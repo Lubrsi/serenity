@@ -38,6 +38,7 @@
 #include <Kernel/Net/NE2000NetworkAdapter.h>
 #include <Kernel/Net/NetworkTask.h>
 #include <Kernel/Net/RTL8139NetworkAdapter.h>
+#include <Kernel/Net/RTL8168NetworkAdapter.h>
 #include <Kernel/PCI/Access.h>
 #include <Kernel/PCI/Initializer.h>
 #include <Kernel/Panic.h>
@@ -244,6 +245,7 @@ void init_stage2(void*)
     E1000NetworkAdapter::detect();
     NE2000NetworkAdapter::detect();
     RTL8139NetworkAdapter::detect();
+    RTL8168NetworkAdapter::detect();
 
     LoopbackAdapter::the();
 
