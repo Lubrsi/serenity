@@ -143,7 +143,7 @@ bool FrameLoader::load(const LoadRequest& request, Type type)
 
     auto& url = request.url();
 
-    set_resource(ResourceLoader::the().load_resource(Resource::Type::Generic, request));
+    set_resource(ResourceLoader::the().load_resource(Response::Type::Generic, request));
 
     if (type == Type::Navigation) {
         if (auto* page = frame().page())
