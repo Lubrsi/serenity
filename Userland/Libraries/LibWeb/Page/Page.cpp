@@ -34,12 +34,12 @@ void Page::set_focused_frame(Badge<EventHandler>, Frame& frame)
 
 void Page::load(const URL& url)
 {
-    main_frame().loader().load(url, FrameLoader::Type::Navigation);
+    main_frame().loader().load(url, Fetch::FrameLoader::Type::Navigation);
 }
 
-void Page::load(const LoadRequest& request)
+void Page::load(const Fetch::LoadRequest& request)
 {
-    main_frame().loader().load(request, FrameLoader::Type::Navigation);
+    main_frame().loader().load(request, Fetch::FrameLoader::Type::Navigation);
 }
 
 void Page::load_html(const StringView& html, const URL& url)

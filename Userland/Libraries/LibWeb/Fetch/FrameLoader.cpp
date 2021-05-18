@@ -21,7 +21,7 @@
 #include <LibWeb/Page/Frame.h>
 #include <LibWeb/Page/Page.h>
 
-namespace Web {
+namespace Web::Fetch {
 
 FrameLoader::FrameLoader(Frame& frame)
     : m_frame(frame)

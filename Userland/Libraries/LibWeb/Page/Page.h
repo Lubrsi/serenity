@@ -42,7 +42,7 @@ public:
     void set_focused_frame(Badge<EventHandler>, Frame&);
 
     void load(const URL&);
-    void load(const LoadRequest&);
+    void load(const Fetch::LoadRequest&);
 
     void load_html(const StringView&, const URL&);
 

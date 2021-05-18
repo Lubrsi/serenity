@@ -60,7 +60,7 @@ void HTMLIFrameElement::load_src(const String& value)
     }
 
     dbgln("Loading iframe document from {}", value);
-    m_content_frame->loader().load(url, FrameLoader::Type::IFrame);
+    m_content_frame->loader().load(url, Fetch::FrameLoader::Type::IFrame);
 }
 
 }
