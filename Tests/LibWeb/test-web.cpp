@@ -189,10 +189,10 @@ void TestRunner::run()
         // give a new parser the existing document to work on.
         m_page_view->document()->remove_all_children();
 
-        Web::LoadRequest request;
+        Web::Fetch::LoadRequest request;
         request.set_url(page_to_load);
 
-        Web::ResourceLoader::the().load_sync(
+        Web::Fetch::ResourceLoader::the().load_sync(
             request,
             [&](auto data, auto&, auto) {
                 Web::HTML::HTMLDocumentParser parser(*m_page_view->document(), data, "utf-8");
@@ -298,10 +298,10 @@ JSFileResult TestRunner::run_file_test(const String& test_path)
 
     JSFileResult file_result;
 
-    Web::LoadRequest request;
+    Web::Fetch::LoadRequest request;
     request.set_url(page_to_load);
 
-    Web::ResourceLoader::the().load_sync(
+    Web::Fetch::ResourceLoader::the().load_sync(
         request,
         [&](auto data, auto&, auto) {
             // Create a new parser and immediately get its document to replace the old interpreter.

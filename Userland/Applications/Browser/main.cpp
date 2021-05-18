@@ -55,7 +55,7 @@ int main(int argc, char** argv)
 
     if (Browser::g_single_process) {
         // Connect to the RequestServer and the WebSocket service immediately so we don't need to unveil their portals.
-        Web::ResourceLoader::the();
+        Web::Fetch::ResourceLoader::the();
         Web::HTML::WebSocketClientManager::the();
     }
 
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
             auto line = ad_filter_list.read_line();
             if (line.is_empty())
                 continue;
-            Web::ContentFilter::the().add_pattern(line);
+            Web::Fetch::ContentFilter::the().add_pattern(line);
         }
     }
 

@@ -337,7 +337,7 @@ void InProcessWebView::load_html(const StringView& html, const URL& url)
 bool InProcessWebView::load(const URL& url)
 {
     set_override_cursor(Gfx::StandardCursor::None);
-    return page().main_frame().loader().load(url, FrameLoader::Type::Navigation);
+    return page().main_frame().loader().load(url, Fetch::FrameLoader::Type::Navigation);
 }
 
 const Layout::InitialContainingBlockBox* InProcessWebView::layout_root() const

@@ -50,7 +50,7 @@ const DOM::Document* FrameHostElement::content_document() const
     return m_content_frame ? m_content_frame->document() : nullptr;
 }
 
-void FrameHostElement::content_frame_did_load(Badge<FrameLoader>)
+void FrameHostElement::content_frame_did_load(Badge<Fetch::FrameLoader>)
 {
     dispatch_event(DOM::Event::create(EventNames::load));
 }

@@ -509,7 +509,7 @@ Tab::Tab(Type type)
     }));
     debug_menu.add_action(GUI::Action::create("Clear &Cache", { Mod_Ctrl | Mod_Shift, Key_C }, [this](auto&) {
         if (m_type == Type::InProcessWebView) {
-            Web::ResourceLoader::the().clear_cache();
+            Web::Fetch::ResourceLoader::the().clear_cache();
         } else {
             m_web_content_view->debug_request("clear-cache");
         }
@@ -519,12 +519,12 @@ Tab::Tab(Type type)
     auto& spoof_user_agent_menu = debug_menu.add_submenu("Spoof User Agent");
     m_disable_user_agent_spoofing = GUI::Action::create_checkable("Disabled", [&](auto&) {
         if (m_type == Type::InProcessWebView) {
-            Web::ResourceLoader::the().set_user_agent(Web::default_user_agent);
+            Web::Fetch::ResourceLoader::the().set_user_agent(Web::Fetch::default_user_agent);
         } else {
-            m_web_content_view->debug_request("spoof-user-agent", Web::default_user_agent);
+            m_web_content_view->debug_request("spoof-user-agent", Web::Fetch::default_user_agent);
         }
     });
-    m_disable_user_agent_spoofing->set_status_tip(Web::default_user_agent);
+    m_disable_user_agent_spoofing->set_status_tip(Web::Fetch::default_user_agent);
     spoof_user_agent_menu.add_action(*m_disable_user_agent_spoofing);
     m_user_agent_spoof_actions.add_action(*m_disable_user_agent_spoofing);
     m_disable_user_agent_spoofing->set_checked(true);
@@ -532,7 +532,7 @@ Tab::Tab(Type type)
     auto add_user_agent = [&](auto& name, auto& user_agent) {
         auto action = GUI::Action::create_checkable(name, [&](auto&) {
             if (m_type == Type::InProcessWebView) {
-                Web::ResourceLoader::the().set_user_agent(user_agent);
+                Web::Fetch::ResourceLoader::the().set_user_agent(user_agent);
             } else {
                 m_web_content_view->debug_request("spoof-user-agent", user_agent);
             }
@@ -555,7 +555,7 @@ Tab::Tab(Type type)
             return;
         }
         if (m_type == Type::InProcessWebView) {
-            Web::ResourceLoader::the().set_user_agent(user_agent);
+            Web::Fetch::ResourceLoader::the().set_user_agent(user_agent);
         } else {
             m_web_content_view->debug_request("spoof-user-agent", user_agent);
         }
@@ -647,12 +647,12 @@ void Tab::update_bookmark_button(const String& url)
 void Tab::did_become_active()
 {
     if (m_type == Type::InProcessWebView) {
-        Web::ResourceLoader::the().on_load_counter_change = [this] {
-            if (Web::ResourceLoader::the().pending_loads() == 0) {
+        Web::Fetch::ResourceLoader::the().on_load_counter_change = [this] {
+            if (Web::Fetch::ResourceLoader::the().pending_loads() == 0) {
                 m_statusbar->set_text("");
                 return;
             }
-            m_statusbar->set_text(String::formatted("Loading ({} pending resources...)", Web::ResourceLoader::the().pending_loads()));
+            m_statusbar->set_text(String::formatted("Loading ({} pending resources...)", Web::Fetch::ResourceLoader::the().pending_loads()));
         };
     }
 
