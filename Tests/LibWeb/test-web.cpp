@@ -22,9 +22,9 @@
 #include <LibJS/Runtime/Array.h>
 #include <LibJS/Runtime/JSONObject.h>
 #include <LibTest/Results.h>
+#include <LibWeb/Fetch/ResourceLoader.h>
 #include <LibWeb/HTML/Parser/HTMLDocumentParser.h>
 #include <LibWeb/InProcessWebView.h>
-#include <LibWeb/Loader/ResourceLoader.h>
 #include <signal.h>
 #include <sys/time.h>
 

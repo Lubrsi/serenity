@@ -65,6 +65,14 @@ set(SOURCES
     DOM/Window.cpp
     DOMTreeModel.cpp
     Dump.cpp
+    Fetch/ContentFilter.cpp
+    Fetch/CSSLoader.cpp
+    Fetch/FrameLoader.cpp
+    Fetch/ImageLoader.cpp
+    Fetch/ImageResource.cpp
+    Fetch/LoadRequest.cpp
+    Fetch/Resource.cpp
+    Fetch/ResourceLoader.cpp
     FontCache.cpp
     HTML/AttributeNames.cpp
     HTML/CanvasRenderingContext2D.cpp
@@ -192,14 +200,6 @@ set(SOURCES
     Layout/TextNode.cpp
     Layout/TreeBuilder.cpp
     LayoutTreeModel.cpp
-    Loader/ContentFilter.cpp
-    Loader/CSSLoader.cpp
-    Loader/FrameLoader.cpp
-    Loader/ImageLoader.cpp
-    Loader/ImageResource.cpp
-    Loader/LoadRequest.cpp
-    Loader/Resource.cpp
-    Loader/ResourceLoader.cpp
     Namespace.cpp
     NavigationTiming/PerformanceTiming.cpp
     OutOfProcessWebView.cpp
