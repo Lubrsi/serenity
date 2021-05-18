@@ -16,13 +16,13 @@
 #include <LibGUI/Scrollbar.h>
 #include <LibGUI/Window.h>
 #include <LibGfx/ShareableBitmap.h>
+#include <LibWeb/Fetch/ResourceLoader.h>
 #include <LibWeb/HTML/HTMLAnchorElement.h>
 #include <LibWeb/HTML/Parser/HTMLDocumentParser.h>
 #include <LibWeb/InProcessWebView.h>
 #include <LibWeb/Layout/InitialContainingBlockBox.h>
 #include <LibWeb/Layout/Node.h>
 #include <LibWeb/Layout/TextNode.h>
-#include <LibWeb/Loader/ResourceLoader.h>
 #include <LibWeb/Page/EventHandler.h>
 #include <LibWeb/Page/Frame.h>
 #include <LibWeb/Painting/PaintContext.h>
