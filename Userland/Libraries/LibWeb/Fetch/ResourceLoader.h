@@ -10,6 +10,7 @@
 #include <AK/URL.h>
 #include <LibCore/Object.h>
 #include <LibWeb/Fetch/Response.h>
+#include <LibWeb/Fetch/FetchParams.h>
 
 namespace Protocol {
 class RequestClient;
@@ -41,9 +42,13 @@ public:
 
     void clear_cache();
 
+    void fetch(LoadRequest&, ProcessRequestBodyType, ProcessRequestEndOfBodyType, ProcessReponseType, ProcessResponseEndOfBodyType, ProcessResponseDoneType, bool use_parallel_queue = false);
+
 private:
     ResourceLoader();
-    static bool is_port_blocked(int port);
+    static bool is_port_blocked(const URL&);
+
+    RefPtr<Response> main_fetch(const FetchParams&, bool recursive = false);
 
     int m_pending_loads { 0 };
 

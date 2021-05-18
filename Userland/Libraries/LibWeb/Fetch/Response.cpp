@@ -12,16 +12,23 @@
 
 namespace Web::Fetch {
 
-NonnullRefPtr<Response> Response::create(Badge<ResourceLoader>, Type type, const LoadRequest& request)
+NonnullRefPtr<Response> Response::create(Badge<ResourceLoader>, Type type, const LoadRequest& request /* FIXME: REMOVE */)
 {
     if (type == Type::Image)
         return adopt_ref(*new ImageResource(request));
     return adopt_ref(*new Response(type, request));
 }
 
-Response::Response(Type type, const LoadRequest& request)
-    : m_request(request)
-    , m_type(type)
+NonnullRefPtr<Response> Response::create_network_error(Badge<ResourceLoader>, const LoadRequest& request /* FIXME: REMOVE */)
+{
+    auto response = adopt_ref(*new Response(Type::Generic, request));
+    response->m_new_type = NewType::Error;
+    response->m_status = 0;
+    return response;
+}
+
+Response::Response(Type type, const LoadRequest& /* FIXME: REMOVE */)
+    : m_type(type)
 {
 }
 

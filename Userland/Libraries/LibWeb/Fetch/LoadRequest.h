@@ -138,14 +138,15 @@ public:
 
     LoadRequest()
     {
+        m_url_list.ensure_capacity(1);
     }
 
     static LoadRequest create_for_url_on_page(const URL& url, Page* page);
 
-    bool is_valid() const { return m_url.is_valid(); }
+    bool is_valid() const { return url().is_valid(); }
 
-    const URL& url() const { return m_url; }
-    void set_url(const URL& url) { m_url = url; }
+    const URL& url() const { return m_url_list.first(); }
+    void set_url(const URL& url) { m_url_list[0] = url; }
 
     const String& method() const { return m_method; }
     void set_method(const String& method) { m_method = method; }
@@ -156,7 +157,7 @@ public:
     unsigned hash() const
     {
         // FIXME: Include headers in the hash as well
-        return pair_int_hash(pair_int_hash(m_url.to_string().hash(), m_method.hash()), string_hash((const char*)m_body.data(), m_body.size()));
+        return pair_int_hash(pair_int_hash(url().to_string().hash(), m_method.hash()), string_hash((const char*)m_body.data(), m_body.size()));
     }
 
     bool operator==(const LoadRequest& other) const
@@ -170,7 +171,7 @@ public:
             if (it.value != jt)
                 return false;
         }
-        return m_url == other.m_url && m_method == other.m_method && m_body == other.m_body;
+        return url() == other.url() && m_method == other.m_method && m_body == other.m_body;
     }
 
     void set_header(const String& name, const String& value) { m_headers.set(name, value); }
@@ -181,6 +182,8 @@ public:
 
     // https://fetch.spec.whatwg.org/#concept-request-current-url
     const URL& current_url() const { return m_url_list.last(); }
+
+    Destination destination() const { return m_destination; }
 
     // https://fetch.spec.whatwg.org/#request-destination-script-like
     bool destination_is_script_like() const
@@ -209,6 +212,7 @@ public:
             || m_destination == Destination::XSLT;
     }
 
+    // https://fetch.spec.whatwg.org/#navigation-request
     bool is_navigation_request() const
     {
         return m_destination == Destination::Document
@@ -218,9 +222,16 @@ public:
             || m_destination == Destination::Object;
     }
 
+    bool local_urls_only() const { return m_local_urls_only; }
+
+    ReferrerPolicy::ReferrerPolicy referrer_policy() const { return m_referrer_policy; }
+    void set_referrer_policy(Badge<ResourceLoader>, ReferrerPolicy::ReferrerPolicy referrer_policy) { m_referrer_policy = referrer_policy; }
+
+    ResponseTainting response_tainting() const { return m_response_tainting; }
+    void set_response_tainting(Badge<ResourceLoader>, ResponseTainting response_tainting) { m_response_tainting = response_tainting; }
+
 private:
     String m_method { "GET" }; // FIXME: This should be a byte sequence.
-    URL m_url;                 // FIXME: This should point to the first URL in the URL list.
     bool m_local_urls_only { false };
     HTTP::HeaderList m_headers;
     bool m_unsafe_request { false };
@@ -237,6 +248,7 @@ private:
     Variant<OriginEnum, Origin> m_origin;
     HTML::PolicyContainer m_policy_container;
     Variant<Referrer, URL> m_referrer { Referrer::Client };
+    ReferrerPolicy::ReferrerPolicy m_referrer_policy { ReferrerPolicy::ReferrerPolicy::None };
     Mode m_mode { Mode::NoCors };
     bool m_use_cors_preflight { false };
     CredentialsMode m_credentials_mode { CredentialsMode::SameOrigin };
