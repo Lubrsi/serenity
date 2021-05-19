@@ -10,6 +10,7 @@
 #include <LibIPC/ServerConnection.h>
 #include <RequestServer/RequestClientEndpoint.h>
 #include <RequestServer/RequestServerEndpoint.h>
+#include <LibHTTP/HeaderList.h>
 
 namespace Protocol {
 
@@ -23,6 +24,9 @@ class RequestClient final
 public:
     template<typename RequestHashMapTraits = Traits<String>>
     RefPtr<Request> start_request(const String& method, const String& url, const HashMap<String, String, RequestHashMapTraits>& request_headers = {}, ReadonlyBytes request_body = {});
+
+    // FIXME: TEMP!!!
+    RefPtr<Request> start_request(const String& method, const String& url, const HTTP::HeaderList& request_headers = {}, ReadonlyBytes request_body = {});
 
     bool stop_request(Badge<Request>, Request&);
     bool set_certificate(Badge<Request>, Request&, String, String);
