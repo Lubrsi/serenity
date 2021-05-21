@@ -80,6 +80,9 @@ public:
         return m_protocol.is_one_of("http", "https");
     }
 
+    // https://url.spec.whatwg.org/#include-credentials
+    bool include_credentials() const { return !m_username.is_empty() && !m_password.is_empty(); }
+
 private:
     bool parse(const StringView&);
     bool compute_validity() const;
@@ -94,6 +97,8 @@ private:
     String m_fragment;
     String m_data_mime_type;
     String m_data_payload;
+    String m_username;
+    String m_password;
 };
 
 template<>
