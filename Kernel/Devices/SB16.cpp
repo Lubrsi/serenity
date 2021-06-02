@@ -164,16 +164,6 @@ void SB16::set_irq_line(u8 irq_number)
     change_irq_number(irq_number);
 }
 
-bool SB16::can_read_without_blocking(const FileDescription&, size_t) const
-{
-    return false;
-}
-
-KResultOr<size_t> SB16::read(FileDescription&, u64, UserOrKernelBuffer&, size_t)
-{
-    return 0;
-}
-
 void SB16::dma_start(uint32_t length)
 {
     const auto addr = m_dma_region->physical_page(0)->paddr().get();

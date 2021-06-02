@@ -49,13 +49,18 @@ public:
 //
 // read() and write()
 //   - Implement reading and writing.
-//   - Return the number of bytes read/written, OR a negative error code.
+//   - Return the number of bytes read/written, OR an error code.
+//   - Return the ENOTSUP error code if the file does not support read/write.
+//   - Return the ENOTIMPL error code if you plan to support read/write, but haven't implemented it yet.
 //
-// can_read() and can_write()
+// can_read_without_blocking() and can_write_without_blocking()
 //
 //   - Used to implement blocking I/O, and the select() and poll() syscalls.
-//   - Return true if read() or write() would succeed, respectively.
-//   - Note that can_read() should return true in EOF conditions,
+//   - Return true if read() or write() would run without blocking, respectively.
+//   - If the files does not support/implement read(), write() or both, their respective function returns true.
+//     This is because they simply return ENOTSUP/ENOTIMPL in this case and thus cannot block.
+//     Note that these functions do not indicate if the read/write will fail.
+//   - Note that can_read_without_blocking() should return true in EOF conditions,
 //     and a subsequent call to read() should return 0.
 //
 // ioctl()

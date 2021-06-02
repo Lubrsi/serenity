@@ -26,10 +26,10 @@ public:
     }
     static PTYMultiplexer& the();
 
-    // ^CharacterDevice
+    // ^File
     virtual KResultOr<NonnullRefPtr<FileDescription>> open(int options) override;
-    virtual KResultOr<size_t> read(FileDescription&, u64, UserOrKernelBuffer&, size_t) override { return 0; }
-    virtual KResultOr<size_t> write(FileDescription&, u64, const UserOrKernelBuffer&, size_t) override { return 0; }
+    virtual KResultOr<size_t> read(FileDescription&, u64, UserOrKernelBuffer&, size_t) override { return ENOTSUP; }
+    virtual KResultOr<size_t> write(FileDescription&, u64, const UserOrKernelBuffer&, size_t) override { return ENOTSUP; }
     virtual bool can_read_without_blocking(const FileDescription&, size_t) const override { return true; }
     virtual bool can_write_without_blocking(const FileDescription&, size_t) const override { return true; }
 

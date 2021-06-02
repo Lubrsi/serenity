@@ -24,7 +24,7 @@ UNMAP_AFTER_INIT MemoryDevice::~MemoryDevice()
 
 KResultOr<size_t> MemoryDevice::read(FileDescription&, u64, UserOrKernelBuffer&, size_t)
 {
-    TODO();
+    return ENOTIMPL;
 }
 
 void MemoryDevice::did_seek(FileDescription&, off_t)

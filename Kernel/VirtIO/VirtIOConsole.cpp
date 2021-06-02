@@ -88,16 +88,6 @@ void VirtIOConsole::handle_queue_update(u16 queue_index)
     }
 }
 
-bool VirtIOConsole::can_read_without_blocking(const FileDescription&, size_t) const
-{
-    return true;
-}
-
-KResultOr<size_t> VirtIOConsole::read(FileDescription&, u64, [[maybe_unused]] UserOrKernelBuffer& data, size_t)
-{
-    return ENOTSUP;
-}
-
 bool VirtIOConsole::can_write_without_blocking(const FileDescription&, size_t) const
 {
     return get_queue(TRANSMITQ).has_free_slots() && m_transmit_buffer->has_space();

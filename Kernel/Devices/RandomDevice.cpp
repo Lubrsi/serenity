@@ -18,11 +18,6 @@ UNMAP_AFTER_INIT RandomDevice::~RandomDevice()
 {
 }
 
-bool RandomDevice::can_read_without_blocking(const FileDescription&, size_t) const
-{
-    return true;
-}
-
 KResultOr<size_t> RandomDevice::read(FileDescription&, u64, UserOrKernelBuffer& buffer, size_t size)
 {
     return buffer.write_buffered<256>(size, [&](u8* data, size_t data_size) {
@@ -31,10 +26,10 @@ KResultOr<size_t> RandomDevice::read(FileDescription&, u64, UserOrKernelBuffer& 
     });
 }
 
-KResultOr<size_t> RandomDevice::write(FileDescription&, u64, const UserOrKernelBuffer&, size_t size)
+KResultOr<size_t> RandomDevice::write(FileDescription&, u64, const UserOrKernelBuffer&, size_t)
 {
     // FIXME: Use input for entropy? I guess that could be a neat feature?
-    return size;
+    return ENOTSUP;
 }
 
 }

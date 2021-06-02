@@ -311,7 +311,7 @@ KResultOr<size_t> KeyboardDevice::read(FileDescription&, u64, UserOrKernelBuffer
 
 KResultOr<size_t> KeyboardDevice::write(FileDescription&, u64, const UserOrKernelBuffer&, size_t)
 {
-    return 0;
+    return ENOTSUP;
 }
 
 }

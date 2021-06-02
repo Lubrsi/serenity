@@ -51,7 +51,7 @@ KResultOr<size_t> MouseDevice::read(FileDescription&, u64, UserOrKernelBuffer& b
 
 KResultOr<size_t> MouseDevice::write(FileDescription&, u64, const UserOrKernelBuffer&, size_t)
 {
-    return 0;
+    return ENOTSUP;
 }
 
 }

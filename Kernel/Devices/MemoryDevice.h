@@ -28,10 +28,10 @@ public:
 private:
     virtual const char* class_name() const override { return "MemoryDevice"; }
     virtual bool can_read_without_blocking(const FileDescription&, size_t) const override { return true; }
-    virtual bool can_write_without_blocking(const FileDescription&, size_t) const override { return false; }
+    virtual bool can_write_without_blocking(const FileDescription&, size_t) const override { return true; }
     virtual bool is_seekable() const { return true; }
     virtual KResultOr<size_t> read(FileDescription&, u64, UserOrKernelBuffer&, size_t) override;
-    virtual KResultOr<size_t> write(FileDescription&, u64, const UserOrKernelBuffer&, size_t) override { return -EINVAL; }
+    virtual KResultOr<size_t> write(FileDescription&, u64, const UserOrKernelBuffer&, size_t) override { return ENOTSUP; }
 
     virtual void did_seek(FileDescription&, off_t) override;
 
