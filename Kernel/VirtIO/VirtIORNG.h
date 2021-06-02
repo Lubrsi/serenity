@@ -19,7 +19,7 @@ class VirtIORNG final : public CharacterDevice
 public:
     virtual const char* class_name() const override { return m_class_name.characters(); }
 
-    virtual bool can_read(const FileDescription&, size_t) const override { return false; }
+    virtual bool can_read_without_blocking(const FileDescription&, size_t) const override { return false; }
     virtual KResultOr<size_t> read(FileDescription&, u64, UserOrKernelBuffer&, size_t) override { return 0; }
     virtual bool can_write_without_blocking(const FileDescription&, size_t) const override { return false; }
     virtual KResultOr<size_t> write(FileDescription&, u64, const UserOrKernelBuffer&, size_t) override { return 0; }

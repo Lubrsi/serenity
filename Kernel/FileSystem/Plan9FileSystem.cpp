@@ -530,7 +530,7 @@ KResult Plan9FS::do_read(u8* data, size_t size)
 {
     auto& description = file_description();
     while (size > 0) {
-        if (!description.can_read()) {
+        if (!description.can_read_without_blocking()) {
             auto unblock_flags = Thread::FileBlocker::BlockFlags::None;
             if (Thread::current()->block<Thread::ReadBlocker>({}, description, unblock_flags).was_interrupted())
                 return EINTR;

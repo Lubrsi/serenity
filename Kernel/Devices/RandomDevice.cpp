@@ -18,7 +18,7 @@ UNMAP_AFTER_INIT RandomDevice::~RandomDevice()
 {
 }
 
-bool RandomDevice::can_read(const FileDescription&, size_t) const
+bool RandomDevice::can_read_without_blocking(const FileDescription&, size_t) const
 {
     return true;
 }

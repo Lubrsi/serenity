@@ -21,7 +21,7 @@ UNMAP_AFTER_INIT FullDevice::~FullDevice()
 {
 }
 
-bool FullDevice::can_read(const FileDescription&, size_t) const
+bool FullDevice::can_read_without_blocking(const FileDescription&, size_t) const
 {
     return true;
 }

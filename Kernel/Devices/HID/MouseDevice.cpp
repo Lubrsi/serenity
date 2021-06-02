@@ -18,7 +18,7 @@ MouseDevice::~MouseDevice()
 {
 }
 
-bool MouseDevice::can_read(const FileDescription&, size_t) const
+bool MouseDevice::can_read_without_blocking(const FileDescription&, size_t) const
 {
     ScopedSpinLock lock(m_queue_lock);
     return !m_queue.is_empty();

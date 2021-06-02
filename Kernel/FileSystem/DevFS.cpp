@@ -354,7 +354,7 @@ KResultOr<ssize_t> DevFSDeviceInode::read_bytes(off_t offset, ssize_t count, Use
 {
     Locker locker(m_lock);
     VERIFY(!!description);
-    if (!m_attached_device->can_read(*description, offset))
+    if (!m_attached_device->can_read_without_blocking(*description, offset))
         return 0;
     auto nread = const_cast<Device&>(*m_attached_device).read(*description, offset, buffer, count);
     if (nread.is_error())

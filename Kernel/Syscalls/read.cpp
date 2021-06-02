@@ -47,7 +47,7 @@ KResultOr<ssize_t> Process::sys$readv(int fd, Userspace<const struct iovec*> iov
     int nread = 0;
     for (auto& vec : vecs) {
         if (description->is_blocking()) {
-            if (!description->can_read()) {
+            if (!description->can_read_without_blocking()) {
                 auto unblock_flags = BlockFlags::None;
                 if (Thread::current()->block<Thread::ReadBlocker>({}, *description, unblock_flags).was_interrupted())
                     return EINTR;
@@ -84,7 +84,7 @@ KResultOr<ssize_t> Process::sys$read(int fd, Userspace<u8*> buffer, ssize_t size
     if (description->is_directory())
         return EISDIR;
     if (description->is_blocking()) {
-        if (!description->can_read()) {
+        if (!description->can_read_without_blocking()) {
             auto unblock_flags = BlockFlags::None;
             if (Thread::current()->block<Thread::ReadBlocker>({}, *description, unblock_flags).was_interrupted())
                 return EINTR;

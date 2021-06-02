@@ -276,7 +276,7 @@ UNMAP_AFTER_INIT KeyboardDevice::~KeyboardDevice()
 {
 }
 
-bool KeyboardDevice::can_read(const FileDescription&, size_t) const
+bool KeyboardDevice::can_read_without_blocking(const FileDescription&, size_t) const
 {
     return !m_queue.is_empty();
 }

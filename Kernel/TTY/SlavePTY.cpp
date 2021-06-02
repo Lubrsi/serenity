@@ -66,11 +66,11 @@ bool SlavePTY::can_write_without_blocking(const FileDescription&, size_t) const
     return m_master->can_write_from_slave();
 }
 
-bool SlavePTY::can_read(const FileDescription& description, size_t offset) const
+bool SlavePTY::can_read_without_blocking(const FileDescription& description, size_t offset) const
 {
     if (m_master->is_closed())
         return true;
-    return TTY::can_read(description, offset);
+    return TTY::can_read_without_blocking(description, offset);
 }
 
 KResultOr<size_t> SlavePTY::read(FileDescription& description, u64 offset, UserOrKernelBuffer& buffer, size_t size)

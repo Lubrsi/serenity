@@ -42,7 +42,7 @@ public:
     virtual void get_peer_address(sockaddr*, socklen_t*) override;
     virtual KResult attach(FileDescription&) override;
     virtual void detach(FileDescription&) override;
-    virtual bool can_read(const FileDescription&, size_t) const override;
+    virtual bool can_read_without_blocking(const FileDescription&, size_t) const override;
     virtual bool can_write_without_blocking(const FileDescription&, size_t) const override;
     virtual KResultOr<size_t> sendto(FileDescription&, const UserOrKernelBuffer&, size_t, int, Userspace<const sockaddr*>, socklen_t) override;
     virtual KResultOr<size_t> recvfrom(FileDescription&, UserOrKernelBuffer&, size_t, int flags, Userspace<sockaddr*>, Userspace<socklen_t*>, Time&) override;

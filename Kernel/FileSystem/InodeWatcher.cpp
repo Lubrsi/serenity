@@ -25,7 +25,7 @@ InodeWatcher::~InodeWatcher()
     (void)close();
 }
 
-bool InodeWatcher::can_read(const FileDescription&, size_t) const
+bool InodeWatcher::can_read_without_blocking(const FileDescription&, size_t) const
 {
     Locker locker(m_lock);
     return !m_queue.is_empty();

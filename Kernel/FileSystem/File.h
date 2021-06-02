@@ -79,7 +79,7 @@ public:
     virtual KResultOr<NonnullRefPtr<FileDescription>> open(int options);
     virtual KResult close();
 
-    virtual bool can_read(const FileDescription&, size_t) const = 0;
+    virtual bool can_read_without_blocking(const FileDescription&, size_t) const = 0;
     virtual bool can_write_without_blocking(const FileDescription&, size_t) const = 0;
 
     virtual KResult attach(FileDescription&);

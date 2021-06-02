@@ -97,7 +97,7 @@ KResultOr<size_t> StorageDevice::read(FileDescription&, u64 offset, UserOrKernel
     return pos + remaining;
 }
 
-bool StorageDevice::can_read(const FileDescription&, size_t offset) const
+bool StorageDevice::can_read_without_blocking(const FileDescription&, size_t offset) const
 {
     return offset < (max_addressable_block() * block_size());
 }

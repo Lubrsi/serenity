@@ -88,7 +88,7 @@ void VirtIOConsole::handle_queue_update(u16 queue_index)
     }
 }
 
-bool VirtIOConsole::can_read(const FileDescription&, size_t) const
+bool VirtIOConsole::can_read_without_blocking(const FileDescription&, size_t) const
 {
     return true;
 }

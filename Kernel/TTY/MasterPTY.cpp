@@ -57,7 +57,7 @@ KResultOr<size_t> MasterPTY::write(FileDescription&, u64, const UserOrKernelBuff
     return size;
 }
 
-bool MasterPTY::can_read(const FileDescription&, size_t) const
+bool MasterPTY::can_read_without_blocking(const FileDescription&, size_t) const
 {
     if (!m_slave)
         return true;

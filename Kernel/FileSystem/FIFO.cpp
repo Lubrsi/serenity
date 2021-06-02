@@ -114,7 +114,7 @@ void FIFO::detach(Direction direction)
     evaluate_block_conditions();
 }
 
-bool FIFO::can_read(const FileDescription&, size_t) const
+bool FIFO::can_read_without_blocking(const FileDescription&, size_t) const
 {
     return !m_buffer.is_empty() || !m_writers;
 }

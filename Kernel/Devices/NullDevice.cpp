@@ -31,7 +31,7 @@ UNMAP_AFTER_INIT NullDevice::~NullDevice()
 {
 }
 
-bool NullDevice::can_read(const FileDescription&, size_t) const
+bool NullDevice::can_read_without_blocking(const FileDescription&, size_t) const
 {
     return true;
 }

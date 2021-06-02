@@ -44,11 +44,11 @@ KResultOr<size_t> DiskPartition::read(FileDescription& fd, u64 offset, UserOrKer
     return m_device->read(fd, offset + adjust, outbuf, len);
 }
 
-bool DiskPartition::can_read(const FileDescription& fd, size_t offset) const
+bool DiskPartition::can_read_without_blocking(const FileDescription& fd, size_t offset) const
 {
     unsigned adjust = m_metadata.start_block() * block_size();
-    dbgln_if(OFFD_DEBUG, "DiskPartition::can_read offset={}, adjust={}", offset, adjust);
-    return m_device->can_read(fd, offset + adjust);
+    dbgln_if(OFFD_DEBUG, "DiskPartition::can_read_without_blocking offset={}, adjust={}", offset, adjust);
+    return m_device->can_read_without_blocking(fd, offset + adjust);
 }
 
 KResultOr<size_t> DiskPartition::write(FileDescription& fd, u64 offset, const UserOrKernelBuffer& inbuf, size_t len)

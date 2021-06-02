@@ -254,7 +254,7 @@ void LocalSocket::detach(FileDescription& description)
     evaluate_block_conditions();
 }
 
-bool LocalSocket::can_read(const FileDescription& description, size_t) const
+bool LocalSocket::can_read_without_blocking(const FileDescription& description, size_t) const
 {
     auto role = this->role(description);
     if (role == Role::Listener)
@@ -330,7 +330,7 @@ KResultOr<size_t> LocalSocket::recvfrom(FileDescription& description, UserOrKern
                 return 0;
             return EAGAIN;
         }
-    } else if (!can_read(description, 0)) {
+    } else if (!can_read_without_blocking(description, 0)) {
         auto unblock_flags = Thread::FileDescriptionBlocker::BlockFlags::None;
         if (Thread::current()->block<Thread::ReadBlocker>({}, description, unblock_flags).was_interrupted())
             return EINTR;

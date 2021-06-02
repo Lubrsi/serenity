@@ -164,7 +164,7 @@ void SB16::set_irq_line(u8 irq_number)
     change_irq_number(irq_number);
 }
 
-bool SB16::can_read(const FileDescription&, size_t) const
+bool SB16::can_read_without_blocking(const FileDescription&, size_t) const
 {
     return false;
 }

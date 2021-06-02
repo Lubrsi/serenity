@@ -90,7 +90,7 @@ Thread::FileBlocker::BlockFlags FileDescription::should_unblock(Thread::FileBloc
 {
     using BlockFlags = Thread::FileBlocker::BlockFlags;
     BlockFlags unblock_flags = BlockFlags::None;
-    if (has_flag(block_flags, BlockFlags::Read) && can_read())
+    if (has_flag(block_flags, BlockFlags::Read) && can_read_without_blocking())
         unblock_flags |= BlockFlags::Read;
     if (has_flag(block_flags, BlockFlags::Write) && can_write_without_blocking())
         unblock_flags |= BlockFlags::Write;
@@ -188,9 +188,9 @@ bool FileDescription::can_write_without_blocking() const
     return m_file->can_write_without_blocking(*this, offset());
 }
 
-bool FileDescription::can_read() const
+bool FileDescription::can_read_without_blocking() const
 {
-    return m_file->can_read(*this, offset());
+    return m_file->can_read_without_blocking(*this, offset());
 }
 
 KResultOr<NonnullOwnPtr<KBuffer>> FileDescription::read_entire_file()

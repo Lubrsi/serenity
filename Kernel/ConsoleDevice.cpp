@@ -40,7 +40,7 @@ UNMAP_AFTER_INIT ConsoleDevice::~ConsoleDevice()
 {
 }
 
-bool ConsoleDevice::can_read(const Kernel::FileDescription&, size_t) const
+bool ConsoleDevice::can_read_without_blocking(const Kernel::FileDescription&, size_t) const
 {
     return false;
 }

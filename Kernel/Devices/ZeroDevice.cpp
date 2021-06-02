@@ -19,7 +19,7 @@ UNMAP_AFTER_INIT ZeroDevice::~ZeroDevice()
 {
 }
 
-bool ZeroDevice::can_read(const FileDescription&, size_t) const
+bool ZeroDevice::can_read_without_blocking(const FileDescription&, size_t) const
 {
     return true;
 }

@@ -40,7 +40,7 @@ private:
     // ^File
     virtual const char* class_name() const { return "FramebufferDevice"; }
 
-    virtual bool can_read(const FileDescription&, size_t) const override final { return true; }
+    virtual bool can_read_without_blocking(const FileDescription&, size_t) const override final { return true; }
     virtual bool can_write_without_blocking(const FileDescription&, size_t) const override final { return true; }
     virtual void start_request(AsyncBlockDeviceRequest& request) override final { request.complete(AsyncDeviceRequest::Failure); }
     virtual KResultOr<size_t> read(FileDescription&, u64, UserOrKernelBuffer&, size_t) override { return -EINVAL; }

@@ -159,7 +159,7 @@ KResult IPv4Socket::connect(FileDescription& description, Userspace<const sockad
     return protocol_connect(description, should_block);
 }
 
-bool IPv4Socket::can_read(const FileDescription&, size_t) const
+bool IPv4Socket::can_read_without_blocking(const FileDescription&, size_t) const
 {
     if (m_role == Role::Listener)
         return can_accept();

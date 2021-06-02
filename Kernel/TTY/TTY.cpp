@@ -127,7 +127,7 @@ KResultOr<size_t> TTY::write(FileDescription&, u64, const UserOrKernelBuffer& bu
     });
 }
 
-bool TTY::can_read(const FileDescription&, size_t) const
+bool TTY::can_read_without_blocking(const FileDescription&, size_t) const
 {
     if (in_canonical_mode()) {
         return m_available_lines > 0;

@@ -24,7 +24,7 @@ private:
     // ^CharacterDevice
     virtual KResultOr<size_t> read(FileDescription&, u64, UserOrKernelBuffer&, size_t) override;
     virtual KResultOr<size_t> write(FileDescription&, u64, const UserOrKernelBuffer&, size_t) override;
-    virtual bool can_read(const FileDescription&, size_t) const override;
+    virtual bool can_read_without_blocking(const FileDescription&, size_t) const override;
     virtual bool can_write_without_blocking(const FileDescription&, size_t) const override { return true; }
     virtual const char* class_name() const override { return "FullDevice"; }
 };

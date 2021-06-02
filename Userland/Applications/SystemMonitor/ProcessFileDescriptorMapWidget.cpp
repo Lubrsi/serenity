@@ -30,8 +30,8 @@ ProcessFileDescriptorMapWidget::ProcessFileDescriptorMapWidget()
     pid_fds_fields.empend("On exec", Gfx::TextAlignment::CenterLeft, [](auto& object) {
         return object.get("cloexec").to_bool() ? "Close" : "Keep";
     });
-    pid_fds_fields.empend("Can read", Gfx::TextAlignment::CenterLeft, [](auto& object) {
-        return object.get("can_read").to_bool() ? "Yes" : "No";
+    pid_fds_fields.empend("Can read without blocking", Gfx::TextAlignment::CenterLeft, [](auto& object) {
+        return object.get("can_read_without_blocking").to_bool() ? "Yes" : "No";
     });
     pid_fds_fields.empend("Can write without blocking", Gfx::TextAlignment::CenterLeft, [](auto& object) {
         return object.get("can_write_without_blocking").to_bool() ? "Yes" : "No";
