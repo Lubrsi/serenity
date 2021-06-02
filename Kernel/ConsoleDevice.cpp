@@ -13,8 +13,10 @@
 // Output bytes to kernel debug port 0xE9 (Bochs console). It's very handy.
 #define CONSOLE_OUT_TO_BOCHS_DEBUG_PORT
 
+namespace Kernel {
+
 static AK::Singleton<ConsoleDevice> s_the;
-static Kernel::SpinLock g_console_lock;
+static SpinLock g_console_lock;
 
 UNMAP_AFTER_INIT void ConsoleDevice::initialize()
 {
@@ -40,19 +42,14 @@ UNMAP_AFTER_INIT ConsoleDevice::~ConsoleDevice()
 {
 }
 
-bool ConsoleDevice::can_read_without_blocking(const Kernel::FileDescription&, size_t) const
-{
-    return false;
-}
-
-Kernel::KResultOr<size_t> ConsoleDevice::read(FileDescription&, u64, Kernel::UserOrKernelBuffer&, size_t)
+KResultOr<size_t> ConsoleDevice::read(FileDescription&, u64, Kernel::UserOrKernelBuffer&, size_t)
 {
     // FIXME: Implement reading from the console.
     //        Maybe we could use a ring buffer for this device?
-    return 0;
+    return ENOTIMPL;
 }
 
-Kernel::KResultOr<size_t> ConsoleDevice::write(FileDescription&, u64, const Kernel::UserOrKernelBuffer& data, size_t size)
+KResultOr<size_t> ConsoleDevice::write(FileDescription&, u64, const Kernel::UserOrKernelBuffer& data, size_t size)
 {
     if (!size)
         return 0;
@@ -71,4 +68,6 @@ void ConsoleDevice::put_char(char ch)
     IO::out8(IO::BOCHS_DEBUG_PORT, ch);
 #endif
     m_logbuffer.enqueue(ch);
+}
+
 }

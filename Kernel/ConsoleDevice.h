@@ -22,8 +22,8 @@ public:
     ConsoleDevice();
     virtual ~ConsoleDevice() override;
 
-    // ^CharacterDevice
-    virtual bool can_read_without_blocking(const Kernel::FileDescription&, size_t) const override;
+    // ^File
+    virtual bool can_read_without_blocking(const Kernel::FileDescription&, size_t) const override { return true; }
     virtual bool can_write_without_blocking(const Kernel::FileDescription&, size_t) const override { return true; }
     virtual Kernel::KResultOr<size_t> read(FileDescription&, u64, Kernel::UserOrKernelBuffer&, size_t) override;
     virtual Kernel::KResultOr<size_t> write(FileDescription&, u64, const Kernel::UserOrKernelBuffer&, size_t) override;
