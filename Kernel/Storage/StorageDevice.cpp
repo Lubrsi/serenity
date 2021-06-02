@@ -187,7 +187,7 @@ KResultOr<size_t> StorageDevice::write(FileDescription&, u64 offset, const UserO
     return pos + remaining;
 }
 
-bool StorageDevice::can_write(const FileDescription&, size_t offset) const
+bool StorageDevice::can_write_without_blocking(const FileDescription&, size_t offset) const
 {
     return offset < (max_addressable_block() * block_size());
 }

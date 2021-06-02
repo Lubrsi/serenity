@@ -135,7 +135,7 @@ bool TTY::can_read(const FileDescription&, size_t) const
     return !m_input_buffer.is_empty();
 }
 
-bool TTY::can_write(const FileDescription&, size_t) const
+bool TTY::can_write_without_blocking(const FileDescription&, size_t) const
 {
     return true;
 }

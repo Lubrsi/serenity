@@ -509,7 +509,7 @@ KResult Plan9FS::post_message(Message& message, RefPtr<ReceiveCompletion> comple
     }
 
     while (size > 0) {
-        if (!description.can_write()) {
+        if (!description.can_write_without_blocking()) {
             auto unblock_flags = Thread::FileBlocker::BlockFlags::None;
             if (Thread::current()->block<Thread::WriteBlocker>({}, description, unblock_flags).was_interrupted())
                 return EINTR;

@@ -54,7 +54,7 @@ public:
     KResult chmod(mode_t);
 
     bool can_read() const;
-    bool can_write() const;
+    bool can_write_without_blocking() const;
 
     KResultOr<ssize_t> get_dir_entries(UserOrKernelBuffer& buffer, ssize_t);
 

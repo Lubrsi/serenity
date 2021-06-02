@@ -276,7 +276,7 @@ bool LocalSocket::has_attached_peer(const FileDescription& description) const
     VERIFY_NOT_REACHED();
 }
 
-bool LocalSocket::can_write(const FileDescription& description, size_t) const
+bool LocalSocket::can_write_without_blocking(const FileDescription& description, size_t) const
 {
     auto role = this->role(description);
     if (role == Role::Accepted)

@@ -41,7 +41,7 @@ private:
     virtual KResultOr<size_t> read(FileDescription&, u64, UserOrKernelBuffer&, size_t) override;
     virtual KResult stat(::stat&) const override;
     virtual bool can_read(const FileDescription&, size_t) const override;
-    virtual bool can_write(const FileDescription&, size_t) const override;
+    virtual bool can_write_without_blocking(const FileDescription&, size_t) const override;
     virtual String absolute_path(const FileDescription&) const override;
     virtual const char* class_name() const override { return "FIFO"; }
     virtual bool is_fifo() const override { return true; }

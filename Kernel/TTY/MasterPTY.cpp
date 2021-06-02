@@ -64,7 +64,7 @@ bool MasterPTY::can_read(const FileDescription&, size_t) const
     return !m_buffer.is_empty();
 }
 
-bool MasterPTY::can_write(const FileDescription&, size_t) const
+bool MasterPTY::can_write_without_blocking(const FileDescription&, size_t) const
 {
     return true;
 }

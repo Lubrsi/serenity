@@ -380,7 +380,7 @@ KResultOr<ssize_t> DevFSDeviceInode::write_bytes(off_t offset, ssize_t count, co
 {
     Locker locker(m_lock);
     VERIFY(!!description);
-    if (!m_attached_device->can_write(*description, offset))
+    if (!m_attached_device->can_write_without_blocking(*description, offset))
         return 0;
     auto nread = const_cast<Device&>(*m_attached_device).write(*description, offset, buffer, count);
     if (nread.is_error())

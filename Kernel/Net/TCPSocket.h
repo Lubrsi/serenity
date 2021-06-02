@@ -157,7 +157,7 @@ public:
 
     virtual KResult close() override;
 
-    virtual bool can_write(const FileDescription&, size_t) const override;
+    virtual bool can_write_without_blocking(const FileDescription&, size_t) const override;
 
 protected:
     void set_direction(Direction direction) { m_direction = direction; }

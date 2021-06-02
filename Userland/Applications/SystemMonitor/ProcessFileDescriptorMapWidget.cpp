@@ -33,8 +33,8 @@ ProcessFileDescriptorMapWidget::ProcessFileDescriptorMapWidget()
     pid_fds_fields.empend("Can read", Gfx::TextAlignment::CenterLeft, [](auto& object) {
         return object.get("can_read").to_bool() ? "Yes" : "No";
     });
-    pid_fds_fields.empend("Can write", Gfx::TextAlignment::CenterLeft, [](auto& object) {
-        return object.get("can_write").to_bool() ? "Yes" : "No";
+    pid_fds_fields.empend("Can write without blocking", Gfx::TextAlignment::CenterLeft, [](auto& object) {
+        return object.get("can_write_without_blocking").to_bool() ? "Yes" : "No";
     });
 
     m_model = GUI::JsonArrayModel::create({}, move(pid_fds_fields));

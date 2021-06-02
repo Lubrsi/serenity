@@ -578,9 +578,9 @@ void TCPSocket::retransmit_packets()
     }
 }
 
-bool TCPSocket::can_write(const FileDescription& file_description, size_t size) const
+bool TCPSocket::can_write_without_blocking(const FileDescription& file_description, size_t size) const
 {
-    if (!IPv4Socket::can_write(file_description, size))
+    if (!IPv4Socket::can_write_without_blocking(file_description, size))
         return false;
 
     if (!file_description.is_blocking())

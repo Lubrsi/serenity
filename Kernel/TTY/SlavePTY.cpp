@@ -61,7 +61,7 @@ ssize_t SlavePTY::on_tty_write(const UserOrKernelBuffer& data, ssize_t size)
     return m_master->on_slave_write(data, size);
 }
 
-bool SlavePTY::can_write(const FileDescription&, size_t) const
+bool SlavePTY::can_write_without_blocking(const FileDescription&, size_t) const
 {
     return m_master->can_write_from_slave();
 }

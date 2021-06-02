@@ -168,7 +168,7 @@ bool IPv4Socket::can_read(const FileDescription&, size_t) const
     return m_can_read;
 }
 
-bool IPv4Socket::can_write(const FileDescription&, size_t) const
+bool IPv4Socket::can_write_without_blocking(const FileDescription&, size_t) const
 {
     return is_connected();
 }

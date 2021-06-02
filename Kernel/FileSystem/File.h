@@ -80,7 +80,7 @@ public:
     virtual KResult close();
 
     virtual bool can_read(const FileDescription&, size_t) const = 0;
-    virtual bool can_write(const FileDescription&, size_t) const = 0;
+    virtual bool can_write_without_blocking(const FileDescription&, size_t) const = 0;
 
     virtual KResult attach(FileDescription&);
     virtual void detach(FileDescription&);

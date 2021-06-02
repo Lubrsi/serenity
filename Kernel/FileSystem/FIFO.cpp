@@ -119,7 +119,7 @@ bool FIFO::can_read(const FileDescription&, size_t) const
     return !m_buffer.is_empty() || !m_writers;
 }
 
-bool FIFO::can_write(const FileDescription&, size_t) const
+bool FIFO::can_write_without_blocking(const FileDescription&, size_t) const
 {
     return m_buffer.space_for_writing() || !m_readers;
 }

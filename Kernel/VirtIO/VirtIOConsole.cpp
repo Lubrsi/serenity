@@ -98,7 +98,7 @@ KResultOr<size_t> VirtIOConsole::read(FileDescription&, u64, [[maybe_unused]] Us
     return ENOTSUP;
 }
 
-bool VirtIOConsole::can_write(const FileDescription&, size_t) const
+bool VirtIOConsole::can_write_without_blocking(const FileDescription&, size_t) const
 {
     return get_queue(TRANSMITQ).has_free_slots() && m_transmit_buffer->has_space();
 }
@@ -108,7 +108,7 @@ KResultOr<size_t> VirtIOConsole::write(FileDescription& desc, u64, const UserOrK
     if (!size)
         return 0;
 
-    if (!can_write(desc, size))
+    if (!can_write_without_blocking(desc, size))
         return EAGAIN;
 
     ScopedSpinLock ringbuffer_lock(m_transmit_buffer->lock());
@@ -129,7 +129,7 @@ KResultOr<size_t> VirtIOConsole::write(FileDescription& desc, u64, const UserOrK
         bool did_add_buffer = chain.add_buffer_to_chain(start_of_chunk, length_of_chunk, BufferType::DeviceReadable);
         VERIFY(did_add_buffer);
         total_bytes_copied += length_of_chunk;
-    } while (total_bytes_copied < size && can_write(desc, size - total_bytes_copied));
+    } while (total_bytes_copied < size && can_write_without_blocking(desc, size - total_bytes_copied));
 
     supply_chain_and_notify(TRANSMITQ, chain);
 

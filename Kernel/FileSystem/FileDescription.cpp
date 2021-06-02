@@ -92,7 +92,7 @@ Thread::FileBlocker::BlockFlags FileDescription::should_unblock(Thread::FileBloc
     BlockFlags unblock_flags = BlockFlags::None;
     if (has_flag(block_flags, BlockFlags::Read) && can_read())
         unblock_flags |= BlockFlags::Read;
-    if (has_flag(block_flags, BlockFlags::Write) && can_write())
+    if (has_flag(block_flags, BlockFlags::Write) && can_write_without_blocking())
         unblock_flags |= BlockFlags::Write;
     // TODO: Implement Thread::FileBlocker::BlockFlags::Exception
 
@@ -183,9 +183,9 @@ KResultOr<size_t> FileDescription::write(const UserOrKernelBuffer& data, size_t 
     return nwritten_or_error;
 }
 
-bool FileDescription::can_write() const
+bool FileDescription::can_write_without_blocking() const
 {
-    return m_file->can_write(*this, offset());
+    return m_file->can_write_without_blocking(*this, offset());
 }
 
 bool FileDescription::can_read() const
