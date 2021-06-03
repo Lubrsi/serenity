@@ -125,15 +125,19 @@ private:
     void startup();
     void test();
 
+    void rar_exgmac_set();
+
     void configure_phy();
     void configure_phy_b_1();
     void configure_phy_b_2();
+    void configure_phy_e_2();
     void configure_phy_h_1();
     void configure_phy_h_2();
 
     void hardware_quirks();
     void hardware_quirks_b_1();
     void hardware_quirks_b_2();
+    void hardware_quirks_e_2();
     void hardware_quirks_h();
 
     void initialize_rx_descriptors();
@@ -180,6 +184,13 @@ private:
 
     void ocp_phy_out(u32 address, u32 data);
     u16 ocp_phy_in(u32 address);
+
+    struct ExgMacRegister {
+        u16 address;
+        u16 mask;
+        u32 value;
+    };
+    void exgmac_out_batch(const ExgMacRegister[], size_t length);
 
     ChipVersion m_version { ChipVersion::Unknown };
     bool m_version_uncertain { true };
