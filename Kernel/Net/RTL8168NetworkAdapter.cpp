@@ -191,14 +191,14 @@ UNMAP_AFTER_INIT RTL8168NetworkAdapter::RTL8168NetworkAdapter(PCI::Address addre
     , m_rx_descriptors_region(MM.allocate_contiguous_kernel_region(page_round_up(sizeof(TXDescriptor) * (number_of_rx_descriptors + 1)), "RTL8168 RX", Region::Access::Read | Region::Access::Write))
     , m_tx_descriptors_region(MM.allocate_contiguous_kernel_region(page_round_up(sizeof(RXDescriptor) * (number_of_tx_descriptors + 1)), "RTL8168 TX", Region::Access::Read | Region::Access::Write))
 {
-    set_interface_name("rtl8168");
+    set_interface_name(address);
 
     dmesgln("RTL8168: Found @ {}", pci_address());
     dmesgln("RTL8168: I/O port base: {}", m_io_base);
 
     identify_chip_version();
     dmesgln("RTL8168: Version detected - {} ({}{})", possible_device_name(), (u8)m_version, m_version_uncertain ? "?" : "");
-    if (m_version == ChipVersion::Unknown || (m_version >= ChipVersion::Version4 && m_version <= ChipVersion::Version20) || (m_version >= ChipVersion::Version22 && m_version <= ChipVersion::Version28)) {
+    if (m_version == ChipVersion::Unknown || (m_version >= ChipVersion::Version4 && m_version <= ChipVersion::Version16) || (m_version >= ChipVersion::Version18 && m_version <= ChipVersion::Version20) || (m_version >= ChipVersion::Version22 && m_version <= ChipVersion::Version28)) {
         dmesgln("RTL8168: Aborting initialization! Support for your chip version ({}) is not implemented yet, please open a GH issue and include this message.", (u8)m_version);
         return; // Each ChipVersion requires a specific implementation of configure_phy and hardware_quirks
     }
