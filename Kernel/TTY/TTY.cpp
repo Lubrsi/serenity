@@ -88,26 +88,33 @@ KResultOr<size_t> TTY::write(FileDescription&, u64, const UserOrKernelBuffer& bu
     }
 
     constexpr size_t num_chars = 256;
-    return buffer.read_buffered<num_chars>(size, [&](u8 const* data, size_t buffer_bytes) {
+    return buffer.read_buffered<num_chars>(size, [&](u8 const* data, size_t buffer_bytes) -> KResultOr<size_t> {
         u8 modified_data[num_chars * 2];
         size_t modified_data_size = 0;
         for (size_t i = 0; i < buffer_bytes; ++i) {
-            process_output(data[i], [this, &modified_data, &modified_data_size](u8 out_ch) {
+            auto success_or_error = process_output(data[i], [this, &modified_data, &modified_data_size](u8 out_ch) {
                 modified_data[modified_data_size++] = out_ch;
+                return KSuccess;
             });
+
+            // The passed in functor only returns KSuccess, so this shouldn't fail.
+            VERIFY(!success_or_error.is_error());
         }
-        ssize_t bytes_written = on_tty_write(UserOrKernelBuffer::for_kernel_buffer(modified_data), modified_data_size);
-        VERIFY(bytes_written != 0);
-        if (bytes_written < 0 || !(m_termios.c_oflag & OPOST) || !(m_termios.c_oflag & ONLCR))
+        auto bytes_written_or_error = on_tty_write(UserOrKernelBuffer::for_kernel_buffer(modified_data), modified_data_size);
+        if (bytes_written_or_error.is_error())
+            return bytes_written_or_error.error();
+        size_t bytes_written = bytes_written_or_error.value();
+        VERIFY(bytes_written > 0);
+        if (!(m_termios.c_oflag & OPOST) || !(m_termios.c_oflag & ONLCR))
             return bytes_written;
-        if ((size_t)bytes_written == modified_data_size)
-            return (ssize_t)buffer_bytes;
+        if (bytes_written == modified_data_size)
+            return buffer_bytes;
 
         // Degenerate case where we converted some newlines and encountered a partial write
 
         // Calculate where in the input buffer the last character would have been
         size_t pos_data = 0;
-        for (ssize_t pos_modified_data = 0; pos_modified_data < bytes_written; ++pos_data) {
+        for (size_t pos_modified_data = 0; pos_modified_data < bytes_written; ++pos_data) {
             if (data[pos_data] == '\n')
                 pos_modified_data += 2;
             else
@@ -118,25 +125,27 @@ KResultOr<size_t> TTY::write(FileDescription&, u64, const UserOrKernelBuffer& bu
             if (pos_modified_data > bytes_written)
                 --pos_data;
         }
-        return (ssize_t)pos_data;
+        return pos_data;
     });
 }
 
-void TTY::echo_with_processing(u8 ch)
+KResult TTY::echo_with_processing(u8 ch)
 {
-    process_output(ch, [this](u8 out_ch) { echo(out_ch); });
+    return process_output(ch, [this](u8 out_ch) { return echo(out_ch); });
 }
 
 template<typename Functor>
-void TTY::process_output(u8 ch, Functor put_char)
+KResult TTY::process_output(u8 ch, Functor put_char)
 {
     if (m_termios.c_oflag & OPOST) {
-        if (ch == '\n' && (m_termios.c_oflag & ONLCR))
-            put_char('\r');
-        put_char(ch);
-    } else {
-        put_char(ch);
+        if (ch == '\n' && (m_termios.c_oflag & ONLCR)) {
+            if (KResult success_or_error = put_char('\r'); success_or_error.is_error())
+                return success_or_error;
+        }
+        return put_char(ch);
     }
+
+    return put_char(ch);
 }
 
 bool TTY::can_read(const FileDescription&, size_t) const
@@ -177,7 +186,7 @@ bool TTY::is_werase(u8 ch) const
     return ch == m_termios.c_cc[VWERASE];
 }
 
-void TTY::emit(u8 ch, bool do_evaluate_block_conditions)
+KResult TTY::emit(u8 ch, bool do_evaluate_block_conditions)
 {
     if (m_termios.c_iflag & ISTRIP)
         ch &= 0x7F;
@@ -186,17 +195,17 @@ void TTY::emit(u8 ch, bool do_evaluate_block_conditions)
         if (ch == m_termios.c_cc[VINFO]) {
             dbgln("{}: VINFO pressed!", tty_name());
             generate_signal(SIGINFO);
-            return;
+            return KSuccess;
         }
         if (ch == m_termios.c_cc[VINTR]) {
             dbgln("{}: VINTR pressed!", tty_name());
             generate_signal(SIGINT);
-            return;
+            return KSuccess;
         }
         if (ch == m_termios.c_cc[VQUIT]) {
             dbgln("{}: VQUIT pressed!", tty_name());
             generate_signal(SIGQUIT);
-            return;
+            return KSuccess;
         }
         if (ch == m_termios.c_cc[VSUSP]) {
             dbgln("{}: VSUSP pressed!", tty_name());
@@ -205,7 +214,7 @@ void TTY::emit(u8 ch, bool do_evaluate_block_conditions)
                 [[maybe_unused]] auto rc = original_process_parent->send_signal(SIGCHLD, nullptr);
             }
             // TODO: Else send it to the session leader maybe?
-            return;
+            return KSuccess;
         }
     }
 
@@ -234,29 +243,33 @@ void TTY::emit(u8 ch, bool do_evaluate_block_conditions)
             set_special_bit();
             m_available_lines++;
             m_input_buffer.enqueue('\0');
-            return;
+            return KSuccess;
         }
         if (is_kill(ch) && m_termios.c_lflag & ECHOK) {
             kill_line();
-            return;
+            return KSuccess;
         }
         if (is_erase(ch) && m_termios.c_lflag & ECHOE) {
-            do_backspace();
-            return;
+            if (auto success_or_error = do_backspace(); success_or_error.is_error())
+                return success_or_error;
+            return KSuccess;
         }
         if (is_werase(ch)) {
-            erase_word();
-            return;
+            if (auto success_or_error = erase_word(); success_or_error.is_error())
+                return success_or_error;
+            return KSuccess;
         }
 
         if (ch == '\n') {
-            if (m_termios.c_lflag & ECHO || m_termios.c_lflag & ECHONL)
-                echo_with_processing('\n');
+            if (m_termios.c_lflag & ECHO || m_termios.c_lflag & ECHONL) {
+                if (auto success_or_error = echo_with_processing('\n'); success_or_error.is_error())
+                    return success_or_error;
+            }
 
             set_special_bit();
             m_input_buffer.enqueue('\n');
             m_available_lines++;
-            return;
+            return KSuccess;
         }
 
         if (is_eol(ch)) {
@@ -266,8 +279,10 @@ void TTY::emit(u8 ch, bool do_evaluate_block_conditions)
     }
 
     m_input_buffer.enqueue(ch);
-    if (m_termios.c_lflag & ECHO)
-        echo_with_processing(ch);
+    if (m_termios.c_lflag & ECHO) {
+        if (auto success_or_error = echo_with_processing(ch); success_or_error.is_error())
+            return success_or_error;
+    }
 }
 
 bool TTY::can_do_backspace() const
@@ -280,17 +295,20 @@ bool TTY::can_do_backspace() const
     return false;
 }
 
-void TTY::do_backspace()
+KResult TTY::do_backspace()
 {
     if (can_do_backspace()) {
         m_input_buffer.dequeue_end();
-        // We deliberately don't process the output here.
-        echo(8);
-        echo(' ');
-        echo(8);
+        if (auto success_or_error = echo(8); success_or_error.is_error())
+            return success_or_error;
+        if (auto success_or_error = echo(' '); success_or_error.is_error())
+            return success_or_error;
+        if (auto success_or_error = echo(8); success_or_error.is_error())
+            return success_or_error;
 
         evaluate_block_conditions();
     }
+    return KSuccess;
 }
 
 // TODO: Currently, both erase_word() and kill_line work by sending
@@ -298,7 +316,7 @@ void TTY::do_backspace()
 // doesn't currently support VWERASE and VKILL. When these are
 // implemented we could just send a VKILL or VWERASE.
 
-void TTY::erase_word()
+KResult TTY::erase_word()
 {
     //Note: if we have leading whitespace before the word
     //we want to delete we have to also delete that.
@@ -312,10 +330,12 @@ void TTY::erase_word()
             first_char = true;
         m_input_buffer.dequeue_end();
         did_dequeue = true;
-        erase_character();
+        if (auto success_or_error = erase_character(); success_or_error.is_error())
+            return success_or_error;
     }
     if (did_dequeue)
         evaluate_block_conditions();
+    return KSuccess;
 }
 
 void TTY::kill_line()
@@ -330,12 +350,15 @@ void TTY::kill_line()
         evaluate_block_conditions();
 }
 
-void TTY::erase_character()
+KResult TTY::erase_character()
 {
-    // We deliberately don't process the output here.
-    echo(m_termios.c_cc[VERASE]);
-    echo(' ');
-    echo(m_termios.c_cc[VERASE]);
+    if (auto success_or_error = echo(m_termios.c_cc[VERASE]); success_or_error.is_error())
+        return success_or_error;
+    if (auto success_or_error = echo(' '); success_or_error.is_error())
+        return success_or_error;
+    if (auto success_or_error = echo(m_termios.c_cc[VERASE]); success_or_error.is_error())
+        return success_or_error;
+    return KSuccess;
 }
 
 void TTY::generate_signal(int signal)

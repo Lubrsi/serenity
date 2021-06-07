@@ -87,7 +87,7 @@ public:
     bool is_graphical() { return m_graphical; }
     void set_graphical(bool graphical);
 
-    void emit_char(char);
+    KResult emit_char(char);
 
 private:
     explicit VirtualConsole(const unsigned index);
@@ -96,9 +96,9 @@ private:
     virtual void on_key_pressed(KeyEvent) override;
 
     // ^TTY
-    virtual ssize_t on_tty_write(const UserOrKernelBuffer&, ssize_t) override;
+    virtual KResultOr<size_t> on_tty_write(const UserOrKernelBuffer&, size_t) override;
     virtual String const& tty_name() const override { return m_tty_name; }
-    virtual void echo(u8) override;
+    virtual KResult echo(u8) override;
 
     // ^TerminalClient
     virtual void beep() override;

@@ -53,7 +53,8 @@ KResultOr<size_t> MasterPTY::write(FileDescription&, u64, const UserOrKernelBuff
 {
     if (!m_slave)
         return EIO;
-    m_slave->on_master_write(buffer, size);
+    if (auto success_or_error = m_slave->on_master_write(buffer, size); success_or_error.is_error())
+        return success_or_error;
     return size;
 }
 
@@ -78,10 +79,10 @@ void MasterPTY::notify_slave_closed(Badge<SlavePTY>)
         m_slave = nullptr;
 }
 
-ssize_t MasterPTY::on_slave_write(const UserOrKernelBuffer& data, ssize_t size)
+KResultOr<size_t> MasterPTY::on_slave_write(const UserOrKernelBuffer& data, size_t size)
 {
     if (m_closed)
-        return -EIO;
+        return EIO;
     return m_buffer.write(data, size);
 }
 

@@ -36,26 +36,33 @@ String const& SlavePTY::tty_name() const
     return m_tty_name;
 }
 
-void SlavePTY::echo(u8 ch)
+KResult SlavePTY::echo(u8 ch)
 {
     if (should_echo_input()) {
         auto buffer = UserOrKernelBuffer::for_kernel_buffer(&ch);
-        m_master->on_slave_write(buffer, 1);
+        auto nwritten_or_error = m_master->on_slave_write(buffer, 1);
+        if (nwritten_or_error.is_error())
+            return nwritten_or_error.error();
     }
+    return KSuccess;
 }
 
-void SlavePTY::on_master_write(const UserOrKernelBuffer& buffer, ssize_t size)
+KResult SlavePTY::on_master_write(const UserOrKernelBuffer& buffer, size_t size)
 {
-    auto result = buffer.read_buffered<128>(size, [&](u8 const* data, size_t data_size) {
+    auto result = buffer.read_buffered<128>(size, [&](u8 const* data, size_t data_size) -> KResultOr<size_t> {
         for (size_t i = 0; i < data_size; ++i)
-            emit(data[i], false);
+            if (auto success_or_error = emit(data[i], false); success_or_error.is_error())
+                return success_or_error;
         return data_size;
     });
-    if (!result.is_error())
-        evaluate_block_conditions();
+    if (result.is_error())
+        return result.error();
+
+    evaluate_block_conditions();
+    return KSuccess;
 }
 
-ssize_t SlavePTY::on_tty_write(const UserOrKernelBuffer& data, ssize_t size)
+KResultOr<size_t> SlavePTY::on_tty_write(const UserOrKernelBuffer& data, size_t size)
 {
     m_time_of_last_write = kgettimeofday().to_truncated_seconds();
     return m_master->on_slave_write(data, size);

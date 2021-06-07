@@ -197,7 +197,10 @@ UNMAP_AFTER_INIT VirtualConsole::VirtualConsole(const unsigned index, const Circ
 {
     initialize();
     for (auto& ch : log) {
-        echo(ch);
+        auto success_or_error = echo(ch);
+        // FIXME: Since this is in a constructor, I'm not sure how to propagate this error.
+        //        Just check it doesn't fail for now.
+        VERIFY(!success_or_error.is_error());
     }
 }
 
@@ -271,11 +274,11 @@ void VirtualConsole::on_key_pressed(KeyEvent event)
     });
 }
 
-ssize_t VirtualConsole::on_tty_write(const UserOrKernelBuffer& data, ssize_t size)
+KResultOr<size_t> VirtualConsole::on_tty_write(const UserOrKernelBuffer& data, size_t size)
 {
     ScopedSpinLock global_lock(ConsoleManagement::the().tty_write_lock());
     ScopedSpinLock lock(m_lock);
-    auto result = data.read_buffered<512>((size_t)size, [&](u8 const* buffer, size_t buffer_bytes) {
+    auto result = data.read_buffered<512>(size, [&](u8 const* buffer, size_t buffer_bytes) {
         for (size_t i = 0; i < buffer_bytes; ++i)
             m_console_impl.on_input(buffer[i]);
         return buffer_bytes;
@@ -284,7 +287,7 @@ ssize_t VirtualConsole::on_tty_write(const UserOrKernelBuffer& data, ssize_t siz
         flush_dirty_lines();
     if (result.is_error())
         return result.error();
-    return (ssize_t)result.value();
+    return result.value();
 }
 
 void VirtualConsole::set_active(bool active)
@@ -303,9 +306,9 @@ void VirtualConsole::set_active(bool active)
     }
 }
 
-void VirtualConsole::emit_char(char ch)
+KResult VirtualConsole::emit_char(char ch)
 {
-    echo(ch);
+    return echo(ch);
 }
 
 void VirtualConsole::flush_dirty_lines()
@@ -365,8 +368,12 @@ void VirtualConsole::terminal_history_changed()
 
 void VirtualConsole::emit(const u8* data, size_t size)
 {
-    for (size_t i = 0; i < size; i++)
-        TTY::emit(data[i], true);
+    for (size_t i = 0; i < size; i++) {
+        auto success_or_error = TTY::emit(data[i], true);
+        // FIXME: This goes into LibVT, a userland library, so no clue what to do if KResult is an error here.
+        //        Just check it's not an error for now.
+        VERIFY(!success_or_error.is_error());
+    }
 }
 
 void VirtualConsole::set_cursor_style(VT::CursorStyle)
@@ -379,12 +386,15 @@ String VirtualConsole::device_name() const
     return String::formatted("tty{}", minor());
 }
 
-void VirtualConsole::echo(u8 ch)
+KResult VirtualConsole::echo(u8 ch)
 {
     if (should_echo_input()) {
         auto buffer = UserOrKernelBuffer::for_kernel_buffer(&ch);
-        on_tty_write(buffer, 1);
+        auto nwritten_or_error = on_tty_write(buffer, 1);
+        if (nwritten_or_error.is_error())
+            return nwritten_or_error.error();
     }
+    return KSuccess;
 }
 
 VirtualConsole::Cell& VirtualConsole::cell_at(size_t x, size_t y)
