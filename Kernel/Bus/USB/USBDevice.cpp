@@ -7,18 +7,20 @@
 #include <AK/OwnPtr.h>
 #include <AK/Types.h>
 #include <AK/Vector.h>
-#include <Kernel/Bus/USB/UHCIController.h>
+#include <AK/String.h>
+#include <Kernel/Bus/USB/USBController.h>
 #include <Kernel/Bus/USB/USBDescriptors.h>
 #include <Kernel/Bus/USB/USBDevice.h>
 #include <Kernel/Bus/USB/USBRequest.h>
+#include <Kernel/StdLib.h>
 
 static u32 s_next_usb_address = 1; // Next address we hand out to a device once it's plugged into the machine
 
 namespace Kernel::USB {
 
-KResultOr<NonnullRefPtr<Device>> Device::try_create(PortNumber port, DeviceSpeed speed)
+KResultOr<NonnullRefPtr<Device>> Device::try_create(NonnullRefPtr<USBController> controller, PortNumber port, DeviceSpeed speed)
 {
-    auto pipe_or_error = Pipe::try_create_pipe(Pipe::Type::Control, Pipe::Direction::Bidirectional, 0, 8, 0);
+    auto pipe_or_error = Pipe::try_create_pipe(controller, Pipe::Type::Control, Pipe::Direction::Bidirectional, 0, 8, 0);
     if (pipe_or_error.is_error())
         return pipe_or_error.error();
 

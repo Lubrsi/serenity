@@ -94,7 +94,7 @@ if (uname -a | grep -iq WSL) || (uname -a | grep -iq microsoft); then
 elif [ $SERENITY_SCREENS -gt 1 ] && "${SERENITY_QEMU_BIN}" --display help | grep -iq sdl; then
     SERENITY_QEMU_DISPLAY_BACKEND="${SERENITY_QEMU_DISPLAY_BACKEND:-sdl,gl=off}"
 elif ("${SERENITY_QEMU_BIN}" --display help | grep -iq sdl) && (ldconfig -p | grep -iq virglrenderer); then
-    SERENITY_QEMU_DISPLAY_BACKEND="${SERENITY_QEMU_DISPLAY_BACKEND:-sdl,gl=on}"
+    SERENITY_QEMU_DISPLAY_BACKEND="${SERENITY_QEMU_DISPLAY_BACKEND:-gtk,gl=off}"
 elif "${SERENITY_QEMU_BIN}" --display help | grep -iq cocoa; then
     # QEMU for OSX seems to only support cocoa
     SERENITY_QEMU_DISPLAY_BACKEND="${SERENITY_QEMU_DISPLAY_BACKEND:-cocoa,gl=off}"
@@ -137,6 +137,8 @@ $SERENITY_EXTRA_QEMU_ARGS
 -device i82801b11-bridge,bus=bridge1,id=bridge2 -device sdhci-pci,bus=bridge2
 -device i82801b11-bridge,id=bridge3 -device sdhci-pci,bus=bridge3
 -device ich9-ahci,bus=bridge3
+-device pci-ohci,bus=bridge3
+--trace \"usb_*\"
 "
 
 [ -z "$SERENITY_COMMON_QEMU_Q35_ARGS" ] && SERENITY_COMMON_QEMU_Q35_ARGS="

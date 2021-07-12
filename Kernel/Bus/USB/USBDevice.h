@@ -12,6 +12,8 @@
 
 namespace Kernel::USB {
 
+class USBController;
+
 //
 // Some nice info from FTDI on device enumeration and how some of this
 // glues together:
@@ -30,7 +32,7 @@ public:
     };
 
 public:
-    static KResultOr<NonnullRefPtr<Device>> try_create(PortNumber, DeviceSpeed);
+    static KResultOr<NonnullRefPtr<Device>> try_create(NonnullRefPtr<USBController>, PortNumber, DeviceSpeed);
 
     Device(PortNumber, DeviceSpeed, NonnullOwnPtr<Pipe> default_pipe);
     ~Device();

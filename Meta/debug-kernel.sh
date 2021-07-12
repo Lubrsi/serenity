@@ -20,7 +20,7 @@ exec $SERENITY_KERNEL_DEBUGGER \
     -ex "file $(dirname "$0")/../Build/${SERENITY_ARCH:-i686}/Kernel/$kernel_binary" \
     -ex "set arch $gdb_arch" \
     -ex 'target remote localhost:1234' \
-    -ex "source $(dirname "$0")/serenity_gdb.py" \
-    -ex "layout asm" \
+    #-ex "source $(dirname "$0")/serenity_gdb.py" \
+    #-ex "layout asm" \
     -ex "fs next" \
     "$@"
