@@ -94,6 +94,19 @@ struct [[gnu::packed]] USBEndpointDescriptor {
     u8 poll_interval_in_frames;
 };
 
+//
+//  Hub Descriptor
+//  ==============
+//
+struct [[gnu::packed]] USBHighSpeedHubDescriptor {
+    USBDescriptorCommon descriptor_header;
+    u8 number_of_downstream_ports;
+    u8 power_on_to_power_good_time;
+    u8 hub_controller_current;
+    // FIXME: DeviceRemovable (it's variable length up to 255 ports, but the drivers I looked at all assume a different max for this and don't use variable length)
+    // FIXME: PortPwrCtrlMask (it's variable length up to 255 ports, but the drivers I looked at all assume a different max for this and don't use variable length, and is deprecated)
+};
+
 static constexpr u8 DESCRIPTOR_TYPE_DEVICE = 0x01;
 static constexpr u8 DESCRIPTOR_TYPE_CONFIGURATION = 0x02;
 static constexpr u8 DESCRIPTOR_TYPE_STRING = 0x03;
