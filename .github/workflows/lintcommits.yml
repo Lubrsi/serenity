@@ -11,7 +11,7 @@ concurrency:
 jobs:
   lint_commits:
     runs-on: ubuntu-20.04
-    if: always() && github.repository == 'SerenityOS/serenity'
+    if: always()
 
     steps:
       - name: Get PR Commits
