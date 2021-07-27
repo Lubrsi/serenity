@@ -16,7 +16,7 @@ namespace GUI {
 
 ListView::ListView()
 {
-    set_fill_with_background_color(false);
+    set_fill_with_background_color(true);
     set_background_role(ColorRole::Base);
     set_foreground_role(ColorRole::BaseText);
 }
