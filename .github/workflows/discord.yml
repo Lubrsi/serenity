@@ -1,6 +1,9 @@
 name: Discord notifications
 
-on: [push, pull_request_target]
+on:
+  push:
+  pull_request_target:
+    types: [opened]
 
 concurrency:
   group: ${{ github.head_ref || format('{0}-{1}', github.ref, github.run_number) }}
