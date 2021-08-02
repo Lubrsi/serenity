@@ -80,6 +80,7 @@ private:
     bool spin_until_ready() const;
 
     bool identify_device(ScopedSpinLock<SpinLock<u8>>&);
+    bool read_atapi_capacity(ScopedSpinLock<SpinLock<u8>>&, OwnPtr<Region>&);
 
     ALWAYS_INLINE void start_command_list_processing() const;
     ALWAYS_INLINE void mark_command_header_ready_to_process(u8 command_header_index) const;

@@ -112,6 +112,7 @@ BlockBasedFileSystem::BlockBasedFileSystem(FileDescription& file_description)
 
 BlockBasedFileSystem::~BlockBasedFileSystem()
 {
+    dbgln("BBFSD has cache: {}", !!m_cache);
 }
 
 KResult BlockBasedFileSystem::write_block(BlockIndex index, const UserOrKernelBuffer& data, size_t count, size_t offset, bool allow_cache)
