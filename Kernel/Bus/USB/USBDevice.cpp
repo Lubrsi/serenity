@@ -26,7 +26,7 @@ KResultOr<NonnullRefPtr<Device>> Device::try_create(NonnullRefPtr<USBController>
     if (!device)
         return ENOMEM;
 
-    auto enumerate_result = device->enumerate();
+    auto enumerate_result = device->enumerate_device();
     if (enumerate_result.is_error())
         return enumerate_result;
 
@@ -42,35 +42,64 @@ Device::Device(NonnullRefPtr<USBController> controller, PortNumber port, DeviceS
 {
 }
 
-KResult Device::enumerate()
+Device::Device(NonnullRefPtr<USBController> controller, u8 address, PortNumber port, DeviceSpeed speed, NonnullOwnPtr<Pipe> default_pipe)
+    : m_device_port(port)
+    , m_device_speed(speed)
+    , m_address(address)
+    , m_controller(controller)
+    , m_default_pipe(move(default_pipe))
+{
+}
+
+Device::Device(Device const& device)
+{
+
+}
+
+KResult Device::enumerate_device()
 {
     USBDeviceDescriptor dev_descriptor {};
 
     // FIXME: 0x100 is a magic number for now, as I'm not quite sure how these are constructed....
     // Send 8-bytes to get at least the `max_packet_size` from the device
-    auto transfer_length_or_error = m_default_pipe->control_transfer(USB_DEVICE_REQUEST_DEVICE_TO_HOST, USB_REQUEST_GET_DESCRIPTOR, 0x100, 0, 8, &dev_descriptor);
+    auto transfer_length_or_error = m_default_pipe->control_transfer(USB_REQUEST_TRANSFER_DIRECTION_DEVICE_TO_HOST, USB_REQUEST_GET_DESCRIPTOR, (DESCRIPTOR_TYPE_DEVICE << 8), 0, 8, &dev_descriptor);
 
     if (transfer_length_or_error.is_error())
         return transfer_length_or_error.error();
 
     auto transfer_length = transfer_length_or_error.release_value();
 
-    // FIXME: This shouldn't crash! Do some correct error handling on me please!
-    VERIFY(transfer_length > 0);
+    if (transfer_length < 8) {
+        dbgln("USB Device: Not enough bytes for short device descriptor. Expected at least 8, got {}.", transfer_length);
+        return EIO;
+    }
+
+    if constexpr (USB_DEBUG) {
+        dbgln("USB Short Device Descriptor for {:04x}:{:04x}", dev_descriptor.vendor_id, dev_descriptor.product_id);
+        dbgln("Descriptor length: {}", dev_descriptor.descriptor_header.length);
+        dbgln("Descriptor type: {}", dev_descriptor.descriptor_header.descriptor_type);
+
+        dbgln("Device Class: {:02x}", dev_descriptor.device_class);
+        dbgln("Device Sub-Class: {:02x}", dev_descriptor.device_sub_class);
+        dbgln("Device Protocol: {:02x}", dev_descriptor.device_protocol);
+        dbgln("Max Packet Size: {:02x} bytes", dev_descriptor.max_packet_size);
+    }
 
     // Ensure that this is actually a valid device descriptor...
     VERIFY(dev_descriptor.descriptor_header.descriptor_type == DESCRIPTOR_TYPE_DEVICE);
     m_default_pipe->set_max_packet_size(dev_descriptor.max_packet_size);
 
-    transfer_length_or_error = m_default_pipe->control_transfer(USB_DEVICE_REQUEST_DEVICE_TO_HOST, USB_REQUEST_GET_DESCRIPTOR, 0x100, 0, sizeof(USBDeviceDescriptor), &dev_descriptor);
+    transfer_length_or_error = m_default_pipe->control_transfer(USB_REQUEST_TRANSFER_DIRECTION_DEVICE_TO_HOST, USB_REQUEST_GET_DESCRIPTOR, (DESCRIPTOR_TYPE_DEVICE << 8), 0, sizeof(USBDeviceDescriptor), &dev_descriptor);
 
     if (transfer_length_or_error.is_error())
         return transfer_length_or_error.error();
 
     transfer_length = transfer_length_or_error.release_value();
 
-    // FIXME: This shouldn't crash! Do some correct error handling on me please!
-    VERIFY(transfer_length > 0);
+    if (transfer_length < sizeof(USBDeviceDescriptor)) {
+        dbgln("USB Device: Unexpected device descriptor length. Expected {}, got {}.", sizeof(USBDeviceDescriptor), transfer_length);
+        return EIO;
+    }
 
     // Ensure that this is actually a valid device descriptor...
     VERIFY(dev_descriptor.descriptor_header.descriptor_type == DESCRIPTOR_TYPE_DEVICE);
@@ -84,17 +113,24 @@ KResult Device::enumerate()
         dbgln("Number of configurations: {:02x}", dev_descriptor.num_configurations);
     }
 
-    m_address = m_controller->allocate_address();
+    auto new_address = m_controller->allocate_address();
 
     // Attempt to set devices address on the bus
-    transfer_length_or_error = m_default_pipe->control_transfer(USB_DEVICE_REQUEST_HOST_TO_DEVICE, USB_REQUEST_SET_ADDRESS, m_address, 0, 0, nullptr);
+    transfer_length_or_error = m_default_pipe->control_transfer(USB_REQUEST_TRANSFER_DIRECTION_HOST_TO_DEVICE, USB_REQUEST_SET_ADDRESS, new_address, 0, 0, nullptr);
 
     if (transfer_length_or_error.is_error())
         return transfer_length_or_error.error();
 
-    transfer_length = transfer_length_or_error.release_value();
+    // This has to be set after we send out the "Set Address" request because it might be sent to the root hub,
+    // which uses this address to intercept requests to itself.
+    m_address = new_address;
+    m_default_pipe->set_device_address(new_address);
 
-    VERIFY(transfer_length > 0);
+    dbgln("USB Device: Set address to {}", m_address);
+
+//    transfer_length = transfer_length_or_error.release_value();
+//
+//    VERIFY(transfer_length > 0);
 
     memcpy(&m_device_descriptor, &dev_descriptor, sizeof(USBDeviceDescriptor));
     return KSuccess;

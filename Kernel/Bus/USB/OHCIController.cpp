@@ -56,7 +56,7 @@ bool OHCIController::initialize()
     dmesgln("OHCI: Required HCCA alignment: 0x{:08x}", alignment);
 
     // FIXME: allocate_contiguous_kernel_region only takes multiples of the PAGE_SIZE for the alignment.
-    m_host_controller_communication_area_region = MM.allocate_contiguous_kernel_region(page_round_up(sizeof(HostControllerCommunicationArea)), "OHCI Host Controller Communication Area", Region::Access::Read | Region::Access::Write, page_round_up(alignment), Region::Cacheable::No);
+    m_host_controller_communication_area_region = MM.allocate_contiguous_kernel_region(page_round_up(sizeof(HostControllerCommunicationArea)), "OHCI Host Controller Communication Area", Region::Access::Read | Region::Access::Write, Region::Cacheable::No);
     if (!m_host_controller_communication_area_region)
         return false;
 

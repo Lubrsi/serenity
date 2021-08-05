@@ -35,9 +35,10 @@ public:
     static KResultOr<NonnullRefPtr<Device>> try_create(NonnullRefPtr<USBController>, PortNumber, DeviceSpeed);
 
     Device(NonnullRefPtr<USBController>, PortNumber, DeviceSpeed, NonnullOwnPtr<Pipe> default_pipe);
-    ~Device();
+    Device(Device const&);
+    virtual ~Device();
 
-    KResult enumerate();
+    KResult enumerate_device();
 
     PortNumber port() const { return m_device_port; }
     DeviceSpeed speed() const { return m_device_speed; }
@@ -46,7 +47,12 @@ public:
 
     const USBDeviceDescriptor& device_descriptor() const { return m_device_descriptor; }
 
-private:
+    USBController& controller() { return *m_controller; }
+    USBController const& controller() const { return *m_controller; }
+
+protected:
+    Device(NonnullRefPtr<USBController> controller, u8 address, PortNumber port, DeviceSpeed speed, NonnullOwnPtr<Pipe> default_pipe);
+
     PortNumber m_device_port;   // What port is this device attached to
     DeviceSpeed m_device_speed; // What speed is this device running at
     u8 m_address { 0 };         // USB address assigned to this device

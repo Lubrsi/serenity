@@ -199,8 +199,7 @@ $SERENITY_AUDIO_HW
 -device i82801b11-bridge,bus=bridge1,id=bridge2 -device sdhci-pci,bus=bridge2
 -device i82801b11-bridge,id=bridge3 -device sdhci-pci,bus=bridge3
 -device ich9-ahci,bus=bridge3
--device pci-ohci,bus=bridge3
---trace \"usb_*\"
+-d trace:usb_uhci_mmio_*
 "
 
 if "${SERENITY_QEMU_BIN}" -chardev help | grep -iq spice; then
