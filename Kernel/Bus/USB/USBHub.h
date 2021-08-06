@@ -85,7 +85,7 @@ public:
     // Root Hub constructor
     Hub(NonnullRefPtr<USBController>, DeviceSpeed, NonnullOwnPtr<Pipe> default_pipe);
     Hub(Device const&, NonnullOwnPtr<Pipe> default_pipe);
-    virtual ~Hub() override = default;
+    virtual ~Hub() override;
 
     KResult enumerate_and_power_on_hub();
 
@@ -100,8 +100,7 @@ public:
 private:
     USBHubDescriptor m_hub_descriptor;
 
-    // FIXME: I wish this wasn't a vector.
-    NonnullRefPtrVector<Device> m_children;
+    Device::List m_children;
 };
 
 }

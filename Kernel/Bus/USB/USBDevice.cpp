@@ -51,31 +51,31 @@ Device::Device(NonnullRefPtr<USBController> controller, u8 address, PortNumber p
 {
 }
 
-Device::Device(Device const& device)
+Device::~Device()
 {
-
 }
 
 KResult Device::enumerate_device()
 {
     USBDeviceDescriptor dev_descriptor {};
 
-    // FIXME: 0x100 is a magic number for now, as I'm not quite sure how these are constructed....
     // Send 8-bytes to get at least the `max_packet_size` from the device
-    auto transfer_length_or_error = m_default_pipe->control_transfer(USB_REQUEST_TRANSFER_DIRECTION_DEVICE_TO_HOST, USB_REQUEST_GET_DESCRIPTOR, (DESCRIPTOR_TYPE_DEVICE << 8), 0, 8, &dev_descriptor);
+    constexpr u8 short_device_descriptor_length = 8;
+    auto transfer_length_or_error = m_default_pipe->control_transfer(USB_REQUEST_TRANSFER_DIRECTION_DEVICE_TO_HOST, USB_REQUEST_GET_DESCRIPTOR, (DESCRIPTOR_TYPE_DEVICE << 8), 0, short_device_descriptor_length, &dev_descriptor);
 
     if (transfer_length_or_error.is_error())
         return transfer_length_or_error.error();
 
     auto transfer_length = transfer_length_or_error.release_value();
 
+    // FIXME: This be "not equal to" instead of "less than", but control transfers report a higher transfer length than expected.
     if (transfer_length < 8) {
         dbgln("USB Device: Not enough bytes for short device descriptor. Expected at least 8, got {}.", transfer_length);
         return EIO;
     }
 
     if constexpr (USB_DEBUG) {
-        dbgln("USB Short Device Descriptor for {:04x}:{:04x}", dev_descriptor.vendor_id, dev_descriptor.product_id);
+        dbgln("USB Short Device Descriptor:");
         dbgln("Descriptor length: {}", dev_descriptor.descriptor_header.length);
         dbgln("Descriptor type: {}", dev_descriptor.descriptor_header.descriptor_type);
 
@@ -96,6 +96,7 @@ KResult Device::enumerate_device()
 
     transfer_length = transfer_length_or_error.release_value();
 
+    // FIXME: This be "not equal to" instead of "less than", but control transfers report a higher transfer length than expected.
     if (transfer_length < sizeof(USBDeviceDescriptor)) {
         dbgln("USB Device: Unexpected device descriptor length. Expected {}, got {}.", sizeof(USBDeviceDescriptor), transfer_length);
         return EIO;
@@ -121,23 +122,15 @@ KResult Device::enumerate_device()
     if (transfer_length_or_error.is_error())
         return transfer_length_or_error.error();
 
-    // This has to be set after we send out the "Set Address" request because it might be sent to the root hub,
-    // which uses this address to intercept requests to itself.
+    // This has to be set after we send out the "Set Address" request because it might be sent to the root hub.
+    // The root hub uses the address to intercept requests to itself.
     m_address = new_address;
     m_default_pipe->set_device_address(new_address);
 
     dbgln("USB Device: Set address to {}", m_address);
 
-//    transfer_length = transfer_length_or_error.release_value();
-//
-//    VERIFY(transfer_length > 0);
-
     memcpy(&m_device_descriptor, &dev_descriptor, sizeof(USBDeviceDescriptor));
     return KSuccess;
-}
-
-Device::~Device()
-{
 }
 
 }

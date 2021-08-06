@@ -57,18 +57,22 @@ Hub::Hub(Device const& device, NonnullOwnPtr<Pipe> default_pipe)
 {
 }
 
+Hub::~Hub()
+{
+    dbgln("Hub destroyed");
+}
+
 KResult Hub::enumerate_and_power_on_hub()
 {
     // USBDevice::enumerate_device must be called before this.
     VERIFY(m_address > 0);
 
-    dbgln("USB Hub: Enumerating and powering on for address {}", m_address);
+    if (m_device_descriptor.device_class != (u8)Class::Hub) {
+        dbgln("Not a hub :^(");
+        return EINVAL;
+    }
 
-    // FIXME
-//    if (m_device_descriptor.device_class != (u8)Class::Hub) {
-//        dbgln("Not a hub :^(");
-//        return EINVAL;
-//    }
+    dbgln("USB Hub: Enumerating and powering on for address {}", m_address);
 
     USBHubDescriptor descriptor {};
 
@@ -120,11 +124,11 @@ KResult Hub::get_port_status(u8 port, HubStatus& hub_status)
     if (transfer_length_or_error.is_error())
         return transfer_length_or_error.error();
 
-    // FIXME
-//    if (transfer_length_or_error.value() != sizeof(HubStatus)) {
-//        dbgln("USB Hub: Unexpected hub status size. Expected {}, got {}.", sizeof(HubStatus), transfer_length_or_error.value());
-//        return EIO;
-//    }
+    // FIXME: This be "not equal to" instead of "less than", but control transfers report a higher transfer length than expected.
+    if (transfer_length_or_error.value() < sizeof(HubStatus)) {
+        dbgln("USB Hub: Unexpected hub status size. Expected {}, got {}.", sizeof(HubStatus), transfer_length_or_error.value());
+        return EIO;
+    }
 
     return KSuccess;
 }
@@ -160,7 +164,7 @@ KResult Hub::set_port_feature(u8 port, HubFeatureSelector feature_selector)
 void Hub::check_for_port_updates()
 {
     for (u8 port_number = 1; port_number < m_hub_descriptor.number_of_downstream_ports + 1; ++port_number) {
-        dbgln("USB Hub: Checking for port updates on port {}...", port_number);
+        dbgln_if(USB_DEBUG, "USB Hub: Checking for port updates on port {}...", port_number);
 
         HubStatus port_status {};
         auto result = get_port_status(port_number, port_status);
@@ -170,14 +174,15 @@ void Hub::check_for_port_updates()
         }
 
         if (port_status.change & PORT_STATUS_CONNECT_STATUS_CHANGED) {
-            if (port_status.status & PORT_STATUS_CURRENT_CONNECT_STATUS) {
-                dbgln("USB Hub: New device attached to port {}!", port_number);
+            // Clear the connection status change notification.
+            result = clear_port_feature(port_number, HubFeatureSelector::C_PORT_CONNECTION);
+            if (result.is_error()) {
+                dbgln("USB Hub: Error occurred when clearing port connection change for port {}: {}.", port_number, result.error());
+                return;
+            }
 
-                result = clear_port_feature(port_number, HubFeatureSelector::C_PORT_CONNECTION);
-                if (result.is_error()) {
-                    dbgln("USB Hub: Error occurred when clearing port connection change for port {}: {}.", port_number, result.error());
-                    return;
-                }
+            if (port_status.status & PORT_STATUS_CURRENT_CONNECT_STATUS) {
+                dbgln("USB Hub: Device attached to port {}!", port_number);
 
                 // Debounce the port. USB 2.0 Specification Page 150
                 // Debounce interval is 100 ms (100000 us). USB 2.0 Specification Page 188 Table 7-14.
@@ -189,8 +194,9 @@ void Hub::check_for_port_updates()
 
                 u32 debounce_timer = 0;
 
+                dbgln_if(USB_DEBUG, "USB Hub: Debouncing...");
+
                 // FIXME: Timeout
-                dbgln("USB Hub: Debouncing...");
                 while (debounce_timer < debounce_interval) {
                     IO::delay(debounce_disconnect_check_interval);
                     debounce_timer += debounce_disconnect_check_interval;
@@ -204,7 +210,7 @@ void Hub::check_for_port_updates()
                     if (!(port_status.change & PORT_STATUS_CONNECT_STATUS_CHANGED))
                         continue;
 
-                    dbgln("USB Hub: Connect status changed while debouncing, resetting debounce timer.");
+                    dbgln_if(USB_DEBUG, "USB Hub: Connect status changed while debouncing, resetting debounce timer.");
                     debounce_timer = 0;
                     result = clear_port_feature(port_number, HubFeatureSelector::C_PORT_CONNECTION);
                     if (result.is_error()) {
@@ -214,7 +220,7 @@ void Hub::check_for_port_updates()
                 }
 
                 // Reset the port
-                dbgln("USB Hub: Driving reset...");
+                dbgln_if(USB_DEBUG, "USB Hub: Driving reset...");
                 result = set_port_feature(port_number, HubFeatureSelector::PORT_RESET);
                 if (result.is_error()) {
                     dbgln("USB Hub: Error occurred when resetting port {}: {}.", port_number, result.error());
@@ -223,8 +229,10 @@ void Hub::check_for_port_updates()
 
                 // FIXME: Timeout
                 for (;;) {
-                    // Wait at least 50 ms for the port to reset.
-                    IO::delay(50000);
+                    // Wait at least 10 ms for the port to reset.
+                    // This is T DRST in the USB 2.0 Specification Page 186 Table 7-13.
+                    constexpr u16 reset_delay = 10 * 1000;
+                    IO::delay(reset_delay);
 
                     result = get_port_status(port_number, port_status);
                     if (result.is_error()) {
@@ -243,10 +251,12 @@ void Hub::check_for_port_updates()
                     return;
                 }
 
-                // Wait at least 10 ms for the port to recover.
-                IO::delay(10000);
+                // Wait 10 ms for the port to recover.
+                // This is T RSTRCY in the USB 2.0 Specification Page 188 Table 7-14.
+                constexpr u16 reset_recovery_delay = 10 * 1000;
+                IO::delay(reset_recovery_delay);
 
-                dbgln("USB Hub: Reset complete!");
+                dbgln_if(USB_DEBUG, "USB Hub: Reset complete!");
 
                 result = get_port_status(port_number, port_status);
                 if (result.is_error()) {
@@ -264,9 +274,10 @@ void Hub::check_for_port_updates()
                     return;
                 }
 
-                dbgln("USB Hub: Created device!");
-
                 auto device = device_or_error.release_value();
+
+                dbgln_if(USB_DEBUG, "USB Hub: Created device with address {}!", device->address());
+
                 if (device->device_descriptor().device_class == (u8)Class::Hub) {
                     auto hub_or_error = Hub::try_create_from_device(*device);
                     if (hub_or_error.is_error()) {
@@ -274,8 +285,7 @@ void Hub::check_for_port_updates()
                         return;
                     }
 
-                    dbgln("USB Hub: Upgraded device to hub!");
-
+                    dbgln_if(USB_DEBUG, "USB Hub: Upgraded device at address {} to hub!");
 
                     m_children.append(hub_or_error.release_value());
                 } else {
@@ -284,15 +294,26 @@ void Hub::check_for_port_updates()
 
             } else {
                 dbgln("USB Hub: Device detached on port {}!", port_number);
+
+                Device* device_to_remove { nullptr };
+                for (auto& child : m_children) {
+                    // FIXME: This kinda sucks.
+                    if (port_number - 1 == (u8)child.port()) {
+                        device_to_remove = &child;
+                        break;
+                    }
+                }
+
+                if (device_to_remove)
+                    m_children.remove(*device_to_remove);
             }
         }
     }
 
     for (auto& child : m_children) {
-        dbgln("USB Hub: Looking at child with class {}", child.device_descriptor().device_class);
         if (child.device_descriptor().device_class == (u8)Class::Hub) {
             auto& hub_child = static_cast<Hub&>(child);
-            dbgln("USB Hub: Checking for porting updates on child hub...");
+            dbgln_if(USB_DEBUG, "USB Hub: Checking for porting updates on child hub at address {}...", child.address());
             hub_child.check_for_port_updates();
         }
     }

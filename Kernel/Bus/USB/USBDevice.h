@@ -35,7 +35,6 @@ public:
     static KResultOr<NonnullRefPtr<Device>> try_create(NonnullRefPtr<USBController>, PortNumber, DeviceSpeed);
 
     Device(NonnullRefPtr<USBController>, PortNumber, DeviceSpeed, NonnullOwnPtr<Pipe> default_pipe);
-    Device(Device const&);
     virtual ~Device();
 
     KResult enumerate_device();
@@ -64,5 +63,11 @@ protected:
 
     NonnullRefPtr<USBController> m_controller;
     NonnullOwnPtr<Pipe> m_default_pipe; // Default communication pipe (endpoint0) used during enumeration
+
+private:
+    IntrusiveListNode<Device, NonnullRefPtr<Device>> m_hub_child_node;
+
+public:
+    using List = IntrusiveList<Device, NonnullRefPtr<Device>, &Device::m_hub_child_node>;
 };
 }

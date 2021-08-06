@@ -28,38 +28,38 @@ static USBDeviceDescriptor uhci_root_hub_device_descriptor = {
     1, // One configuration descriptor
 };
 
-//static USBConfigurationDescriptor uhci_root_hub_configuration_descriptor = {
-//    sizeof(USBConfigurationDescriptor), // 9 bytes long
-//    DESCRIPTOR_TYPE_CONFIGURATION,
-//    sizeof(USBConfigurationDescriptor) + sizeof(USBInterfaceDescriptor) + sizeof(USBEndpointDescriptor) + sizeof(USBHubDescriptor), // Combined length of configuration, interface, endpoint and hub descriptors.
-//    1, // One interface descriptor
-//    1, // Configuration #1
-//    0, // Index of configuration string. FIXME: There is currently no support for string descriptors.
-//    (1 << 7) | (1 << 6), // Bit 6 is set to indicate that the root hub is self powered. Bit 7 must always be 1.
-//    0, // 0 mA required from the bus (self-powered)
-//};
-//
-//static USBInterfaceDescriptor uhci_root_hub_interface_descriptor = {
-//    sizeof(USBInterfaceDescriptor), // 9 bytes long
-//    DESCRIPTOR_TYPE_INTERFACE,
-//    0, // Interface #0
-//    0, // Alternate setting
-//    1, // One endpoint
-//    (u8)Class::Hub,
-//    0, // Hubs use subclass 0
-//    0, // Full Speed Hub
-//    0, // Index of interface string. FIXME: There is currently no support for string descriptors
-//};
-//
-//static USBEndpointDescriptor uhci_root_hub_endpoint_descriptor = {
-//    sizeof(USBEndpointDescriptor), // 7 bytes long
-//    DESCRIPTOR_TYPE_ENDPOINT,
-//    USBEndpoint::ENDPOINT_ADDRESS_DIRECTION_IN | 1, // IN Endpoint #1
-//    USBEndpoint::ENDPOINT_ATTRIBUTES_TRANSFER_TYPE_INTERRUPT, // Interrupt endpoint
-//    2, // Max Packet Size FIXME: I'm not sure what this is supposed to be as it is implementation defined. 2 is the number of bytes Get Port Status returns.
-//    0xFF, // Max possible interval
-//};
-//
+static USBConfigurationDescriptor uhci_root_hub_configuration_descriptor = {
+    sizeof(USBConfigurationDescriptor), // 9 bytes long
+    DESCRIPTOR_TYPE_CONFIGURATION,
+    sizeof(USBConfigurationDescriptor) + sizeof(USBInterfaceDescriptor) + sizeof(USBEndpointDescriptor) + sizeof(USBHubDescriptor), // Combined length of configuration, interface, endpoint and hub descriptors.
+    1, // One interface descriptor
+    1, // Configuration #1
+    0, // Index of configuration string. FIXME: There is currently no support for string descriptors.
+    (1 << 7) | (1 << 6), // Bit 6 is set to indicate that the root hub is self powered. Bit 7 must always be 1.
+    0, // 0 mA required from the bus (self-powered)
+};
+
+static USBInterfaceDescriptor uhci_root_hub_interface_descriptor = {
+    sizeof(USBInterfaceDescriptor), // 9 bytes long
+    DESCRIPTOR_TYPE_INTERFACE,
+    0, // Interface #0
+    0, // Alternate setting
+    1, // One endpoint
+    (u8)Class::Hub,
+    0, // Hubs use subclass 0
+    0, // Full Speed Hub
+    0, // Index of interface string. FIXME: There is currently no support for string descriptors
+};
+
+static USBEndpointDescriptor uhci_root_hub_endpoint_descriptor = {
+    sizeof(USBEndpointDescriptor), // 7 bytes long
+    DESCRIPTOR_TYPE_ENDPOINT,
+    USBEndpoint::ENDPOINT_ADDRESS_DIRECTION_IN | 1, // IN Endpoint #1
+    USBEndpoint::ENDPOINT_ATTRIBUTES_TRANSFER_TYPE_INTERRUPT, // Interrupt endpoint
+    2, // Max Packet Size FIXME: I'm not sure what this is supposed to be as it is implementation defined. 2 is the number of bytes Get Port Status returns.
+    0xFF, // Max possible interval
+};
+
 // FIXME: The UHCI specification gives us nothing for this, so this is made up.
 static USBHubDescriptor uhci_root_hub_hub_descriptor = {
     sizeof(USBHubDescriptor),
@@ -152,19 +152,33 @@ KResultOr<size_t> UHCIRootHub::handle_control_transfer(Transfer& transfer)
             VERIFY(length <= sizeof(USBDeviceDescriptor));
             memcpy(request_data, (void*)&uhci_root_hub_device_descriptor, length);
             break;
+        case DESCRIPTOR_TYPE_CONFIGURATION:
+            length = min(transfer.transfer_data_size(), sizeof(USBConfigurationDescriptor));
+            VERIFY(length <= sizeof(USBConfigurationDescriptor));
+            memcpy(request_data, (void*)&uhci_root_hub_configuration_descriptor, length);
+            break;
+        case DESCRIPTOR_TYPE_INTERFACE:
+            length = min(transfer.transfer_data_size(), sizeof(USBInterfaceDescriptor));
+            VERIFY(length <= sizeof(USBInterfaceDescriptor));
+            memcpy(request_data, (void*)&uhci_root_hub_interface_descriptor, length);
+            break;
+        case DESCRIPTOR_TYPE_ENDPOINT:
+            length = min(transfer.transfer_data_size(), sizeof(USBEndpointDescriptor));
+            VERIFY(length <= sizeof(USBEndpointDescriptor));
+            memcpy(request_data, (void*)&uhci_root_hub_endpoint_descriptor, length);
+            break;
         case DESCRIPTOR_TYPE_HUB:
             length = min(transfer.transfer_data_size(), sizeof(USBHubDescriptor));
             VERIFY(length <= sizeof(USBHubDescriptor));
             memcpy(request_data, (void*)&uhci_root_hub_hub_descriptor, length);
             break;
         default:
-            TODO();
             return EINVAL;
         }
         break;
     }
     case USB_REQUEST_SET_ADDRESS:
-        dbgln_if(UHCI_DEBUG, "UHCIRootHub: Attempt to set address to {}", request.value);
+        dbgln_if(UHCI_DEBUG, "UHCIRootHub: Attempt to set address to {}, ignoring.", request.value);
         // FIXME: No magic values pls. (This is the max amount of addresses allowed on USB)
         if (request.value >= 128)
             return EINVAL;

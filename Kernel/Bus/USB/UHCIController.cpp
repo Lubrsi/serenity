@@ -62,7 +62,7 @@ static constexpr u16 UHCI_PORTSC_RESUME_DETECT = 0x40;
 static constexpr u16 UHCI_PORTSC_LOW_SPEED_DEVICE = 0x0100;
 static constexpr u16 UHCI_PORTSC_PORT_RESET = 0x0200;
 static constexpr u16 UHCI_PORTSC_SUSPEND = 0x1000;
-static constexpr u16 UCHI_PORTSC_NON_WRITE_CLEAR_BIT_MASK = 1; // This is used to mask out the Write Clear bits making sure we don't accidentally clear them.
+static constexpr u16 UCHI_PORTSC_NON_WRITE_CLEAR_BIT_MASK = 0x1FF5; // This is used to mask out the Write Clear bits making sure we don't accidentally clear them.
 
 // *BSD and a few other drivers seem to use this number
 static constexpr u8 UHCI_NUMBER_OF_ISOCHRONOUS_TDS = 128;
@@ -689,12 +689,14 @@ size_t UHCIController::poll_transfer_queue(QueueHead& transfer_queue)
         }
 
         transfer_size += descriptor->actual_packet_length();
+        dbgln("UHCI: Adding {} to current transfer size of {}.", descriptor->actual_packet_length(), transfer_size);
         descriptor = descriptor->next_td();
     }
 
     if (!transfer_still_in_progress)
         transfer->set_complete();
 
+    dbgln("UHCI: Returning transfer size of {}.", transfer_size);
     return transfer_size;
 }
 
@@ -868,6 +870,7 @@ void UHCIController::reset_port(u8 port)
     VERIFY(port < NUMBER_OF_ROOT_PORTS);
 
     u16 port_data = port == 0 ? read_portsc1() : read_portsc2();
+    port_data &= UCHI_PORTSC_NON_WRITE_CLEAR_BIT_MASK;
     port_data |= UHCI_PORTSC_PORT_RESET;
     if (port == 0)
         write_portsc1(port_data);
@@ -875,8 +878,9 @@ void UHCIController::reset_port(u8 port)
         write_portsc2(port_data);
 
     // Wait at least 50 ms for the port to reset.
-    // NOTE: This doesn't have to be a continuous 50ms, but for simplicity we do it continuously. See sections 7.1.7.5 and 10.2.8.1 of the USB 2.0 spec.
-    IO::delay(50000);
+    // This is T DRSTR in the USB 2.0 Specification Page 186 Table 7-13.
+    constexpr u16 reset_delay = 50 * 1000;
+    IO::delay(reset_delay);
 
     port_data &= ~UHCI_PORTSC_PORT_RESET;
     if (port == 0)
@@ -884,8 +888,10 @@ void UHCIController::reset_port(u8 port)
     else
         write_portsc2(port_data);
 
-    // Wait at least 10 ms for the port to recover.
-    IO::delay(10000);
+    // Wait 10 ms for the port to recover.
+    // This is T RSTRCY in the USB 2.0 Specification Page 188 Table 7-14.
+    constexpr u16 reset_recovery_delay = 10 * 1000;
+    IO::delay(reset_recovery_delay);
 
     port_data = port == 0 ? read_portsc1() : read_portsc2();
     port_data |= UHCI_PORTSC_PORT_ENABLED;
@@ -914,6 +920,7 @@ KResult UHCIController::set_port_feature(Badge<UHCIRootHub>, u8 port, HubFeature
         break;
     case HubFeatureSelector::PORT_SUSPEND: {
         u16 port_data = port == 0 ? read_portsc1() : read_portsc2();
+        port_data &= UCHI_PORTSC_NON_WRITE_CLEAR_BIT_MASK;
         port_data |= UHCI_PORTSC_SUSPEND;
 
         if (port == 0)
@@ -940,6 +947,7 @@ KResult UHCIController::clear_port_feature(Badge<UHCIRootHub>, u8 port, HubFeatu
     dbgln("UHCI: clear_port_feature: port={} feature_selector={}", port, (u8)feature_selector);
 
     u16 port_data = port == 0 ? read_portsc1() : read_portsc2();
+    port_data &= UCHI_PORTSC_NON_WRITE_CLEAR_BIT_MASK;
 
     switch (feature_selector) {
     case HubFeatureSelector::PORT_ENABLE:
