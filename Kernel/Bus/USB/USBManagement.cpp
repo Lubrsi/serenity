@@ -6,6 +6,7 @@
 
 #include <AK/Singleton.h>
 #include <Kernel/Bus/PCI/Access.h>
+#include <Kernel/Bus/USB/SysFSUSB.h>
 #include <Kernel/Bus/USB/UHCIController.h>
 #include <Kernel/Bus/USB/USBManagement.h>
 #include <Kernel/CommandLine.h>
@@ -64,6 +65,8 @@ bool USBManagement::initialized()
 
 UNMAP_AFTER_INIT void USBManagement::initialize()
 {
+    // FIXME: This probably shouldn't be done here.
+    USB::SysFSUSBBusDirectory::initialize();
     s_the.ensure_instance();
 }
 
