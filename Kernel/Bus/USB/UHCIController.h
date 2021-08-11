@@ -42,9 +42,6 @@ public:
 
     virtual KResultOr<size_t> submit_control_transfer(Transfer& transfer) override;
 
-    virtual RefPtr<USB::Device> const get_device_at_port(USB::Device::PortNumber) override;
-    virtual RefPtr<USB::Device> const get_device_from_address(u8 device_address) override;
-
     void get_port_status(Badge<UHCIRootHub>, u8, HubStatus&);
     KResult set_port_feature(Badge<UHCIRootHub>, u8, HubFeatureSelector);
     KResult clear_port_feature(Badge<UHCIRootHub>, u8, HubFeatureSelector);
