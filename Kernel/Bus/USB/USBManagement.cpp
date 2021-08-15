@@ -6,6 +6,7 @@
 
 #include <AK/Singleton.h>
 #include <Kernel/Bus/PCI/Access.h>
+#include <Kernel/Bus/USB/OHCIController.h>
 #include <Kernel/Bus/USB/SysFSUSB.h>
 #include <Kernel/Bus/USB/UHCI/UHCIController.h>
 #include <Kernel/Bus/USB/USBManagement.h>
@@ -41,7 +42,12 @@ UNMAP_AFTER_INIT void USBManagement::enumerate_controllers()
         }
 
         if (PCI::get_programming_interface(address) == 0x10) {
-            dmesgln("USBManagement: OHCI controller found at {} is not currently supported.", address);
+            if (kernel_command_line().disable_ohci_controller())
+                return;
+
+            if (auto ohci_controller_or_error = OHCIController::try_to_initialize(address); !ohci_controller_or_error.is_error())
+                m_controllers.append(ohci_controller_or_error.release_value());
+
             return;
         }
 

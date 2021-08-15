@@ -108,6 +108,18 @@ struct [[gnu::packed]] USBHubDescriptor {
     // NOTE: This does not contain DeviceRemovable or PortPwrCtrlMask because a struct cannot have two VLAs in a row.
 };
 
+static constexpr u16 HUB_CHARACTERISTIC_GANGED_POWER_SWITCHING = (0b00 << 0);
+static constexpr u16 HUB_CHARACTERISTIC_INDIVIDUAL_PORT_POWER_SWITCHING = (0b01 << 0);
+static constexpr u16 HUB_CHARACTERISTIC_COMPOUND_DEVICE = (1 << 2);
+static constexpr u16 HUB_CHARACTERISTIC_GLOBAL_OVER_CURRENT_PROTECTION = (0b00 << 3);
+static constexpr u16 HUB_CHARACTERISTIC_INDIVIDUAL_PORT_OVER_CURRENT_PROTECTION = (0b01 << 3);
+static constexpr u16 HUB_CHARACTERISTIC_NO_OVER_CURRENT_PROTECTION = (0b10 << 3);
+static constexpr u16 HUB_CHARACTERISTIC_TT_8_FS_BIT_TIMES = (0b00 << 5);
+static constexpr u16 HUB_CHARACTERISTIC_TT_16_FS_BIT_TIMES = (0b01 << 5);
+static constexpr u16 HUB_CHARACTERISTIC_TT_24_FS_BIT_TIMES = (0b10 << 5);
+static constexpr u16 HUB_CHARACTERISTIC_TT_32_FS_BIT_TIMES = (0b11 << 5);
+static constexpr u16 HUB_CHARACTERISTIC_PORT_INDICATORS_SUPPORTED = (0b01 << 7);
+
 static constexpr u8 DESCRIPTOR_TYPE_DEVICE = 0x01;
 static constexpr u8 DESCRIPTOR_TYPE_CONFIGURATION = 0x02;
 static constexpr u8 DESCRIPTOR_TYPE_STRING = 0x03;

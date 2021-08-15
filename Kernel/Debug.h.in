@@ -202,6 +202,10 @@
 #cmakedefine01 OFFD_DEBUG
 #endif
 
+#ifndef OHCI_DEBUG
+#cmakedefine01 OHCI_DEBUG
+#endif
+
 #ifndef PAGE_FAULT_DEBUG
 #cmakedefine01 PAGE_FAULT_DEBUG
 #endif

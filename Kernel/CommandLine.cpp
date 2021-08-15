@@ -172,6 +172,11 @@ UNMAP_AFTER_INIT bool CommandLine::disable_physical_storage() const
     return contains("disable_physical_storage"sv);
 }
 
+UNMAP_AFTER_INIT bool CommandLine::disable_ohci_controller() const
+{
+    return contains("disable_ohci_controller"sv);
+}
+
 UNMAP_AFTER_INIT bool CommandLine::disable_uhci_controller() const
 {
     return contains("disable_uhci_controller"sv);

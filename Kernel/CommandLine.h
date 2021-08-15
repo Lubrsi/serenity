@@ -72,6 +72,7 @@ public:
     [[nodiscard]] HPETMode hpet_mode() const;
     [[nodiscard]] bool disable_physical_storage() const;
     [[nodiscard]] bool disable_ps2_controller() const;
+    [[nodiscard]] bool disable_ohci_controller() const;
     [[nodiscard]] bool disable_uhci_controller() const;
     [[nodiscard]] bool disable_usb() const;
     [[nodiscard]] bool disable_virtio() const;
