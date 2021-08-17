@@ -9,6 +9,7 @@
 #include <Kernel/IO.h>
 #include <Kernel/Memory/AnonymousVMObject.h>
 #include <Kernel/Multiboot.h>
+#include <Kernel/Net/Am79C970NetworkAdapter.h>
 #include <Kernel/Net/E1000ENetworkAdapter.h>
 #include <Kernel/Net/E1000NetworkAdapter.h>
 #include <Kernel/Net/LoopbackAdapter.h>
@@ -83,6 +84,8 @@ UNMAP_AFTER_INIT RefPtr<NetworkAdapter> NetworkingManagement::determine_network_
     if (auto candidate = RTL8168NetworkAdapter::try_to_initialize(address); !candidate.is_null())
         return candidate;
     if (auto candidate = NE2000NetworkAdapter::try_to_initialize(address); !candidate.is_null())
+        return candidate;
+    if (auto candidate = Am79C970NetworkAdapter::try_to_initialize(address); !candidate.is_null())
         return candidate;
     return {};
 }

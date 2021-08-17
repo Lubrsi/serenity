@@ -6,6 +6,10 @@
 
 #pragma once
 
+#ifndef AM79C970_DEBUG
+#cmakedefine01 AM79C970_DEBUG
+#endif
+
 #ifndef ACPI_DEBUG
 #cmakedefine01 ACPI_DEBUG
 #endif

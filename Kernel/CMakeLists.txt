@@ -161,6 +161,7 @@ set(KERNEL_SOURCES
     Memory/VirtualRangeAllocator.cpp
     MiniStdLib.cpp
     Locking/Mutex.cpp
+    Net/Am79C970NetworkAdapter.cpp
     Net/E1000ENetworkAdapter.cpp
     Net/E1000NetworkAdapter.cpp
     Net/IPv4Socket.cpp
