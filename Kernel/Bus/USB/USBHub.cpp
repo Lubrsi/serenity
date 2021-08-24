@@ -13,13 +13,13 @@
 
 namespace Kernel::USB {
 
-KResultOr<NonnullRefPtr<Hub>> Hub::try_create_root_hub(NonnullRefPtr<USBController> controller, DeviceSpeed device_speed)
+KResultOr<NonnullRefPtr<Hub>> Hub::try_create_root_hub(NonnullRefPtr<USBController> controller, Pipe::DeviceSpeed device_speed)
 {
-    auto pipe_or_error = Pipe::try_create_pipe(controller, Pipe::Type::Control, Pipe::Direction::Bidirectional, 0, 8, 0);
+    auto pipe_or_error = Pipe::try_create_pipe(controller, Pipe::Type::Control, Pipe::Direction::Bidirectional, device_speed, 0, 8, 0);
     if (pipe_or_error.is_error())
         return pipe_or_error.error();
 
-    auto hub = AK::try_create<Hub>(controller, device_speed, pipe_or_error.release_value());
+    auto hub = AK::try_create<Hub>(controller, pipe_or_error.release_value());
     if (!hub)
         return ENOMEM;
 
@@ -30,7 +30,7 @@ KResultOr<NonnullRefPtr<Hub>> Hub::try_create_root_hub(NonnullRefPtr<USBControll
 
 KResultOr<NonnullRefPtr<Hub>> Hub::try_create_from_device(Device const& device)
 {
-    auto pipe_or_error = Pipe::try_create_pipe(device.controller(), Pipe::Type::Control, Pipe::Direction::Bidirectional, 0, device.device_descriptor().max_packet_size, device.address());
+    auto pipe_or_error = Pipe::try_create_pipe(device.controller(), Pipe::Type::Control, Pipe::Direction::Bidirectional, device.default_pipe().device_speed(), 0, device.device_descriptor().max_packet_size, device.address());
     if (pipe_or_error.is_error())
         return pipe_or_error.error();
 
@@ -45,8 +45,8 @@ KResultOr<NonnullRefPtr<Hub>> Hub::try_create_from_device(Device const& device)
     return hub.release_nonnull();
 }
 
-Hub::Hub(NonnullRefPtr<USBController> controller, DeviceSpeed device_speed, NonnullOwnPtr<Pipe> default_pipe)
-    : Device(move(controller), 1 /* Port 1 */, device_speed, move(default_pipe))
+Hub::Hub(NonnullRefPtr<USBController> controller, NonnullOwnPtr<Pipe> default_pipe)
+    : Device(move(controller), 1 /* Port 1 */, move(default_pipe))
 {
 }
 
@@ -265,7 +265,7 @@ void Hub::check_for_port_updates()
                 }
 
                 // FIXME: Check for high speed.
-                auto speed = port_status.status & PORT_STATUS_LOW_SPEED_DEVICE_ATTACHED ? USB::Device::DeviceSpeed::LowSpeed : USB::Device::DeviceSpeed::FullSpeed;
+                auto speed = port_status.status & PORT_STATUS_LOW_SPEED_DEVICE_ATTACHED ? Pipe::DeviceSpeed::LowSpeed : Pipe::DeviceSpeed::FullSpeed;
 
                 auto device_or_error = USB::Device::try_create(m_controller, port_number, speed);
                 if (device_or_error.is_error()) {

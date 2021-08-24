@@ -14,16 +14,20 @@ namespace Kernel::USB {
 static constexpr u32 HC_REVISION_REVISION = 0xFF;
 
 /* == Control register == */
-// This determines the ratio of control endpoint descriptors over bulk endpoint descriptors.
-static constexpr u32 HC_CONTROL_CONTROL_BULK_SERVICE_RATIO_ONE_TO_ONE = 0b00;
-static constexpr u32 HC_CONTROL_CONTROL_BULK_SERVICE_RATIO_TWO_TO_ONE = 0b01;
-static constexpr u32 HC_CONTROL_CONTROL_BULK_SERVICE_RATIO_THREE_TO_ONE = 0b10;
-static constexpr u32 HC_CONTROL_CONTROL_BULK_SERVICE_RATIO_FOUR_TO_ONE = 0b11;
+// For each bulk endpoint processed, the controller will process N control endpoints specified by this field.
+// This does not include skipped/halted endpoints.
+// This is because the USB specification says control transfers must be given preference over bulk transfers.
+static constexpr u32 HC_CONTROL_CONTROL_BULK_SERVICE_RATIO_ONE_TO_ONE = (0b00 << 0);
+static constexpr u32 HC_CONTROL_CONTROL_BULK_SERVICE_RATIO_TWO_TO_ONE = (0b01 << 0);
+static constexpr u32 HC_CONTROL_CONTROL_BULK_SERVICE_RATIO_THREE_TO_ONE = (0b10 << 0);
+static constexpr u32 HC_CONTROL_CONTROL_BULK_SERVICE_RATIO_FOUR_TO_ONE = (0b11 << 0);
+static constexpr u32 HC_CONTROL_CONTROL_BULK_SERVICE_RATIO_MASK = (0b11 << 0);
 
 static constexpr u32 HC_CONTROL_PERIODIC_LIST_ENABLE = (1 << 2);
 static constexpr u32 HC_CONTROL_ISOCHRONOUS_ENABLE = (1 << 3);
 static constexpr u32 HC_CONTROL_CONTROL_LIST_ENABLE = (1 << 4);
 static constexpr u32 HC_CONTROL_BULK_LIST_ENABLE = (1 << 5);
+static constexpr u32 HC_CONTROL_ENABLE_MASK = HC_CONTROL_PERIODIC_LIST_ENABLE | HC_CONTROL_ISOCHRONOUS_ENABLE | HC_CONTROL_CONTROL_LIST_ENABLE | HC_CONTROL_BULK_LIST_ENABLE;
 
 static constexpr u32 HC_CONTROL_HOST_CONTROLLER_FUNCTIONAL_STATE_USB_RESET = (0b00 << 6);
 static constexpr u32 HC_CONTROL_HOST_CONTROLLER_FUNCTIONAL_STATE_USB_RESUME = (0b01 << 6);
@@ -117,7 +121,7 @@ static constexpr u32 HC_ROOT_DESCRIPTOR_A_OVER_CURRENT_PROTECTION_TYPE = (1 << 1
 static constexpr u32 HC_ROOT_DESCRIPTOR_A_NO_OVER_CURRENT_PROTECTION = (1 << 12);
 
 // Returns the amount of time to wait before accessing a port after powering it on in units of 2 milliseconds.
-static constexpr u32 HC_ROOT_DESCRIPTOR_A_POWER_ON_TO_POWER_GOOD_TIME = (1 << 24);
+static constexpr u32 HC_ROOT_DESCRIPTOR_A_POWER_ON_TO_POWER_GOOD_TIME = (0xFFUL << 24);
 
 /* == Root Hub Descriptor B register == */
 
@@ -270,7 +274,7 @@ struct [[gnu::packed]] OperationalRegisters {
     volatile u32 last_completed_transfer_descriptor_physical_address; // NOTE: Cannot be written to.
     volatile u32 hc_frame_interval;
     volatile u32 hc_frame_remaining; // NOTE: Cannot be written to.
-    volatile u32 hc_frame_number; // NOTE: Cannot be written to.
+    volatile u32 hc_frame_number;    // NOTE: Cannot be written to.
     volatile u32 hc_periodic_start;
     volatile u32 hc_low_speed_threshold;
     volatile u32 hc_root_hub_descriptor_a;
@@ -280,7 +284,7 @@ struct [[gnu::packed]] OperationalRegisters {
     // NOTE: This is bounded by HC_ROOT_DESCRIPTOR_A_NUMBER_OF_DOWNSTREAM_PORTS.
     volatile u32 hc_root_hub_port_status[];
 };
-static_assert(sizeof(OperationalRegisters) == 0x54);
+static_assert(sizeof(OperationalRegisters) == 84);
 
 struct [[gnu::packed]] HostControllerCommunicationArea {
     volatile u32 endpoint_descriptor_interrupt_table[32];
@@ -294,39 +298,22 @@ struct [[gnu::packed]] HostControllerCommunicationArea {
 };
 static_assert(sizeof(HostControllerCommunicationArea) == 256);
 
-// OHCI Endpoint Descriptors are essentially us telling the controller about pipes we have set up and the transfer descriptors associated with them.
-// OHCI Specification Section 4.2
-struct alignas(16) [[gnu::packed]] OHCIEndpointDescriptor {
-    // Contains a bunch of fields describing the endpoint. See the defined fields below this struct.
-    volatile u32 control;
-
-    // Points to the last TD to process. If the head and tail are the same, there are no TDs left in the queue.
-    // NOTE: Must be 16 byte aligned.
-    volatile u32 transfer_descriptor_tail_physical_address;
-
-    // Points to the next TD to process. On retirement of a TD, the controller changes this field to the next TD automatically.
-    // NOTE: Must be 16 byte aligned. It also contains 2 flags in the bottom 2 bits.
-    volatile u32 transfer_descriptor_head_physical_address;
-
-    // Points to the next endpoint descriptor. If 0, there is no next endpoint descriptor.
-    // NOTE: Must be 16 byte aligned.
-    volatile u32 next_endpoint_descriptor_physical_address;
-};
-static_assert(sizeof(OHCIEndpointDescriptor) == 16);
-
 // The USB address associated with this endpoint descriptor. It is 7 bits long.
 // NOTE: This value is how many bits you have to shift by in the control value in OHCIEndpointDescriptor.
 static constexpr u32 ED_CONTROL_FUNCTION_ADDRESS = 0;
+static constexpr u32 ED_CONTROL_FUNCTION_ADDRESS_MASK = (0x7F << ED_CONTROL_FUNCTION_ADDRESS);
 
 // The endpoint number within the given function address. It is 4 bits long.
 // NOTE: This value is how many bits you have to shift by in the control value in OHCIEndpointDescriptor.
 static constexpr u32 ED_CONTROL_ENDPOINT_NUMBER = 7;
+static constexpr u32 ED_CONTROL_ENDPOINT_NUMBER_MASK = (0xF << ED_CONTROL_ENDPOINT_NUMBER);
 
 static constexpr u32 ED_CONTROL_DIRECTION_IN = (0b01 << 11);
 static constexpr u32 ED_CONTROL_DIRECTION_OUT = (0b10 << 11);
 
 // NOTE: 0b00 in this field is the same as 0b11.
 static constexpr u32 ED_CONTROL_DIRECTION_GET_FROM_TRANSFER_DESCRIPTOR = (0b11 << 11);
+static constexpr u32 ED_CONTROL_DIRECTION_MASK = (0b11 << 11);
 
 // If 0, this endpoint descriptor is for a full speed endpoint.
 // If 1, this endpoint descriptor is for a low speed endpoint.
@@ -345,53 +332,152 @@ static constexpr u32 ED_CONTROL_IS_ISOCHRONOUS = (1 << 15);
 // The maximum number of bytes allowed in a single packet. It is 11 bits long.
 // NOTE: This value is how many bits you have to shift by in the control value in OHCIEndpointDescriptor.
 static constexpr u32 ED_CONTROL_MAX_PACKET_SIZE = 16;
+static constexpr u32 ED_CONTROL_MAX_PACKET_SIZE_MASK = (0x7FF << ED_CONTROL_MAX_PACKET_SIZE);
 
-// These next 2 flags are stored in the bottom 2 bits of transfer_descriptor_tail_physical_address.
+// These next 2 flags are stored in the bottom 2 bits of transfer_descriptor_head_physical_address.
 
 // If set, then the host controller stopped processing the TD queue, usually due to an error.
-static constexpr u32 ED_HALTED = (1 << 0);
+static constexpr u32 ED_TD_HEAD_FLAG_HALTED = (1 << 0);
 
 // Contains the LSB of the data toggle field from the most recently retired TD.
 // Invalid for isochronous transfers.
-static constexpr u32 ED_TOGGLE_CARRY = (1 << 1);
+static constexpr u32 ED_TD_HEAD_FLAG_TOGGLE_CARRY = (1 << 1);
 
-// OHCI Specification Section 4.3.1
-struct alignas(16) [[gnu::packed]] OHCIGeneralTransferDescriptor {
-    // Contains a bunch of fields describing the transfer descriptor. See the defined fields below this struct.
-    volatile u32 control;
+static constexpr u32 ED_TD_HEAD_FLAGS_MASK = (0b11 << 0);
 
-    // Points to the next buffer that be transferred to or from the endpoint.
-    // If it's 0, then it is a zero length packet.
-    volatile u32 current_buffer_pointer_physical_address;
+// OHCI Endpoint Descriptors are essentially us telling the controller about pipes we have set up and the transfer descriptors associated with them.
+// OHCI Specification Section 4.2
+struct alignas(16) [[gnu::packed]] OHCIEndpointDescriptor {
+    OHCIEndpointDescriptor() = delete;
+    OHCIEndpointDescriptor(u32 paddr)
+        : physical_address(paddr)
+    {
+        // Must be 16 byte aligned.
+        VERIFY(paddr % 16 == 0);
+    }
+    ~OHCIEndpointDescriptor() = delete; // Prevent anything except placement new on this object
 
-    volatile u32 next_transfer_descriptor_physical_address;
+    // Contains a bunch of fields describing the endpoint. See the defined fields above this struct.
+    // Default to skipping this endpoint.
+    volatile u32 control { ED_CONTROL_SKIP };
 
-    // Points to the last byte in the buffer for this TD.
-    volatile u32 end_of_buffer_physical_address;
+    // Points to the last TD to process. If the head and tail are the same, there are no TDs left in the queue.
+    // NOTE: Must be 16 byte aligned.
+    volatile u32 transfer_descriptor_tail_physical_address { 0 };
+
+    // Points to the next TD to process. On retirement of a TD, the controller changes this field to the next TD automatically.
+    // NOTE: Must be 16 byte aligned. It also contains 2 flags in the bottom 2 bits.
+    volatile u32 transfer_descriptor_head_physical_address { 0 };
+
+    // Points to the next endpoint descriptor. If 0, there is no next endpoint descriptor.
+    // NOTE: Must be 16 byte aligned.
+    volatile u32 next_endpoint_descriptor_physical_address { 0 };
+
+    // Driver bookkeeping. The controller will ignore these.
+
+    // Physical address of this endpoint descriptor. Needed to update the linked list.
+    u32 physical_address { 0 };
+
+    // Tail dummy transfer descriptor in virtual memory space.
+    // FIXME: I wish this wasn't void* (it can be a General TD or Isochronous TD and I don't want to take up much space)
+    void* tail_transfer_descriptor { nullptr };
+
+    // Previous endpoint descriptor in virtual memory space.
+    OHCIEndpointDescriptor* previous { nullptr };
+
+    // Next endpoint descriptor in virtual memory space.
+    OHCIEndpointDescriptor* next { nullptr };
+
+    // FIXME: It'd be better to store this in the pipe itself to prevent a lookup on every transfer.
+    Pipe const* associated_pipe { nullptr };
+
+    void free()
+    {
+        dbgln_if(OHCI_DEBUG, "OHCI: Freeing ED at {:p}", this);
+        // Remove the links, clear all data in control except making the controller skip this endpoint.
+        control = ED_CONTROL_SKIP;
+        transfer_descriptor_tail_physical_address = 0;
+        transfer_descriptor_head_physical_address = 0;
+        next_endpoint_descriptor_physical_address = 0;
+        tail_transfer_descriptor = nullptr;
+        previous = nullptr;
+        next = nullptr;
+        associated_pipe = nullptr;
+    }
+
+    void print()
+    {
+        u32 non_volatile_control = control;
+        u32 non_volatile_transfer_descriptor_tail_physical_address = transfer_descriptor_tail_physical_address;
+        u32 non_volatile_transfer_descriptor_head_physical_address = transfer_descriptor_head_physical_address;
+        u32 non_volatile_next_endpoint_descriptor_physical_address = next_endpoint_descriptor_physical_address;
+
+        dbgln("OHCI: ED({:p}) @ 0x{:08x}: control=0x{:08x}, transfer_descriptor_tail_physical_address=0x{:08x}, transfer_descriptor_head_physical_address=0x{:08x}, next_endpoint_descriptor_physical_address=0x{:08x}, tail_transfer_descriptor={:p}, previous={:p}, next={:p}, associated_pipe={:p}",
+            this,
+            physical_address,
+            non_volatile_control,
+            non_volatile_transfer_descriptor_tail_physical_address,
+            non_volatile_transfer_descriptor_head_physical_address,
+            non_volatile_next_endpoint_descriptor_physical_address,
+            tail_transfer_descriptor,
+            previous,
+            next,
+            associated_pipe);
+
+        u32 direction = non_volatile_control & ED_CONTROL_DIRECTION_MASK;
+
+        // Now print the flags out.
+        dbgln("OHCI: ED({:p}) @ 0x{:08x}: control: FunctionAddress={}, EndpointNumber={}, Direction='{}', Speed='{}', Skip={}, Isochronous={}, MaxPacketSize={}",
+            this,
+            physical_address,
+            non_volatile_control & ED_CONTROL_FUNCTION_ADDRESS_MASK,
+            ((non_volatile_control & ED_CONTROL_ENDPOINT_NUMBER_MASK) >> ED_CONTROL_ENDPOINT_NUMBER) & 0xF,
+            (direction == 0 || direction == ED_CONTROL_DIRECTION_GET_FROM_TRANSFER_DESCRIPTOR) ? "Get from TD" : direction == ED_CONTROL_DIRECTION_IN ? "In" : "Out",
+            (non_volatile_control & ED_CONTROL_LOW_SPEED) != 0 ? "Low" : "Full",
+            (non_volatile_control & ED_CONTROL_SKIP) != 0,
+            (non_volatile_control & ED_CONTROL_IS_ISOCHRONOUS) != 0,
+            ((non_volatile_control & ED_CONTROL_MAX_PACKET_SIZE_MASK) >> ED_CONTROL_MAX_PACKET_SIZE) & 0x7FF);
+
+        dbgln("OHCI: ED({:p}) @ 0x{:08x}: HeadFlags: Halted={}, ToggleCarry={}",
+            this,
+            physical_address,
+            (non_volatile_transfer_descriptor_head_physical_address & ED_TD_HEAD_FLAG_HALTED) != 0,
+            (non_volatile_transfer_descriptor_head_physical_address & ED_TD_HEAD_FLAG_TOGGLE_CARRY) != 0);
+    }
 };
-static_assert(sizeof(OHCIGeneralTransferDescriptor) == 16);
 
 // If 0, the last data packet to the TD must exactly fill the TD buffer.
 // If 1, the last data packet and be smaller than the buffer without causing an error.
 static constexpr u32 GTD_BUFFER_ROUNDING = (1 << 18);
 
-static constexpr u32 GTD_DIRECTION_SETUP = (0b00 << 19);
-static constexpr u32 GTD_DIRECTION_OUT = (0b01 << 19);
-static constexpr u32 GTD_DIRECTION_IN = (0b10 << 19);
+enum class GTDDirection : u32 {
+    Setup = (0b00 << 19),
+    Out = (0b01 << 19),
+    In = (0b10 << 19),
+};
+
+static constexpr u32 GTD_DIRECTION_MASK = (0b11 << 19);
 
 // If not 0b111, the controller will wait DelayInterrupt frames before issuing an interrupt indicating this transfer descriptor is complete.
 // If 0b111, there is no interrupt associated with the completion of the TD.
 // NOTE: This value is how many bits you have to shift by in the control value in OHCIGeneralTransferDescriptor.
 static constexpr u32 GTD_DELAY_INTERRUPT = 21;
+static constexpr u32 GTD_DELAY_INTERRUPT_MASK = (0b111 << GTD_DELAY_INTERRUPT);
 
-// If the MSB is 0, the DataToggle value should be retrieved from ToggleCarry in the ED.
-// If the MSB is 1, the DataToggle value should be retrieved from the LSB of this field.
-static constexpr u32 GTD_DATA_TOGGLE = (0b11 << 24);
+// If not set, the TD will use DATA0.
+// If set, the TD will use DATA1.
+static constexpr u32 GTD_DATA_TOGGLE_TOGGLE_VALUE = (0b01 << 24);
+
+// If not set, the DataToggle value should be retrieved from ToggleCarry in the ED.
+// If set, the DataToggle value should be retrieved from the LSB of this field.
+static constexpr u32 GTD_DATA_TOGGLE_GET_FROM_TRANSFER_DESCRIPTOR = (0b10 << 24);
 
 // The controller increments this field for every error.
 // If ErrorCount is 2 and another error occurs, the condition code is set to the error code and the TD is immediately put onto the done queue.
 // If 2 or less errors occur, this field is cleared before the TD is put into the done queue.
-static constexpr u32 GTD_ERROR_COUNT = (0b11 << 26);
+// NOTE: This value is how many bits you have to shift by in the control value in OHCIGeneralTransferDescriptor.
+static constexpr u32 GTD_ERROR_COUNT = 26;
+static constexpr u32 GTD_ERROR_COUNT_MASK = (0b11 << GTD_ERROR_COUNT);
 
 // OHCI Specification Section 4.3.3
 
@@ -412,5 +498,103 @@ static constexpr u32 GTD_CONDITION_CODE_BUFFER_OVERRUN = (0b1100UL << 28);
 static constexpr u32 GTD_CONDITION_CODE_BUFFER_UNDERRUN = (0b1101UL << 28);
 static constexpr u32 GTD_CONDITION_CODE_NOT_ACCESSED = (0b1110UL << 28);
 static constexpr u32 GTD_CONDITION_CODE_MASK = (0xFUL << 28);
+
+// OHCI Specification Section 4.3.1
+struct alignas(16) [[gnu::packed]] OHCIGeneralTransferDescriptor {
+    OHCIGeneralTransferDescriptor() = delete;
+    OHCIGeneralTransferDescriptor(u32 paddr)
+        : physical_address(paddr)
+    {
+        // Must be 16 byte aligned.
+        VERIFY(paddr % 16 == 0);
+    }
+    ~OHCIGeneralTransferDescriptor() = delete; // Prevent anything except placement new on this object
+
+    // Contains a bunch of fields describing the transfer descriptor. See the defined fields above this struct.
+    volatile u32 control { 0 };
+
+    // Points to the next buffer that be transferred to or from the endpoint.
+    // If it's 0, then it is a zero length packet or all the bytes of the buffer have been transferred.
+    volatile u32 current_buffer_pointer_physical_address { 0 };
+
+    // Points to the next transfer descriptor in physical memory space.
+    // NOTE: Must be 16 byte aligned.
+    volatile u32 next_transfer_descriptor_physical_address { 0 };
+
+    // Points to the last byte in the buffer for this TD.
+    volatile u32 end_of_buffer_physical_address { 0 };
+
+    // Driver bookkeeping. The controller will ignore these.
+
+    // Physical address of this transfer descriptor. Needed to update the linked list.
+    u32 physical_address { 0 };
+
+    // Next transfer descriptor in virtual memory space.
+    OHCIGeneralTransferDescriptor* next { nullptr };
+
+    // Size of the buffer.
+    // The controller changes current_buffer_pointer_physical_address to 0 if all the bytes have been transferred,
+    // meaning we have to keep track of the size ourselves.
+    size_t buffer_size { 0 };
+
+    KResult set_buffer_addresses(Ptr32<u8>& start_of_buffer_address, size_t size)
+    {
+        if (Checked<FlatPtr>::addition_would_overflow(reinterpret_cast<FlatPtr>(&*start_of_buffer_address), size - 1))
+            return EOVERFLOW;
+
+        auto end_of_buffer_address = Ptr32<u8>(start_of_buffer_address + (size - 1));
+        current_buffer_pointer_physical_address = reinterpret_cast<uintptr_t>(&*start_of_buffer_address);
+        end_of_buffer_physical_address = reinterpret_cast<uintptr_t>(&*end_of_buffer_address);
+        buffer_size = size;
+
+        return KSuccess;
+    }
+
+    void insert_next_transfer_descriptor(OHCIGeneralTransferDescriptor* transfer_descriptor)
+    {
+        next_transfer_descriptor_physical_address = transfer_descriptor->physical_address;
+        next = transfer_descriptor;
+    }
+
+    void free()
+    {
+        dbgln_if(OHCI_DEBUG, "OHCI: Freeing GTD at {:p}", this);
+        control = 0;
+        current_buffer_pointer_physical_address = 0;
+        next_transfer_descriptor_physical_address = 0;
+        end_of_buffer_physical_address = 0;
+        next = nullptr;
+        buffer_size = 0;
+    }
+
+    void print()
+    {
+        auto non_volatile_control = control;
+        auto non_volatile_current_buffer_pointer_physical_address = current_buffer_pointer_physical_address;
+        auto non_volatile_next_transfer_descriptor_physical_address = next_transfer_descriptor_physical_address;
+        auto non_volatile_end_of_buffer_physical_address = end_of_buffer_physical_address;
+        dbgln("OHCI: GTD({:p}) @ 0x{:08x}: control=0x{:04x}, current_buffer_pointer_physical_address=0x{:08x}, next_transfer_descriptor_physical_address=0x{:08x}, end_of_buffer_physical_address=0x{:08x}, next={:p}, buffer_size=0x{:08x}",
+            this,
+            physical_address,
+            non_volatile_control,
+            non_volatile_current_buffer_pointer_physical_address,
+            non_volatile_next_transfer_descriptor_physical_address,
+            non_volatile_end_of_buffer_physical_address,
+            next,
+            buffer_size);
+
+        // Now print the flags out.
+        dbgln("OHCI: GTD({:p}) @ 0x{:08x}: control: BufferRounding={} Direction='{}' DelayInterrupt={} DataToggle={} ({}) ErrorCount={} ConditionCode=0b{:04b}",
+            this,
+            physical_address,
+            (non_volatile_control & GTD_BUFFER_ROUNDING) != 0,
+            (non_volatile_control & GTD_DIRECTION_MASK) == 0 ? "Setup" : ((non_volatile_control & (u32)GTDDirection::Out) != 0 ? "Out" : "In"),
+            ((non_volatile_control & GTD_DELAY_INTERRUPT_MASK) >> GTD_DELAY_INTERRUPT) & 0b111,
+            (non_volatile_control & GTD_DATA_TOGGLE_TOGGLE_VALUE) != 0,
+            (non_volatile_control & GTD_DATA_TOGGLE_GET_FROM_TRANSFER_DESCRIPTOR) != 0 ? "From TD" : "From ED",
+            ((non_volatile_control & GTD_ERROR_COUNT_MASK) >> GTD_ERROR_COUNT) & 0b11,
+            ((non_volatile_control & GTD_CONDITION_CODE_MASK) >> 28) & 0b1111);
+    }
+};
 
 }

@@ -30,8 +30,8 @@ set(KERNEL_SOURCES
     Bus/PCI/MMIOAccess.cpp
     Bus/PCI/Initializer.cpp
     Bus/PCI/WindowedMMIOAccess.cpp
-    Bus/USB/OHCIController.cpp
-    Bus/USB/OHCIRootHub.cpp
+    Bus/USB/OHCI/OHCIController.cpp
+    Bus/USB/OHCI/OHCIRootHub.cpp
     Bus/USB/SysFSUSB.cpp
     Bus/USB/UHCI/UHCIController.cpp
     Bus/USB/UHCI/UHCIRootHub.cpp

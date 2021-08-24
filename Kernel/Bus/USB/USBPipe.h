@@ -41,7 +41,7 @@ public:
     };
 
 public:
-    static KResultOr<NonnullOwnPtr<Pipe>> try_create_pipe(USBController const& controller, Type type, Direction direction, u8 endpoint_address, u16 max_packet_size, i8 device_address, u8 poll_interval = 0);
+    static KResultOr<NonnullOwnPtr<Pipe>> try_create_pipe(USBController const& controller, Type type, Direction direction, DeviceSpeed speed, u8 endpoint_address, u16 max_packet_size, i8 device_address, u8 poll_interval = 0);
 
     Type type() const { return m_type; }
     Direction direction() const { return m_direction; }
@@ -53,15 +53,16 @@ public:
     u8 poll_interval() const { return m_poll_interval; }
     bool data_toggle() const { return m_data_toggle; }
 
-    void set_max_packet_size(u16 max_size) { m_max_packet_size = max_size; }
+    void set_max_packet_size(u16 max_size);
     void set_toggle(bool toggle) { m_data_toggle = toggle; }
-    void set_device_address(i8 addr) { m_device_address = addr; }
+    void set_device_address(i8 addr);
 
     KResultOr<size_t> control_transfer(u8 request_type, u8 request, u16 value, u16 index, u16 length, void* data);
 
-    Pipe(USBController const& controller, Type type, Direction direction, u16 max_packet_size);
-    Pipe(USBController const& controller, Type type, Direction direction, USBEndpointDescriptor& endpoint);
-    Pipe(USBController const& controller, Type type, Direction direction, u8 endpoint_address, u16 max_packet_size, u8 poll_interval, i8 device_address);
+    Pipe(USBController const& controller, Type type, Direction direction, DeviceSpeed speed, u16 max_packet_size);
+    Pipe(USBController const& controller, Type type, Direction direction, DeviceSpeed speed, USBEndpointDescriptor& endpoint);
+    Pipe(USBController const& controller, Type type, Direction direction, DeviceSpeed speed, u8 endpoint_address, u16 max_packet_size, u8 poll_interval, i8 device_address);
+    ~Pipe();
 
 private:
     friend class Device;

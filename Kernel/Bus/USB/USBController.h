@@ -25,6 +25,10 @@ public:
 
     virtual KResultOr<size_t> submit_control_transfer(Transfer&) = 0;
 
+    virtual KResult pipe_created(Pipe const&) { return KSuccess; }
+    virtual KResult pipe_destroyed(Pipe const&) { return KSuccess; }
+    virtual KResult pipe_changed(Pipe const&) { return KSuccess; }
+
     u8 allocate_address();
 
 private:

@@ -8,9 +8,9 @@
 
 #include <AK/NonnullOwnPtr.h>
 #include <AK/NonnullRefPtr.h>
-#include <Kernel/KResult.h>
 #include <Kernel/Bus/USB/USBHub.h>
 #include <Kernel/Bus/USB/USBTransfer.h>
+#include <Kernel/KResult.h>
 
 namespace Kernel::USB {
 
@@ -30,6 +30,8 @@ public:
     KResultOr<size_t> handle_control_transfer(Transfer& transfer);
 
     void check_for_port_updates() { m_hub->check_for_port_updates(); }
+
+    bool initialized() const { return !!m_hub; }
 
 private:
     NonnullRefPtr<OHCIController> m_ohci_controller;

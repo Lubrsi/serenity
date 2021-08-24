@@ -203,6 +203,8 @@ $SERENITY_AUDIO_HW
 -device ich9-ahci,bus=bridge3
 -device pci-ohci,bus=bridge3
 -d trace:usb_*
+-device usb-host,hostbus=1,hostport=7
+-device usb-host,hostbus=1,hostport=11
 "
 
 if "${SERENITY_QEMU_BIN}" -chardev help | grep -iq spice; then

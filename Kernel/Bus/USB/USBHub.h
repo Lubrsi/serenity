@@ -80,11 +80,11 @@ static constexpr u16 PORT_STATUS_RESET_CHANGED = (1 << 4);
 
 class Hub : public Device {
 public:
-    static KResultOr<NonnullRefPtr<Hub>> try_create_root_hub(NonnullRefPtr<USBController>, DeviceSpeed);
+    static KResultOr<NonnullRefPtr<Hub>> try_create_root_hub(NonnullRefPtr<USBController>, Pipe::DeviceSpeed);
     static KResultOr<NonnullRefPtr<Hub>> try_create_from_device(Device const&);
 
     // Root Hub constructor
-    Hub(NonnullRefPtr<USBController>, DeviceSpeed, NonnullOwnPtr<Pipe> default_pipe);
+    Hub(NonnullRefPtr<USBController>, NonnullOwnPtr<Pipe> default_pipe);
     Hub(Device const&, NonnullOwnPtr<Pipe> default_pipe);
     virtual ~Hub() override = default;
 

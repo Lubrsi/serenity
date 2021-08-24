@@ -16,13 +16,13 @@
 
 namespace Kernel::USB {
 
-KResultOr<NonnullRefPtr<Device>> Device::try_create(USBController const& controller, u8 port, DeviceSpeed speed)
+KResultOr<NonnullRefPtr<Device>> Device::try_create(USBController const& controller, u8 port, Pipe::DeviceSpeed speed)
 {
-    auto pipe_or_error = Pipe::try_create_pipe(controller, Pipe::Type::Control, Pipe::Direction::Bidirectional, 0, 8, 0);
+    auto pipe_or_error = Pipe::try_create_pipe(controller, Pipe::Type::Control, Pipe::Direction::Bidirectional, speed, 0, 8, 0);
     if (pipe_or_error.is_error())
         return pipe_or_error.error();
 
-    auto device = AK::try_create<Device>(controller, port, speed, pipe_or_error.release_value());
+    auto device = AK::try_create<Device>(controller, port, pipe_or_error.release_value());
     if (!device)
         return ENOMEM;
 
@@ -33,18 +33,16 @@ KResultOr<NonnullRefPtr<Device>> Device::try_create(USBController const& control
     return device.release_nonnull();
 }
 
-Device::Device(USBController const& controller, u8 port, DeviceSpeed speed, NonnullOwnPtr<Pipe> default_pipe)
+Device::Device(USBController const& controller, u8 port, NonnullOwnPtr<Pipe> default_pipe)
     : m_device_port(port)
-    , m_device_speed(speed)
     , m_address(0)
     , m_controller(controller)
     , m_default_pipe(move(default_pipe))
 {
 }
 
-Device::Device(NonnullRefPtr<USBController> controller, u8 address, u8 port, DeviceSpeed speed, NonnullOwnPtr<Pipe> default_pipe)
+Device::Device(NonnullRefPtr<USBController> controller, u8 address, u8 port, NonnullOwnPtr<Pipe> default_pipe)
     : m_device_port(port)
-    , m_device_speed(speed)
     , m_address(address)
     , m_controller(controller)
     , m_default_pipe(move(default_pipe))
@@ -53,7 +51,6 @@ Device::Device(NonnullRefPtr<USBController> controller, u8 address, u8 port, Dev
 
 Device::Device(Device const& device, NonnullOwnPtr<Pipe> default_pipe)
     : m_device_port(device.port())
-    , m_device_speed(device.speed())
     , m_address(device.address())
     , m_device_descriptor(device.device_descriptor())
     , m_controller(device.controller())
