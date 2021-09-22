@@ -24,6 +24,14 @@
 
 namespace Spreadsheet {
 
+static JS::VM& global_vm()
+{
+    static RefPtr<JS::VM> vm;
+    if (!vm)
+        vm = JS::VM::create();
+    return *vm;
+}
+
 Sheet::Sheet(const StringView& name, Workbook& workbook)
     : Sheet(workbook)
 {
@@ -38,23 +46,24 @@ Sheet::Sheet(const StringView& name, Workbook& workbook)
 
 Sheet::Sheet(Workbook& workbook)
     : m_workbook(workbook)
+    , m_interpreter(JS::Interpreter::create<SheetGlobalObject>(global_vm(), *this))
+    , m_interpreter_scope(JS::VM::InterpreterExecutionScope(interpreter()))
+    , m_global_object(verify_cast<SheetGlobalObject>(&interpreter().global_object()))
 {
-    JS::DeferGC defer_gc(m_workbook.interpreter().heap());
-    m_global_object = m_workbook.interpreter().heap().allocate_without_global_object<SheetGlobalObject>(*this);
-    global_object().initialize_global_object();
-    global_object().define_direct_property("workbook", m_workbook.workbook_object(), JS::default_attributes);
+    global_object().define_direct_property("workbook", interpreter().heap().allocate<WorkbookObject>(interpreter().global_object(), m_workbook, interpreter().global_object()), JS::default_attributes);
     global_object().define_direct_property("thisSheet", &global_object(), JS::default_attributes); // Self-reference is unfortunate, but required.
 
     // Sadly, these have to be evaluated once per sheet.
-    auto file_or_error = Core::File::open("/res/js/Spreadsheet/runtime.js", Core::OpenMode::ReadOnly);
+    constexpr StringView file_path = "/res/js/Spreadsheet/runtime.js";
+    auto file_or_error = Core::File::open(file_path, Core::OpenMode::ReadOnly);
     if (!file_or_error.is_error()) {
         auto buffer = file_or_error.value()->read_all();
-        JS::Parser parser { JS::Lexer(buffer) };
-        if (parser.has_errors()) {
+        auto script_or_error = JS::Script::parse(buffer, interpreter().realm(), file_path);
+        if (script_or_error.is_error()) {
             warnln("Spreadsheet: Failed to parse runtime code");
-            parser.print_errors();
+            // FIXME: Add error messages back.
         } else {
-            interpreter().run(global_object(), parser.parse_program());
+            interpreter().run(script_or_error.value());
             if (auto* exception = interpreter().exception()) {
                 warnln("Spreadsheet: Failed to run runtime code:");
                 for (auto& traceback_frame : exception->traceback()) {
@@ -74,7 +83,7 @@ Sheet::~Sheet()
 
 JS::Interpreter& Sheet::interpreter() const
 {
-    return m_workbook.interpreter();
+    return const_cast<JS::Interpreter&>(*m_interpreter);
 }
 
 size_t Sheet::add_row()
@@ -158,12 +167,12 @@ Sheet::ValueAndException Sheet::evaluate(const StringView& source, Cell* on_beha
     TemporaryChange cell_change { m_current_cell_being_evaluated, on_behalf_of };
     ScopeGuard clear_exception { [&] { interpreter().vm().clear_exception(); } };
 
-    auto parser = JS::Parser(JS::Lexer(source));
-    auto program = parser.parse_program();
-    if (parser.has_errors() || interpreter().exception())
+    auto script_or_error = JS::Script::parse(source, interpreter().realm());
+    if (script_or_error.is_error() || interpreter().exception())
         return { JS::js_undefined(), interpreter().exception() };
 
-    interpreter().run(global_object(), program);
+    // FIXME: pass parse_result's value in directly and remove global object when interpreter run is ready.
+    interpreter().run(script_or_error.value());
     if (interpreter().exception()) {
         auto exc = interpreter().exception();
         return { JS::js_undefined(), exc };
@@ -525,7 +534,7 @@ JsonObject Sheet::to_json() const
         data.set("kind", it.value->kind() == Cell::Kind::Formula ? "Formula" : "LiteralString");
         if (it.value->kind() == Cell::Formula) {
             data.set("source", it.value->data());
-            auto json = interpreter().global_object().get("JSON");
+            auto json = global_object().get("JSON");
             auto stringified = interpreter().vm().call(json.as_object().get("stringify").as_function(), json, it.value->evaluated_data());
             data.set("value", stringified.to_string_without_side_effects());
         } else {
@@ -668,8 +677,8 @@ JsonObject Sheet::gather_documentation() const
     for (auto& it : interpreter().global_object().shape().property_table())
         add_docs_from(it, interpreter().global_object());
 
-    for (auto& it : global_object().shape().property_table())
-        add_docs_from(it, global_object());
+    //    for (auto& it : interpreter().global_object().shape().property_table())
+    //        add_docs_from(it, global_object());
 
     m_cached_documentation = move(object);
     return m_cached_documentation.value();
