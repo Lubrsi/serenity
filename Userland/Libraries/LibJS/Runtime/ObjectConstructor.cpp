@@ -96,6 +96,8 @@ static Array* get_own_property_keys(GlobalObject& global_object, Value value, Ge
     if (vm.exception())
         return {};
 
+    dbgln("GOPK {}", value.to_string_without_side_effects());
+
     // 2. Let keys be ? obj.[[OwnPropertyKeys]]().
     auto keys = object->internal_own_property_keys();
     if (vm.exception())
