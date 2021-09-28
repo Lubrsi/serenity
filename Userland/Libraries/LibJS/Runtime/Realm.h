@@ -7,8 +7,6 @@
 #pragma once
 
 #include <LibJS/Heap/Cell.h>
-#include <LibJS/Runtime/GlobalEnvironment.h>
-#include <LibJS/Runtime/GlobalObject.h>
 
 namespace JS {
 
@@ -18,15 +16,12 @@ public:
     Realm() = default;
 
     // 9.3.1 CreateRealm ( ), https://tc39.es/ecma262/#sec-createrealm
-    static Realm* create(VM& vm)
-    {
-        return vm.heap().allocate_without_global_object<Realm>();
-    }
+    static Realm* create(VM& vm);
 
     void set_global_object(GlobalObject&, Object* this_value = nullptr);
 
-    [[nodiscard]] GlobalObject& global_object() const { return *m_global_object; }
-    [[nodiscard]] GlobalEnvironment& global_environment() const { return *m_global_environment; }
+    [[nodiscard]] GlobalObject& global_object() const;
+    [[nodiscard]] GlobalEnvironment& global_environment() const;
 
 private:
     virtual char const* class_name() const override { return "Realm"; }

@@ -7,6 +7,7 @@
 #pragma once
 
 #include <LibJS/Heap/Handle.h>
+#include <LibJS/Runtime/Environment.h>
 #include <LibJS/Runtime/Realm.h>
 
 namespace JS {
