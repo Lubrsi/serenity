@@ -31,6 +31,7 @@ NonnullOwnPtr<Interpreter> Interpreter::create_with_existing_realm(Realm& realm)
 
 Interpreter::Interpreter(VM& vm)
     : m_vm(vm)
+    , m_global_execution_context(vm.heap())
 {
 }
 
@@ -38,10 +39,10 @@ Interpreter::~Interpreter()
 {
 }
 
-void Interpreter::run(GlobalObject& global_object, const Program& program)
+// 16.1.6 ScriptEvaluation ( scriptRecord ), https://tc39.es/ecma262/#sec-runtime-semantics-scriptevaluation
+void Interpreter::run(Script& script_record)
 {
-    // FIXME: Why does this receive a GlobalObject? Interpreter has one already, and this might not be in sync with the Realm's GlobalObject.
-
+    dbgln("IR");
     auto& vm = this->vm();
     VERIFY(!vm.exception());
 
@@ -49,25 +50,57 @@ void Interpreter::run(GlobalObject& global_object, const Program& program)
 
     vm.set_last_value(Badge<Interpreter> {}, {});
 
-    ExecutionContext execution_context(heap());
-    execution_context.current_node = &program;
-    execution_context.this_value = &global_object;
-    static FlyString global_execution_context_name = "(global execution context)";
-    execution_context.function_name = global_execution_context_name;
-    execution_context.lexical_environment = &realm().global_environment();
-    execution_context.variable_environment = &realm().global_environment();
-    execution_context.realm = &realm();
-    execution_context.is_strict_mode = program.is_strict_mode();
-    vm.push_execution_context(execution_context, global_object);
+    // 1. Let globalEnv be scriptRecord.[[Realm]].[[GlobalEnv]].
+    auto& global_environment = script_record.realm().global_environment();
+
+    // 2. Let scriptContext be a new ECMAScript code execution context.
+    ExecutionContext script_context(vm.heap());
+
+    // 3. Set the Function of scriptContext to null. (This was done in the construction of ExecutionContext)
+
+    // 4. Set the Realm of scriptContext to scriptRecord.[[Realm]].
+    script_context.realm = &script_record.realm();
+
+    // FIXME: 5. Set the ScriptOrModule of scriptContext to scriptRecord.
+
+    // 6. Set the VariableEnvironment of scriptContext to globalEnv.
+    script_context.variable_environment = &global_environment;
+
+    // 7. Set the LexicalEnvironment of scriptContext to globalEnv.
+    script_context.lexical_environment = &global_environment;
+
+    // FIXME: 8. Set the PrivateEnvironment of scriptContext to null.
+
+    // FIXME: 9. Suspend the currently running execution context.
+
+    // 10. Push scriptContext onto the execution context stack; scriptContext is now the running execution context.
+    // FIXME: Is this the right global object?
+    vm.push_execution_context(script_context, script_record.realm().global_object());
+
+    // 11. Let scriptBody be scriptRecord.[[ECMAScriptCode]].
+    auto& script_body = script_record.parse_node();
+
+    // FIXME: 12. Let result be GlobalDeclarationInstantiation(scriptBody, globalEnv).
+
+    // FIXME: 13. If result.[[Type]] is normal, then
+    // a. Set result to the result of evaluating scriptBody.
+    // FIXME: Is this the right global object?
     VERIFY(!vm.exception());
-    auto value = program.execute(*this, global_object);
+    auto value = script_body.execute(*this, script_record.realm().global_object());
     vm.set_last_value(Badge<Interpreter> {}, value.value_or(js_undefined()));
 
-    // FIXME: We unconditionally stop the unwind here this should be done using completions leaving
-    //        the VM in a cleaner state after executing. For example it does still store the exception.
-    vm.stop_unwind();
+    // FIXME: 14. If result.[[Type]] is normal and result.[[Value]] is empty, then
+    //          a. Set result to NormalCompletion(undefined).
 
+    // FIXME: 15. Suspend scriptContext and remove it from the execution context stack.
     vm.pop_execution_context();
+
+    // 16. Assert: The execution context stack is not empty.
+    VERIFY(!vm.execution_context_stack().is_empty());
+
+    // FIXME: 17. Resume the context that is now on the top of the execution context stack as the running execution context.
+
+    // FIXME: 18. Return Completion(result).
 
     // At this point we may have already run any queued promise jobs via on_call_stack_emptied,
     // in which case this is a no-op.
@@ -76,6 +109,11 @@ void Interpreter::run(GlobalObject& global_object, const Program& program)
     vm.run_queued_finalization_registry_cleanup_jobs();
 
     vm.finish_execution_generation();
+}
+
+void Interpreter::run(SourceTextModule&)
+{
+    TODO();
 }
 
 GlobalObject& Interpreter::global_object()

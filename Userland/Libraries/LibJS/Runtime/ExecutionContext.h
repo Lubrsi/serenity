@@ -9,8 +9,10 @@
 
 #include <AK/FlyString.h>
 #include <LibJS/Forward.h>
+#include <LibJS/Module.h>
 #include <LibJS/Runtime/MarkedValueList.h>
 #include <LibJS/Runtime/Value.h>
+#include <LibJS/Script.h>
 
 namespace JS {
 
@@ -21,10 +23,11 @@ struct ExecutionContext {
     {
     }
 
-    FunctionObject* function { nullptr };          // [[Function]]
-    Realm* realm { nullptr };                      // [[Realm]]
-    Environment* lexical_environment { nullptr };  // [[LexicalEnvironment]]
-    Environment* variable_environment { nullptr }; // [[VariableEnvironment]]
+    FunctionObject* function { nullptr };                         // [[Function]]
+    Realm* realm { nullptr };                                     // [[Realm]]
+    Variant<Script, Module, Empty> script_or_module { Empty {} }; // [[ScriptOrModule]]
+    Environment* lexical_environment { nullptr };                 // [[LexicalEnvironment]]
+    Environment* variable_environment { nullptr };                // [[VariableEnvironment]]
 
     ASTNode const* current_node { nullptr };
     FlyString function_name;

@@ -36,6 +36,7 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <unistd.h>
+#    include <LibJS/MarkupGenerator.h>
 
 #ifdef __serenity__
 #    include <serenity.h>
@@ -281,6 +282,14 @@ inline JSFileResult TestRunner::run_file_test(const String& test_path)
     double start_time = get_time_in_ms();
     auto interpreter = JS::Interpreter::create<TestRunnerGlobalObject>(*g_vm);
 
+    // Since g_vm is reused for each new interpreter, Interpreter::create will end up pushing multiple
+    // global execution contexts onto the VM's execution context stack. To prevent this, we immediately
+    // pop the global execution context off the execution context stack and manually handle pushing
+    // and popping it. Since the global execution context should be the only thing on the stack
+    // at interpreter creation, let's assert there is only one.
+    VERIFY(g_vm->execution_context_stack().size() == 1);
+    auto& global_execution_context = *g_vm->execution_context_stack().take_first();
+
     // FIXME: This is a hack while we're refactoring Interpreter/VM stuff.
     JS::VM::InterpreterExecutionScope scope(*interpreter);
 
@@ -350,10 +359,17 @@ inline JSFileResult TestRunner::run_file_test(const String& test_path)
         JS::Bytecode::Interpreter bytecode_interpreter(interpreter->global_object(), interpreter->realm());
         bytecode_interpreter.run(unit);
     } else {
-        interpreter->run(interpreter->global_object(), m_test_script->parse_node());
+        g_vm->push_execution_context(global_execution_context, interpreter->global_object());
+        interpreter->run(*m_test_script);
+        g_vm->pop_execution_context();
     }
 
-    VERIFY(!g_vm->exception());
+    if (g_vm->exception()) {
+        dbgln("Exception ({} frames): {}", g_vm->exception()->traceback().size(), JS::MarkupGenerator::html_from_value(g_vm->exception()->value()));
+        for (auto& frame : g_vm->exception()->traceback()) {
+            dbgln("Frame: {} (File: '{}', Line: {}, Column: {}, Offset: {})", frame.function_name, frame.source_range.filename, frame.source_range.start.line, frame.source_range.start.column, frame.source_range.start.offset);
+        }
+    }
 
     auto file_script = parse_script(test_path, interpreter->realm());
     if (file_script.is_error())
@@ -372,7 +388,10 @@ inline JSFileResult TestRunner::run_file_test(const String& test_path)
         JS::Bytecode::Interpreter bytecode_interpreter(interpreter->global_object(), interpreter->realm());
         bytecode_interpreter.run(unit);
     } else {
-        interpreter->run(interpreter->global_object(), file_script.value()->parse_node());
+        g_vm->push_execution_context(global_execution_context, interpreter->global_object());
+        interpreter->run(file_script.value());
+        g_vm->pop_execution_context();
+
     }
 
     if (g_vm->exception())
