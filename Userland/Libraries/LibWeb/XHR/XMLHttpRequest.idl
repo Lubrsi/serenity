@@ -11,6 +11,7 @@ interface XMLHttpRequest : XMLHttpRequestEventTarget {
     readonly attribute unsigned short readyState;
     readonly attribute unsigned short status;
     readonly attribute DOMString responseText;
+    attribute boolean withCredentials;
 
     undefined open(DOMString method, DOMString url);
     undefined setRequestHeader(DOMString name, DOMString value);

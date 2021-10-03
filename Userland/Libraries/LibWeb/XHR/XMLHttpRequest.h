@@ -62,6 +62,9 @@ public:
     HTML::EventHandler onreadystatechange();
     void set_onreadystatechange(HTML::EventHandler);
 
+    bool with_credentials() const { return m_cross_origin_credentials; }
+    DOM::ExceptionOr<void> set_with_credentials(bool value);
+
 private:
     virtual void ref_event_target() override { ref(); }
     virtual void unref_event_target() override { unref(); }
@@ -89,6 +92,7 @@ private:
     bool m_upload_complete { false };
     bool m_upload_listener { false };
     bool m_timed_out { false };
+    bool m_cross_origin_credentials { false };
 
     ByteBuffer m_response_object;
 };

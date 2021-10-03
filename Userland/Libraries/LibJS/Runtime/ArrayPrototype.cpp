@@ -330,8 +330,11 @@ JS_DEFINE_NATIVE_FUNCTION(ArrayPrototype::push)
         vm.throw_exception<TypeError>(global_object, ErrorType::ArrayMaxSize);
         return {};
     }
-    for (size_t i = 0; i < argument_count; ++i)
+    for (size_t i = 0; i < argument_count; ++i) {
+        if (vm.argument(i).is_string())
+            dbgln("Pushing {} onto array...", vm.argument(i).as_string().string());
         TRY_OR_DISCARD(this_object->set(length + i, vm.argument(i), Object::ShouldThrowExceptions::Yes));
+    }
     auto new_length_value = Value(new_length);
     TRY_OR_DISCARD(this_object->set(vm.names.length, new_length_value, Object::ShouldThrowExceptions::Yes));
     return new_length_value;
@@ -502,7 +505,10 @@ JS_DEFINE_NATIVE_FUNCTION(ArrayPrototype::join)
         builder.append(string);
     }
 
-    return js_string(vm, builder.to_string());
+    auto string = builder.to_string();
+    dbgln("Array join will return {}", string);
+
+    return js_string(vm, string);
 }
 
 // 23.1.3.1 Array.prototype.concat ( ...items ), https://tc39.es/ecma262/#sec-array.prototype.concat

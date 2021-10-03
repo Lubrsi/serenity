@@ -62,6 +62,7 @@ public:
     }
 
     virtual JS::ThrowCompletionOr<bool> internal_set_prototype_of(JS::Object* prototype) override;
+    virtual JS::ThrowCompletionOr<Optional<JS::PropertyDescriptor>> internal_get_own_property(JS::PropertyName const&) const override;
 
 private:
     virtual void visit_edges(Visitor&) override;

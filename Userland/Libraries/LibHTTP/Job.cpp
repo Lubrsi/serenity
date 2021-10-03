@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#define JOB_DEBUG 1
+
 #include <AK/Debug.h>
 #include <LibCompress/Gzip.h>
 #include <LibCompress/Zlib.h>
@@ -94,10 +96,18 @@ void Job::flush_received_buffers()
             // FIXME: Make this a take-first-friendly object?
             m_received_buffers.take_first();
             --i;
+            AK::StringBuilder builder;
+            for (size_t i = 0; i < payload.size(); i++)
+                builder.append(payload[i]);
+            dbgln("PAYLOAD: {}", builder.to_string());
             continue;
         }
         VERIFY(written < payload.size());
         payload = payload.slice(written, payload.size() - written);
+        AK::StringBuilder builder;
+        for (size_t i = 0; i < payload.size(); i++)
+            builder.append(payload[i]);
+        dbgln("PAYLOAD: {}", builder.to_string());
         break;
     }
     dbgln_if(JOB_DEBUG, "Job: Flushing received buffers done: have {} bytes in {} buffers for {}", m_buffered_size, m_received_buffers.size(), m_request.url());
@@ -294,6 +304,10 @@ void Job::on_socket_connected()
             dbgln_if(JOB_DEBUG, "Waiting for payload for {}", m_request.url());
             auto payload = receive(read_size);
             dbgln_if(JOB_DEBUG, "Received {} bytes of payload from {}", payload.size(), m_request.url());
+            AK::StringBuilder builder;
+            for (size_t i = 0; i < payload.size(); i++)
+                builder.append(payload[i]);
+            dbgln("PAYLOAD: {}", builder.to_string());
             if (payload.is_empty()) {
                 if (eof()) {
                     finish_up();
@@ -391,6 +405,11 @@ void Job::finish_up()
         if (content_encoding.has_value()) {
             flattened_buffer = handle_content_encoding(flattened_buffer, content_encoding.value());
         }
+
+        AK::StringBuilder builder;
+        for (size_t i = 0; i < flattened_buffer.size(); i++)
+            builder.append(flattened_buffer[i]);
+        dbgln("Job response: {}", builder.to_string());
 
         m_buffered_size = flattened_buffer.size();
         m_received_buffers.append(move(flattened_buffer));

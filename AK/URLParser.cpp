@@ -639,7 +639,7 @@ URL URLParser::parse(StringView const& raw_input, URL const* base_url, Optional<
                 VERIFY(url->m_query == "");
                 auto query_percent_encode_set = url->is_special() ? URL::PercentEncodeSet::SpecialQuery : URL::PercentEncodeSet::Query;
                 // NOTE: This is has to be encoded and then decoded because the original sequence could contain already percent-encoded sequences.
-                url->m_query = URL::percent_decode(URL::percent_encode(buffer.string_view(), query_percent_encode_set));
+                url->m_query = URL::percent_encode(buffer.string_view(), query_percent_encode_set);
                 buffer.clear();
                 if (code_point == '#') {
                     url->m_fragment = "";

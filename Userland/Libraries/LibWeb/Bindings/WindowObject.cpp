@@ -151,6 +151,17 @@ JS::ThrowCompletionOr<bool> WindowObject::internal_set_prototype_of(JS::Object* 
     return set_immutable_prototype(prototype);
 }
 
+JS::ThrowCompletionOr<Optional<JS::PropertyDescriptor>> WindowObject::internal_get_own_property(JS::PropertyName const& property_name) const
+{
+    auto blah = Object::internal_get_own_property(property_name);
+
+    if (!blah.is_error() && !blah.value().has_value() && !property_name.is_symbol()) {
+        AK::dbgln("WindowObject: own property not found: '{}'", property_name.to_string());
+    }
+
+    return blah;
+}
+
 static DOM::Window* impl_from(JS::VM& vm, JS::GlobalObject& global_object)
 {
     // Since this is a non built-in function we must treat it as non-strict mode

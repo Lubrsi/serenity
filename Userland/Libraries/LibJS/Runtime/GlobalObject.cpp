@@ -530,6 +530,7 @@ JS_DEFINE_NATIVE_FUNCTION(GlobalObject::encode_uri_component)
     auto encoded = encode(global_object, uri_string, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.!~*'()"sv);
     if (vm.exception())
         return {};
+    dbgln("encodeURIComponent, uri_string: {}, encoded: {}", uri_string, encoded);
     return js_string(vm, move(encoded));
 }
 

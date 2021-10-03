@@ -112,6 +112,23 @@ DOM::ExceptionOr<void> XMLHttpRequest::set_request_header(const String& header, 
     return {};
 }
 
+// https://xhr.spec.whatwg.org/#dom-xmlhttprequest-withcredentials
+DOM::ExceptionOr<void> XMLHttpRequest::set_with_credentials(bool value)
+{
+    // 1. If this’s state is not unsent or opened, then throw an "InvalidStateError" DOMException.
+    if (m_ready_state != ReadyState::Unsent && m_ready_state != ReadyState::Opened)
+        return DOM::InvalidStateError::create("XHR readyState is not UNSENT or OPENED");
+
+    // 2. If this’s send() flag is set, then throw an "InvalidStateError" DOMException.
+    if (m_send)
+        return DOM::InvalidStateError::create("XHR send() flag is already set");
+
+    // Set this’s cross-origin credentials to the given value.
+    m_cross_origin_credentials = value;
+
+    return {};
+}
+
 // https://xhr.spec.whatwg.org/#dom-xmlhttprequest-open
 DOM::ExceptionOr<void> XMLHttpRequest::open(const String& method, const String& url)
 {
@@ -126,9 +143,13 @@ DOM::ExceptionOr<void> XMLHttpRequest::open(const String& method, const String& 
 
     auto normalized_method = normalize_method(method);
 
+    dbgln("XHR URL: {}", url);
+
     auto parsed_url = m_window->associated_document().parse_url(url);
     if (!parsed_url.is_valid())
         return DOM::SyntaxError::create("Invalid URL");
+
+    dbgln("XHR Parsed URL: {}", parsed_url.to_string());
 
     if (!parsed_url.host().is_null()) {
         // FIXME: If the username argument is not null, set the username given parsedURL and username.

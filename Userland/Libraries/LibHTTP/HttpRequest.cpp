@@ -55,7 +55,7 @@ ByteBuffer HttpRequest::to_raw_request() const
         builder.append(header.value);
         builder.append("\r\n");
     }
-    if (!m_body.is_empty()) {
+    if (!m_body.is_empty() || method_name().is_one_of("POST", "PUT")) {
         builder.appendff("Content-Length: {}\r\n\r\n", m_body.size());
         builder.append((char const*)m_body.data(), m_body.size());
     }

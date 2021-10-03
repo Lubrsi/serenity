@@ -130,12 +130,12 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, con
         return;
     }
 
-    if (ContentFilter::the().is_filtered(url)) {
-        auto filter_message = "URL was filtered"sv;
-        log_failure(request, filter_message);
-        error_callback(filter_message, {});
-        return;
-    }
+//    if (ContentFilter::the().is_filtered(url)) {
+//        auto filter_message = "URL was filtered"sv;
+//        log_failure(request, filter_message);
+//        error_callback(filter_message, {});
+//        return;
+//    }
 
     if (url.protocol() == "about") {
         dbgln_if(SPAM_DEBUG, "Loading about: URL {}", url);
