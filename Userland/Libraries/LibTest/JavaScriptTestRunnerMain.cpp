@@ -39,21 +39,21 @@ using namespace Test::JS;
 
 static StringView g_program_name { "test-js"sv };
 
-static void handle_sigabrt(int)
-{
-    dbgln("{}: SIGABRT received, cleaning up.", g_program_name);
-    Test::cleanup();
-    struct sigaction act;
-    memset(&act, 0, sizeof(act));
-    act.sa_flags = SA_NOCLDWAIT;
-    act.sa_handler = SIG_DFL;
-    int rc = sigaction(SIGABRT, &act, nullptr);
-    if (rc < 0) {
-        perror("sigaction");
-        exit(1);
-    }
-    abort();
-}
+//static void handle_sigabrt(int)
+//{
+//    dbgln("{}: SIGABRT received, cleaning up.", g_program_name);
+//    Test::cleanup();
+//    struct sigaction act;
+//    memset(&act, 0, sizeof(act));
+//    act.sa_flags = SA_NOCLDWAIT;
+//    act.sa_handler = SIG_DFL;
+//    int rc = sigaction(SIGABRT, &act, nullptr);
+//    if (rc < 0) {
+//        perror("sigaction");
+//        exit(1);
+//    }
+//    abort();
+//}
 
 int main(int argc, char** argv)
 {
@@ -62,15 +62,15 @@ int main(int argc, char** argv)
     auto program_name = LexicalPath::basename(argv[0]);
     g_program_name = program_name;
 
-    struct sigaction act;
-    memset(&act, 0, sizeof(act));
-    act.sa_flags = SA_NOCLDWAIT;
-    act.sa_handler = handle_sigabrt;
-    int rc = sigaction(SIGABRT, &act, nullptr);
-    if (rc < 0) {
-        perror("sigaction");
-        return 1;
-    }
+//    struct sigaction act;
+//    memset(&act, 0, sizeof(act));
+//    act.sa_flags = SA_NOCLDWAIT;
+//    act.sa_handler = handle_sigabrt;
+//    int rc = sigaction(SIGABRT, &act, nullptr);
+//    if (rc < 0) {
+//        perror("sigaction");
+//        return 1;
+//    }
 
 #ifdef SIGINFO
     signal(SIGINFO, [](int) {

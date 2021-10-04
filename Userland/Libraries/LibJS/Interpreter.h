@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, Andreas Kling <kling@serenityos.org>
+ * Copyright (c) 2021, Luke Wilde <lukew@serenityos.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -61,30 +62,21 @@ public:
 
         // 6. Push newContext onto the execution context stack; newContext is now the running execution context.
         //    NOTE: This is out of order from the spec, but it shouldn't matter here.
-        dbgln("IC");
         vm.push_execution_context(interpreter->m_global_execution_context, *global_object);
 
         // 8. If the host requires that the this binding in realm's global scope return an object other than the global object, let thisValue be such an object created
         //    in a host-defined manner. Otherwise, let thisValue be undefined, indicating that realm's global this binding should be the global object.
         if constexpr (IsSame<GlobalObjectType, GlobalThisObjectType>) {
+            // 9. Perform SetRealmGlobalObject(realm, global, thisValue).
             realm->set_global_object(*global_object, global_object);
-
-            // FIXME: Is this correct?
-            interpreter->m_global_execution_context.this_value = global_object;
         } else {
             // FIXME: Should we pass args in here? Let's er on the side of caution and say yes.
             auto* global_this_value = static_cast<Object*>(interpreter->heap().allocate_without_global_object<GlobalThisObjectType>(forward<Args>(args)...));
+
+            // 9. Perform SetRealmGlobalObject(realm, global, thisValue).
             realm->set_global_object(*global_object, global_this_value);
-
-            // FIXME: Is this correct?
-            interpreter->m_global_execution_context.this_value = global_this_value;
         }
-
-        // 9. Perform SetRealmGlobalObject(realm, global, thisValue).
-        //    NOTE: This was done above, but now we need to pass the global execution context the global environment that just got created.
-        interpreter->m_global_execution_context.lexical_environment = &realm->global_environment();
-        interpreter->m_global_execution_context.variable_environment = &realm->global_environment();
-
+        
         static FlyString global_execution_context_name = "(global execution context)";
         interpreter->m_global_execution_context.function_name = global_execution_context_name;
 

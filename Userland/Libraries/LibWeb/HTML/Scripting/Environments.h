@@ -10,7 +10,6 @@
 #include <LibJS/Runtime/ExecutionContext.h>
 #include <LibJS/Runtime/GlobalObject.h>
 #include <LibJS/Runtime/Realm.h>
-#include <LibWeb/Bindings/MainThreadVM.h>
 #include <LibWeb/HTML/EventLoop/EventLoop.h>
 #include <LibWeb/Origin.h>
 #include <LibWeb/Page/BrowsingContext.h>
@@ -44,8 +43,15 @@ enum class CanUseCrossOriginIsolatedAPIs {
     Yes,
 };
 
+enum class CanRunScript {
+    No,
+    Yes,
+};
+
 // https://html.spec.whatwg.org/multipage/webappapis.html#environment-settings-object
-struct EnvironmentSettingsObject : public Environment {
+struct EnvironmentSettingsObject
+    : public Environment
+    , public JS::Realm::CustomData {
     // https://html.spec.whatwg.org/multipage/webappapis.html#concept-environment-target-browsing-context
     virtual JS::ExecutionContext& realm_execution_context() = 0;
 
@@ -68,27 +74,12 @@ struct EnvironmentSettingsObject : public Environment {
     // https://html.spec.whatwg.org/multipage/webappapis.html#concept-settings-object-cross-origin-isolated-capability
     virtual CanUseCrossOriginIsolatedAPIs cross_origin_isolated_capability() = 0;
 
-    // https://html.spec.whatwg.org/multipage/webappapis.html#environment-settings-object%27s-realm
-    JS::Realm& realm()
-    {
-        // An environment settings object's realm execution context's Realm component is the environment settings object's Realm.
-        return *realm_execution_context().realm;
-    }
-
-    // https://html.spec.whatwg.org/multipage/webappapis.html#concept-settings-object-global
-    JS::GlobalObject& global_object()
-    {
-        // An environment settings object's Realm then has a [[GlobalObject]] field, which contains the environment settings object's global object.
-        return realm().global_object();
-    }
-
-    // https://html.spec.whatwg.org/multipage/webappapis.html#responsible-event-loop
-    EventLoop& responsible_event_loop()
-    {
-        // An environment settings object's responsible event loop is its global object's relevant agent's event loop.
-        auto& vm = global_object().vm();
-        return verify_cast<Bindings::WebEngineCustomData>(vm.custom_data())->event_loop;
-    }
+    JS::Realm& realm();
+    JS::GlobalObject& global_object();
+    EventLoop& responsible_event_loop();
+    CanRunScript can_run_script();
+    void prepare_to_run_script();
+    void clean_up_after_running_script();
 };
 
 }

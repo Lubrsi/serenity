@@ -115,6 +115,8 @@ class CanvasRenderingContext2D;
 class CloseEvent;
 class DOMParser;
 class DOMStringMap;
+struct Environment;
+struct EnvironmentSettingsObject;
 struct EventHandler;
 class EventLoop;
 class HTMLAnchorElement;
@@ -198,6 +200,7 @@ class PageTransitionEvent;
 class PromiseRejectionEvent;
 class SubmitEvent;
 class WebSocket;
+class WindowEnvironmentSettingsObject;
 }
 
 namespace Web::HighResolutionTime {

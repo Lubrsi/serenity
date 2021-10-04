@@ -506,25 +506,25 @@ class ExpectationError extends Error {
     };
 
     //console.log(test.skip);
-    console.log(test);
+    //console.log(test);
 
-    // test.skip = (message, callback) => {
-    //     if (typeof callback !== "function")
-    //         throw new Error("test.skip has invalid second argument (must be a function)");
-    //
-    //     if (!__TestResults__[suiteMessage]) __TestResults__[suiteMessage] = {};
-    //
-    //     const suite = __TestResults__[suiteMessage];
-    //     if (Object.prototype.hasOwnProperty.call(suite, message)) {
-    //         suite[message] = {
-    //             result: "fail",
-    //             details: "Another test with the same message did already run",
-    //         };
-    //         return;
-    //     }
-    //
-    //     suite[message] = {
-    //         result: "skip",
-    //     };
-    // };
+    test.skip = (message, callback) => {
+        if (typeof callback !== "function")
+            throw new Error("test.skip has invalid second argument (must be a function)");
+
+        if (!__TestResults__[suiteMessage]) __TestResults__[suiteMessage] = {};
+
+        const suite = __TestResults__[suiteMessage];
+        if (Object.prototype.hasOwnProperty.call(suite, message)) {
+            suite[message] = {
+                result: "fail",
+                details: "Another test with the same message did already run",
+            };
+            return;
+        }
+
+        suite[message] = {
+            result: "skip",
+        };
+    };
 })();

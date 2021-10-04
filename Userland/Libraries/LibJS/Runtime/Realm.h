@@ -13,6 +13,10 @@ namespace JS {
 // 9.3 Realms, https://tc39.es/ecma262/#realm-record
 class Realm final : public Cell {
 public:
+    struct CustomData {
+        virtual ~CustomData() = default;
+    };
+
     Realm() = default;
 
     // 9.3.1 CreateRealm ( ), https://tc39.es/ecma262/#sec-createrealm
@@ -23,12 +27,17 @@ public:
     [[nodiscard]] GlobalObject& global_object() const;
     [[nodiscard]] GlobalEnvironment& global_environment() const;
 
+    CustomData* custom_data() { return m_custom_data; }
+    void set_custom_data(OwnPtr<CustomData> custom_data) { m_custom_data = move(custom_data); }
+
 private:
     virtual char const* class_name() const override { return "Realm"; }
     virtual void visit_edges(Visitor&) override;
 
     GlobalObject* m_global_object { nullptr };           // [[GlobalObject]]
     GlobalEnvironment* m_global_environment { nullptr }; // [[GlobalEnv]]
+
+    OwnPtr<CustomData> m_custom_data;
 };
 
 }

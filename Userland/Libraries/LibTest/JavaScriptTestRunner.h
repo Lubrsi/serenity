@@ -334,7 +334,7 @@ inline JSFileResult TestRunner::run_file_test(const String& test_path)
         }
     }
 
-    if (!m_test_script) {
+    //if (!m_test_script) {
         auto result = parse_script(m_common_path, interpreter->realm());
         if (result.is_error()) {
             warnln("Unable to parse test-common.js");
@@ -343,7 +343,7 @@ inline JSFileResult TestRunner::run_file_test(const String& test_path)
             cleanup_and_exit();
         }
         m_test_script = result.release_value();
-    }
+    //}
 
     if (g_run_bytecode) {
         auto unit = JS::Bytecode::Generator::generate(m_test_script->parse_node());

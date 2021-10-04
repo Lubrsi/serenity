@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020, Andreas Kling <kling@serenityos.org>
  * Copyright (c) 2020-2021, Linus Groh <linusg@serenityos.org>
+ * Copyright (c) 2021, Luke Wilde <lukew@serenityos.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -42,7 +43,6 @@ Interpreter::~Interpreter()
 // 16.1.6 ScriptEvaluation ( scriptRecord ), https://tc39.es/ecma262/#sec-runtime-semantics-scriptevaluation
 void Interpreter::run(Script& script_record)
 {
-    dbgln("IR");
     auto& vm = this->vm();
     VERIFY(!vm.exception());
 
@@ -52,6 +52,10 @@ void Interpreter::run(Script& script_record)
 
     // 1. Let globalEnv be scriptRecord.[[Realm]].[[GlobalEnv]].
     auto& global_environment = script_record.realm().global_environment();
+
+    // NOTE: This isn't in the spec.
+    // FIXME: Is this the right global object?
+    auto& global_object = script_record.realm().global_object();
 
     // 2. Let scriptContext be a new ECMAScript code execution context.
     ExecutionContext script_context(vm.heap());
@@ -74,20 +78,21 @@ void Interpreter::run(Script& script_record)
     // FIXME: 9. Suspend the currently running execution context.
 
     // 10. Push scriptContext onto the execution context stack; scriptContext is now the running execution context.
-    // FIXME: Is this the right global object?
-    vm.push_execution_context(script_context, script_record.realm().global_object());
+    vm.push_execution_context(script_context, global_object);
 
     // 11. Let scriptBody be scriptRecord.[[ECMAScriptCode]].
     auto& script_body = script_record.parse_node();
 
-    // FIXME: 12. Let result be GlobalDeclarationInstantiation(scriptBody, globalEnv).
+    // 12. Let result be GlobalDeclarationInstantiation(scriptBody, globalEnv).
+    auto result = script_body.global_declaration_instantiation(*this, global_object, global_environment);
 
-    // FIXME: 13. If result.[[Type]] is normal, then
-    // a. Set result to the result of evaluating scriptBody.
-    // FIXME: Is this the right global object?
-    VERIFY(!vm.exception());
-    auto value = script_body.execute(*this, script_record.realm().global_object());
-    vm.set_last_value(Badge<Interpreter> {}, value.value_or(js_undefined()));
+    // 13. If result.[[Type]] is normal, then
+    if (!result.is_throw_completion()) {
+        VERIFY(!vm.exception());
+        // FIXME: a. Set result to the result of evaluating scriptBody.
+        auto value = script_body.execute(*this, global_object);
+        vm.set_last_value(Badge<Interpreter> {}, value.value_or(js_undefined()));
+    }
 
     // FIXME: 14. If result.[[Type]] is normal and result.[[Value]] is empty, then
     //          a. Set result to NormalCompletion(undefined).
