@@ -175,7 +175,10 @@ struct KmallocGlobalHeap {
     {
         if (m_backup_memory)
             return;
-        m_backup_memory = MM.allocate_kernel_region(1 * MiB, "kmalloc subheap", Memory::Region::Access::ReadWrite, AllocationStrategy::AllocateNow).release_value();
+        auto backup_memory_or_error = MM.allocate_kernel_region(1 * MiB, "kmalloc subheap", Memory::Region::Access::ReadWrite, AllocationStrategy::AllocateNow);
+        if (backup_memory_or_error.is_error())
+            return;
+        m_backup_memory = backup_memory_or_error.release_value();
     }
 
     size_t backup_memory_bytes() const

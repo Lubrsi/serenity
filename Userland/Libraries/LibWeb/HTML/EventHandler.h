@@ -9,20 +9,12 @@
 #include <AK/String.h>
 #include <LibJS/Heap/Handle.h>
 #include <LibJS/Runtime/FunctionObject.h>
+#include <LibWeb/Bindings/CallbackType.h>
 
 namespace Web::HTML {
 
-struct EventHandler {
-    EventHandler()
-    {
-    }
-
-    EventHandler(String s)
-        : string(move(s))
-    {
-    }
-
-    EventHandler(JS::Handle<JS::FunctionObject> c)
+struct EventHandler : public Bindings::CallbackType {
+    EventHandler(JS::Handle<JS::Object> callback)
         : callback(move(c))
     {
     }

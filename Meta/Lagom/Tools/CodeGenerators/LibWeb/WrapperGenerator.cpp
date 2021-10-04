@@ -951,12 +951,14 @@ static void generate_to_cpp(SourceGenerator& generator, ParameterType& parameter
             }
         }
     } else if (parameter.type.name == "EventListener") {
+        // FIXME: Replace this with support for callback interfaces. https://heycam.github.io/webidl/#idl-callback-interface
+
         if (parameter.type.nullable) {
             scoped_generator.append(R"~~~(
     RefPtr<EventListener> @cpp_name@;
     if (!@js_name@@js_suffix@.is_nullish()) {
-        if (!@js_name@@js_suffix@.is_function()) {
-            vm.throw_exception<JS::TypeError>(global_object, JS::ErrorType::NotAnObjectOfType, "Function");
+        if (!@js_name@@js_suffix@.is_object()) {
+            vm.throw_exception<JS::TypeError>(global_object, JS::ErrorType::NotAnObject, @js_name@@js_suffix@.to_string_without_side_effects());
             @return_statement@
         }
         @cpp_name@ = adopt_ref(*new EventListener(JS::make_handle(&@js_name@@js_suffix@.as_function())));

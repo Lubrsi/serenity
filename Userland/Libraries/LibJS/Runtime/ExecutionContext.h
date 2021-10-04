@@ -23,17 +23,20 @@ struct ExecutionContext {
     {
     }
 
-    FunctionObject* function { nullptr };                         // [[Function]]
-    Realm* realm { nullptr };                                     // [[Realm]]
-    Variant<Script, Module, Empty> script_or_module { Empty {} }; // [[ScriptOrModule]]
-    Environment* lexical_environment { nullptr };                 // [[LexicalEnvironment]]
-    Environment* variable_environment { nullptr };                // [[VariableEnvironment]]
+    FunctionObject* function { nullptr };                                             // [[Function]]
+    Realm* realm { nullptr };                                                         // [[Realm]]
+    Variant<NonnullRefPtr<Script>, NonnullRefPtr<Module>, Empty> script_or_module {}; // [[ScriptOrModule]]
+    Environment* lexical_environment { nullptr };                                     // [[LexicalEnvironment]]
+    Environment* variable_environment { nullptr };                                    // [[VariableEnvironment]]
 
     ASTNode const* current_node { nullptr };
     FlyString function_name;
     Value this_value;
     MarkedValueList arguments;
     bool is_strict_mode { false };
+
+    // https://html.spec.whatwg.org/multipage/webappapis.html#skip-when-determining-incumbent-counter
+    size_t skip_when_determining_incumbent_counter { 0 };
 };
 
 }

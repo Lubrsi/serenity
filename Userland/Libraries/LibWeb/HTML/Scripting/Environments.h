@@ -43,9 +43,9 @@ enum class CanUseCrossOriginIsolatedAPIs {
     Yes,
 };
 
-enum class CanRunScript {
-    No,
-    Yes,
+enum class RunScriptDecision {
+    Run,
+    DoNotRun,
 };
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#environment-settings-object
@@ -77,9 +77,17 @@ struct EnvironmentSettingsObject
     JS::Realm& realm();
     JS::GlobalObject& global_object();
     EventLoop& responsible_event_loop();
-    CanRunScript can_run_script();
+
+    RunScriptDecision can_run_script();
     void prepare_to_run_script();
     void clean_up_after_running_script();
+
+    void prepare_to_run_callback();
+    void clean_up_after_running_callback();
 };
+
+EnvironmentSettingsObject& incumbent_settings_object();
+JS::Realm& incumbent_realm();
+JS::GlobalObject& incumbent_global_object();
 
 }

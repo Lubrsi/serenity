@@ -71,7 +71,7 @@ JS::Value ClassicScript::run(RethrowErrors rethrow_errors)
 
     // 2. Check if we can run script with settings.
     // FIXME: If this returns "do not run" then return NormalCompletion(empty).
-    if (m_settings_object.can_run_script() == CanRunScript::No)
+    if (m_settings_object.can_run_script() == RunScriptDecision::DoNotRun)
         return {};
 
     // 3. Prepare to run script given settings.

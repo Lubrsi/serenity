@@ -13,6 +13,7 @@ namespace Web::Bindings::IDL {
 
 bool is_an_array_index(JS::GlobalObject&, JS::PropertyName const&);
 
+// https://heycam.github.io/webidl/#call-a-user-objects-operation
 template<typename... Args>
 JS::Completion call_user_object_operation(JS::Object& object, JS::Realm& realm, String const& operation_name, Optional<JS::Value> this_argument, Args&&... args)
 {
@@ -26,6 +27,7 @@ JS::Completion call_user_object_operation(JS::Object& object, JS::Realm& realm, 
     // 3. Let O be the ECMAScript object corresponding to value. (This is enforced by the type of `object`)
 
     // FIXME: 4. Let realm be O’s associated Realm.
+    //        We cannot get the realm from JS::Object, so we currently have to take the realm as an object.
 
     // 5. Let relevant settings be realm’s settings object.
     auto& relevant_settings = verify_cast<HTML::EnvironmentSettingsObject>(*realm.custom_data());
@@ -38,7 +40,7 @@ JS::Completion call_user_object_operation(JS::Object& object, JS::Realm& realm, 
     // FIXME: 8. Prepare to run a callback with stored settings.
 
     // 9. Let X be O.
-    auto* actual_function_object = &object;
+    auto const* actual_function_object = &object;
 
     // 10. If ! IsCallable(O) is false, then:
     if (!object.is_function()) {
@@ -63,14 +65,20 @@ JS::Completion call_user_object_operation(JS::Object& object, JS::Realm& realm, 
     }
 
     // FIXME: 11. Let esArgs be the result of converting args to an ECMAScript arguments list. If this throws an exception, set completion to the completion value representing the thrown exception and jump to the step labeled return.
-    //        For simplicity, we currently make the caller do this. However, this means we don't throw exceptions at this point.
+    //        For simplicity, we currently make the caller do this. However, this means we can't throw exceptions at this point like the spec wants us to.
 
     // 12. Let callResult be Call(X, thisArg, esArgs).
     auto call_result = realm.vm().call(*actual_function_object, this_argument.value(), forward<Args>(args)...);
+
+    // 13. If callResult is an abrupt completion, set completion to callResult and jump to the step labeled return.
     if (call_result.is_throw_completion()) {
         completion = call_result.throw_completion();
         goto return_cleanup;
     }
+
+    // FIXME: 14. Set completion to the result of converting callResult.[[Value]] to an IDL value of the same type as the operation’s return type.
+    //            (This doesn't wrap the value)
+    completion = call_result.value();
 
     // 15. Return: at this point completion will be set to an ECMAScript completion value.
 return_cleanup:

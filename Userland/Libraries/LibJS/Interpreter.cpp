@@ -48,12 +48,13 @@ void Interpreter::run(Script& script_record)
 
     VM::InterpreterExecutionScope scope(*this);
 
+    // FIXME: Replace last value with returning a completion as per the spec.
     vm.set_last_value(Badge<Interpreter> {}, {});
 
     // 1. Let globalEnv be scriptRecord.[[Realm]].[[GlobalEnv]].
     auto& global_environment = script_record.realm().global_environment();
 
-    // NOTE: This isn't in the spec.
+    // NOTE: This isn't in the spec but we require it.
     // FIXME: Is this the right global object?
     auto& global_object = script_record.realm().global_object();
 
@@ -65,7 +66,8 @@ void Interpreter::run(Script& script_record)
     // 4. Set the Realm of scriptContext to scriptRecord.[[Realm]].
     script_context.realm = &script_record.realm();
 
-    // FIXME: 5. Set the ScriptOrModule of scriptContext to scriptRecord.
+    // 5. Set the ScriptOrModule of scriptContext to scriptRecord.
+    script_context.script_or_module = NonnullRefPtr<Script> { script_record };
 
     // 6. Set the VariableEnvironment of scriptContext to globalEnv.
     script_context.variable_environment = &global_environment;
@@ -80,6 +82,9 @@ void Interpreter::run(Script& script_record)
     // 10. Push scriptContext onto the execution context stack; scriptContext is now the running execution context.
     vm.push_execution_context(script_context, global_object);
 
+    // FIXME: Handle running out of stack space.
+    VERIFY(!vm.exception());
+
     // 11. Let scriptBody be scriptRecord.[[ECMAScriptCode]].
     auto& script_body = script_record.parse_node();
 
@@ -88,7 +93,6 @@ void Interpreter::run(Script& script_record)
 
     // 13. If result.[[Type]] is normal, then
     if (!result.is_throw_completion()) {
-        VERIFY(!vm.exception());
         // FIXME: a. Set result to the result of evaluating scriptBody.
         auto value = script_body.execute(*this, global_object);
         vm.set_last_value(Badge<Interpreter> {}, value.value_or(js_undefined()));

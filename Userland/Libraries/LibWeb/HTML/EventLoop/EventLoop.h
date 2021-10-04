@@ -55,6 +55,11 @@ public:
 
     NonnullRefPtrVector<DOM::Document> documents_in_this_event_loop() const;
 
+    void push_onto_backup_incumbent_settings_object_stack(Badge<EnvironmentSettingsObject>, EnvironmentSettingsObject& environment_settings_object);
+    void pop_backup_incumbent_settings_object_stack(Badge<EnvironmentSettingsObject>);
+    EnvironmentSettingsObject& top_of_backup_incumbent_settings_object_stack();
+    bool is_backup_incumbent_settings_object_stack_empty() const { return m_backup_incumbent_settings_object_stack.is_empty(); }
+
 private:
     Type m_type { Type::Window };
 
@@ -72,6 +77,9 @@ private:
     bool m_performing_a_microtask_checkpoint { false };
 
     Vector<WeakPtr<DOM::Document>> m_documents;
+
+    // https://html.spec.whatwg.org/multipage/webappapis.html#backup-incumbent-settings-object-stack
+    Vector<EnvironmentSettingsObject&> m_backup_incumbent_settings_object_stack;
 };
 
 EventLoop& main_thread_event_loop();

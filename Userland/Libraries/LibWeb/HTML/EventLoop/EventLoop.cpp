@@ -291,4 +291,19 @@ void EventLoop::unregister_document(Badge<DOM::Document>, DOM::Document& documen
     VERIFY(did_remove);
 }
 
+void EventLoop::push_onto_backup_incumbent_settings_object_stack(Badge<EnvironmentSettingsObject>, EnvironmentSettingsObject& environment_settings_object)
+{
+    m_backup_incumbent_settings_object_stack.append(environment_settings_object);
+}
+
+void EventLoop::pop_backup_incumbent_settings_object_stack(Badge<EnvironmentSettingsObject>)
+{
+    m_backup_incumbent_settings_object_stack.take_last();
+}
+
+EnvironmentSettingsObject& EventLoop::top_of_backup_incumbent_settings_object_stack()
+{
+    return m_backup_incumbent_settings_object_stack.last();
+}
+
 }
