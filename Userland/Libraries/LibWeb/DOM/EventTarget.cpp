@@ -36,7 +36,7 @@ void EventTarget::add_event_listener(const FlyString& event_name, RefPtr<EventLi
     if (listener.is_null())
         return;
     auto existing_listener = m_listeners.first_matching([&](auto& entry) {
-        return entry.listener->type() == event_name && &entry.listener->function() == &listener->function() && entry.listener->capture() == listener->capture();
+        return entry.listener->type() == event_name && &entry.listener->callback() == &listener->callback() && entry.listener->capture() == listener->capture();
     });
     if (existing_listener.has_value())
         return;
@@ -50,7 +50,7 @@ void EventTarget::remove_event_listener(const FlyString& event_name, RefPtr<Even
     if (listener.is_null())
         return;
     m_listeners.remove_first_matching([&](auto& entry) {
-        auto matches = entry.event_name == event_name && &entry.listener->function() == &listener->function() && entry.listener->capture() == listener->capture();
+        auto matches = entry.event_name == event_name && &entry.listener->callback() == &listener->callback() && entry.listener->capture() == listener->capture();
         if (matches)
             entry.listener->set_removed(true);
         return matches;
@@ -60,7 +60,7 @@ void EventTarget::remove_event_listener(const FlyString& event_name, RefPtr<Even
 void EventTarget::remove_from_event_listener_list(NonnullRefPtr<EventListener> listener)
 {
     m_listeners.remove_first_matching([&](auto& entry) {
-        return entry.listener->type() == listener->type() && &entry.listener->function() == &listener->function() && entry.listener->capture() == listener->capture();
+        return entry.listener->type() == listener->type() && &entry.listener->callback() == &listener->callback() && entry.listener->capture() == listener->capture();
     });
 }
 
@@ -110,7 +110,7 @@ HTML::EventHandler EventTarget::event_handler_attribute(FlyString const& name)
 
     for (auto& listener : target->listeners()) {
         if (listener.event_name == name && listener.listener->is_attribute()) {
-            return HTML::EventHandler { JS::make_handle(&listener.listener->function()) };
+            return HTML::EventHandler { listener.listener->callback().callback };
         }
     }
     return {};
@@ -122,9 +122,17 @@ void EventTarget::set_event_handler_attribute(FlyString const& name, HTML::Event
     if (!target)
         return;
 
+    // FIXME: REMOVE!!!!
+    TODO();
+    return;
+
+    // The EventListener's callback context can be arbitrary; it does not impact the steps of the event handler processing algorithm. [DOM]
+    // https://html.spec.whatwg.org/multipage/webappapis.html#activate-an-event-handler
+    // FIXME: Since this function is not spec compliant, the callback context probably matters here and is probably wrong.
     RefPtr<DOM::EventListener> listener;
     if (!value.callback.is_null()) {
-        listener = adopt_ref(*new DOM::EventListener(move(value.callback), true));
+        Bindings::CallbackType callback(move(value.callback), HTML::incumbent_settings_object());
+        listener = adopt_ref(*new DOM::EventListener(move(callback), true));
     } else {
         StringBuilder builder;
         builder.appendff("function {}(event) {{\n{}\n}}", name, value.string);
@@ -136,7 +144,8 @@ void EventTarget::set_event_handler_attribute(FlyString const& name, HTML::Event
         }
         auto* function = JS::ECMAScriptFunctionObject::create(target->script_execution_context()->realm().global_object(), name, program->body(), program->parameters(), program->function_length(), nullptr, JS::FunctionKind::Regular, false, false);
         VERIFY(function);
-        listener = adopt_ref(*new DOM::EventListener(JS::make_handle(static_cast<JS::FunctionObject*>(function)), true));
+        Bindings::CallbackType callback(move(value.callback), HTML::incumbent_settings_object());
+        listener = adopt_ref(*new DOM::EventListener(move(callback), true));
     }
     if (listener) {
         for (auto& registered_listener : target->listeners()) {

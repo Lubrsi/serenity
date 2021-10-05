@@ -39,6 +39,9 @@ public:
     FunctionObject* temporal_time_zone_prototype_get_offset_nanoseconds_for_function() const { return m_temporal_time_zone_prototype_get_offset_nanoseconds_for_function; }
     FunctionObject* throw_type_error_function() const { return m_throw_type_error_function; }
 
+    Realm* realm() { return m_realm; }
+    void set_realm(Badge<Realm>, Realm* realm) { m_realm = realm; }
+
 #define __JS_ENUMERATE(ClassName, snake_name, PrototypeName, ConstructorName, ArrayType) \
     ConstructorName* snake_name##_constructor() { return m_##snake_name##_constructor; } \
     Object* snake_name##_prototype() { return m_##snake_name##_prototype; }
@@ -102,6 +105,10 @@ private:
     FunctionObject* m_eval_function { nullptr };
     FunctionObject* m_temporal_time_zone_prototype_get_offset_nanoseconds_for_function { nullptr };
     FunctionObject* m_throw_type_error_function { nullptr };
+
+    // NOTE: This is not in the spec, but is required for Web IDL to get the realm from an arbitrary JS::Object, which does not store or have a pointer to any realm.
+    // https://webidl.spec.whatwg.org/#dfn-associated-realm
+    Realm* m_realm { nullptr };
 
 #define __JS_ENUMERATE(ClassName, snake_name, PrototypeName, ConstructorName, ArrayType) \
     ConstructorName* m_##snake_name##_constructor { nullptr };                           \

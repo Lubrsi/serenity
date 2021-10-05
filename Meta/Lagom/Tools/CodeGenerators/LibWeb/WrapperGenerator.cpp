@@ -952,16 +952,19 @@ static void generate_to_cpp(SourceGenerator& generator, ParameterType& parameter
         }
     } else if (parameter.type.name == "EventListener") {
         // FIXME: Replace this with support for callback interfaces. https://heycam.github.io/webidl/#idl-callback-interface
+        // FIXME: This needs to be able to take an arbitrary object. The reason this doesn't right now is because JS::Object's don't provide a realm.
+        //        Web IDL defines "associated Realm" for each Object but it's underspecified. https://heycam.github.io/webidl/#dfn-associated-realm
 
         if (parameter.type.nullable) {
             scoped_generator.append(R"~~~(
     RefPtr<EventListener> @cpp_name@;
     if (!@js_name@@js_suffix@.is_nullish()) {
-        if (!@js_name@@js_suffix@.is_object()) {
-            vm.throw_exception<JS::TypeError>(global_object, JS::ErrorType::NotAnObject, @js_name@@js_suffix@.to_string_without_side_effects());
+        if (!@js_name@@js_suffix@.is_function()) {
+            vm.throw_exception<JS::TypeError>(global_object, JS::ErrorType::NotAnObjectOfType, "Function");
             @return_statement@
         }
-        @cpp_name@ = adopt_ref(*new EventListener(JS::make_handle(&@js_name@@js_suffix@.as_function())));
+        CallbackType callback(JS::make_handle(&@js_name@@js_suffix@.as_function()), HTML::incumbent_settings_object());
+        @cpp_name@ = adopt_ref(*new EventListener(move(callback)));
     }
 )~~~");
         } else {
@@ -970,7 +973,8 @@ static void generate_to_cpp(SourceGenerator& generator, ParameterType& parameter
         vm.throw_exception<JS::TypeError>(global_object, JS::ErrorType::NotAnObjectOfType, "Function");
         @return_statement@
     }
-    auto @cpp_name@ = adopt_ref(*new EventListener(JS::make_handle(&@js_name@@js_suffix@.as_function())));
+    CallbackType callback(JS::make_handle(&@js_name@@js_suffix@.as_function()), HTML::incumbent_settings_object());
+    auto @cpp_name@ = adopt_ref(*new EventListener(move(callback)));
 )~~~");
         }
     } else if (is_wrappable_type(parameter.type)) {

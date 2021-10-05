@@ -9,6 +9,7 @@
 #include <AK/RefCounted.h>
 #include <LibJS/Heap/Handle.h>
 #include <LibWeb/Bindings/Wrappable.h>
+#include <LibWeb/Bindings/CallbackType.h>
 
 namespace Web::DOM {
 
@@ -18,13 +19,13 @@ class EventListener
 public:
     using WrapperType = Bindings::EventListenerWrapper;
 
-    explicit EventListener(JS::Handle<JS::FunctionObject> function, bool is_attribute = false)
-        : m_function(move(function))
+    explicit EventListener(Bindings::CallbackType callback, bool is_attribute = false)
+        : m_callback(move(callback))
         , m_attribute(is_attribute)
     {
     }
 
-    JS::FunctionObject& function();
+    Bindings::CallbackType& callback() { return m_callback; }
 
     const FlyString& type() const { return m_type; }
     void set_type(const FlyString& type) { m_type = type; }
@@ -45,7 +46,7 @@ public:
 
 private:
     FlyString m_type;
-    JS::Handle<JS::FunctionObject> m_function;
+    Bindings::CallbackType m_callback;
     bool m_capture { false };
     bool m_passive { false };
     bool m_once { false };

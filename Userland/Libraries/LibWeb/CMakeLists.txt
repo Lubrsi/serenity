@@ -67,7 +67,6 @@ set(SOURCES
     DOM/ElementFactory.cpp
     DOM/Event.cpp
     DOM/EventDispatcher.cpp
-    DOM/EventListener.cpp
     DOM/EventTarget.cpp
     DOM/HTMLCollection.cpp
     DOM/LiveNodeList.cpp

@@ -28,6 +28,10 @@ void Realm::set_global_object(GlobalObject& global_object, Object* this_value)
     // 4. Set realmRec.[[GlobalObject]] to globalObj.
     m_global_object = &global_object;
 
+    // NOTE: This is not in the spec, but is required for Web IDL to get the realm from an arbitrary JS::Object, which does not store or have a pointer to any realm.
+    // https://webidl.spec.whatwg.org/#dfn-associated-realm
+    m_global_object->set_realm({}, this);
+
     // 5. Let newGlobalEnv be NewGlobalEnvironment(globalObj, thisValue).
     // 6. Set realmRec.[[GlobalEnv]] to newGlobalEnv.
     m_global_environment = global_object.heap().allocate<GlobalEnvironment>(global_object, global_object, *this_value);

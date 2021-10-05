@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <LibWeb/Bindings/CallbackType.h>
+#include <LibJS/Runtime/FunctionObject.h>
 #include <LibJS/Forward.h>
 #include <LibWeb/HTML/Scripting/Environments.h>
 
@@ -13,9 +15,9 @@ namespace Web::Bindings::IDL {
 
 bool is_an_array_index(JS::GlobalObject&, JS::PropertyName const&);
 
-// https://heycam.github.io/webidl/#call-a-user-objects-operation
+// https://webidl.spec.whatwg.org/#call-a-user-objects-operation
 template<typename... Args>
-JS::Completion call_user_object_operation(JS::Object& object, JS::Realm& realm, String const& operation_name, Optional<JS::Value> this_argument, Args&&... args)
+JS::Completion call_user_object_operation(Bindings::CallbackType& callback, String const& operation_name, Optional<JS::Value> this_argument, Args&&... args)
 {
     // 1. Let completion be an uninitialized variable.
     JS::Completion completion;
@@ -24,23 +26,28 @@ JS::Completion call_user_object_operation(JS::Object& object, JS::Realm& realm, 
     if (!this_argument.has_value())
         this_argument = JS::js_undefined();
 
-    // 3. Let O be the ECMAScript object corresponding to value. (This is enforced by the type of `object`)
+    // 3. Let O be the ECMAScript object corresponding to value.
+    auto& object = *callback.callback.cell();
 
-    // FIXME: 4. Let realm be O’s associated Realm.
-    //        We cannot get the realm from JS::Object, so we currently have to take the realm as an object.
+    // 4. Let realm be O’s associated Realm.
+    // NOTE: Since associated Realm is not a part of the JS spec and it's underspecified in Web IDL, I'm not certain if this is correct.
+    // https://webidl.spec.whatwg.org/#dfn-associated-realm
+    auto& realm = *object.global_object().realm();
 
     // 5. Let relevant settings be realm’s settings object.
     auto& relevant_settings = verify_cast<HTML::EnvironmentSettingsObject>(*realm.custom_data());
 
-    // FIXME: 6. Let stored settings be value’s callback context.
+    // 6. Let stored settings be value’s callback context.
+    auto& stored_settings = callback.callback_context;
 
     // 7. Prepare to run script with relevant settings.
     relevant_settings.prepare_to_run_script();
 
-    // FIXME: 8. Prepare to run a callback with stored settings.
+    // 8. Prepare to run a callback with stored settings.
+    stored_settings.prepare_to_run_callback();
 
     // 9. Let X be O.
-    auto const* actual_function_object = &object;
+    auto* actual_function_object = &object;
 
     // 10. If ! IsCallable(O) is false, then:
     if (!object.is_function()) {
@@ -61,28 +68,36 @@ JS::Completion call_user_object_operation(JS::Object& object, JS::Realm& realm, 
 
         // 3. Set X to getResult.[[Value]].
         // NOTE: This is done out of order because `actual_function_object` is of type JS::Object and we cannot assign to it until we know for sure getResult.[[Value]] is a JS::Object.
-        actual_function_object = &get_result.value().as_object();
+        actual_function_object = &get_result.release_value().as_object();
+
+        // 5. Set thisArg to O (overriding the provided value).
+        this_argument = &object;
     }
 
-    // FIXME: 11. Let esArgs be the result of converting args to an ECMAScript arguments list. If this throws an exception, set completion to the completion value representing the thrown exception and jump to the step labeled return.
-    //        For simplicity, we currently make the caller do this. However, this means we can't throw exceptions at this point like the spec wants us to.
+    // FIXME: Remove this scope or the gotos.
+    {
+        // FIXME: 11. Let esArgs be the result of converting args to an ECMAScript arguments list. If this throws an exception, set completion to the completion value representing the thrown exception and jump to the step labeled return.
+        //        For simplicity, we currently make the caller do this. However, this means we can't throw exceptions at this point like the spec wants us to.
 
-    // 12. Let callResult be Call(X, thisArg, esArgs).
-    auto call_result = realm.vm().call(*actual_function_object, this_argument.value(), forward<Args>(args)...);
+        // 12. Let callResult be Call(X, thisArg, esArgs).
+        VERIFY(actual_function_object);
+        auto call_result = realm.vm().call(verify_cast<JS::FunctionObject>(*actual_function_object), this_argument.value(), forward<Args>(args)...);
 
-    // 13. If callResult is an abrupt completion, set completion to callResult and jump to the step labeled return.
-    if (call_result.is_throw_completion()) {
-        completion = call_result.throw_completion();
-        goto return_cleanup;
+        // 13. If callResult is an abrupt completion, set completion to callResult and jump to the step labeled return.
+        if (call_result.is_throw_completion()) {
+            completion = call_result.throw_completion();
+            goto return_cleanup;
+        }
+
+        // FIXME: 14. Set completion to the result of converting callResult.[[Value]] to an IDL value of the same type as the operation’s return type.
+        //            (This doesn't convert the value)
+        completion = call_result.value();
     }
-
-    // FIXME: 14. Set completion to the result of converting callResult.[[Value]] to an IDL value of the same type as the operation’s return type.
-    //            (This doesn't wrap the value)
-    completion = call_result.value();
 
     // 15. Return: at this point completion will be set to an ECMAScript completion value.
 return_cleanup:
-    // FIXME: 1. Clean up after running a callback with stored settings.
+    // 1. Clean up after running a callback with stored settings.
+    stored_settings.clean_up_after_running_callback();
 
     // 2. Clean up after running script with relevant settings.
     relevant_settings.clean_up_after_running_script();
@@ -92,8 +107,12 @@ return_cleanup:
         return completion;
 
     // 4. If completion is an abrupt completion and the operation has a return type that is not a promise type, return completion.
-    // FIXME: This does not handle promises and thus always returns.
+    // FIXME: This does not handle promises and thus always returns completion at this point.
     return completion;
+
+    // FIXME: 5. Let rejectedPromise be ! Call(%Promise.reject%, %Promise%, «completion.[[Value]]»).
+
+    // FIXME: 6. Return the result of converting rejectedPromise to the operation’s return type.
 }
 
 }

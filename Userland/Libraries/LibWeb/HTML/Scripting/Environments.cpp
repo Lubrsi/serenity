@@ -158,7 +158,7 @@ JS::Realm& incumbent_realm()
 JS::GlobalObject& incumbent_global_object()
 {
     // Similarly, the incumbent global object is the global object of the incumbent settings object.
-    return incumbent_realm().global_object();
+    return incumbent_settings_object().global_object();
 }
 
 }

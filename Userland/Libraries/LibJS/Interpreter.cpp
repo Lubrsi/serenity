@@ -55,7 +55,6 @@ void Interpreter::run(Script& script_record)
     auto& global_environment = script_record.realm().global_environment();
 
     // NOTE: This isn't in the spec but we require it.
-    // FIXME: Is this the right global object?
     auto& global_object = script_record.realm().global_object();
 
     // 2. Let scriptContext be a new ECMAScript code execution context.
