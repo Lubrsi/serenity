@@ -59,7 +59,7 @@ public:
 protected:
     explicit EventTarget(Bindings::ScriptExecutionContext&);
 
-    HTML::EventHandler* get_current_value_of_event_handler(FlyString const& name);
+    Bindings::CallbackType* get_current_value_of_event_handler(FlyString const& name);
 
     virtual void ref_event_target() = 0;
     virtual void unref_event_target() = 0;

@@ -117,7 +117,7 @@ HTML::EventHandler EventTarget::event_handler_attribute(FlyString const& name)
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#getting-the-current-value-of-the-event-handler
-HTML::EventHandler* EventTarget::get_current_value_of_event_handler(FlyString const& name)
+Bindings::CallbackType* EventTarget::get_current_value_of_event_handler(FlyString const& name)
 {
     // 1. Let handlerMap be eventTarget's event handler map. (NOTE: Not necessary)
 
@@ -216,7 +216,8 @@ HTML::EventHandler* EventTarget::get_current_value_of_event_handler(FlyString co
         //  The result of parsing body above. (This is given by program->body())
 
         // thisMode
-        //  non-lexical-this (For JS::ECMAScriptFunctionObject, this means passing is_arrow_function to false)
+        //  non-lexical-this (For JS::ECMAScriptFunctionObject, this means passing is_arrow_function as false)
+        constexpr bool is_arrow_function = false;
 
         // scope
         //  1. Let realm be settings object's Realm.
@@ -225,7 +226,7 @@ HTML::EventHandler* EventTarget::get_current_value_of_event_handler(FlyString co
         //  2. Let scope be realm.[[GlobalEnv]].
         auto& scope = realm.global_environment();
 
-        // These can't currently be implemented as NewObjectEnvironment expects a JS::Object, which none of these are.
+        // These can't currently be implemented as new_object_environment expects a JS::Object, which none of these are.
         //  FIXME: 3. If eventHandler is an element's event handler, then set scope to NewObjectEnvironment(document, true, scope).
         //  FIXME: 4. If form owner is not null, then set scope to NewObjectEnvironment(form owner, true, scope).
         //  FIXME: 5. If element is not null, then set scope to NewObjectEnvironment(element, true, scope).
@@ -233,11 +234,23 @@ HTML::EventHandler* EventTarget::get_current_value_of_event_handler(FlyString co
         //  6. Return scope. (NOTE: Not necessary)
 
         // FIXME: Work out might_need_arguments_object here. Let's assume it might for now.
-        auto* function = JS::ECMAScriptFunctionObject::create(global_object, name, program->body(), program->parameters(), program->function_length(), JS::FunctionKind::Regular, &scope, program->is_strict_mode(), true, false);
+        auto* function = JS::ECMAScriptFunctionObject::create(global_object, name, program->body(), program->parameters(), program->function_length(), &scope, JS::FunctionKind::Regular, program->is_strict_mode(), true, is_arrow_function);
         VERIFY(function);
 
-        //
+        // 10. Remove settings object's realm execution context from the JavaScript execution context stack.
+        VERIFY(global_object.vm().execution_context_stack().last() == &settings_object.realm_execution_context());
+        global_object.vm().pop_execution_context();
+
+        // 11. Set function.[[ScriptOrModule]] to null.
+        function->set_script_or_module({});
+
+        // 12. Set eventHandler's value to the result of creating a Web IDL EventHandler callback function object whose object reference is function and whose callback context is settings object.
+        event_handler->value = Bindings::CallbackType { JS::make_handle(static_cast<JS::Object*>(function)), settings_object };
     }
+
+    // 4. Return eventHandler's value.
+    VERIFY(event_handler->value.has<Bindings::CallbackType>());
+    return event_handler->value.get_pointer<Bindings::CallbackType>();
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-attributes:event-handler-idl-attributes-3

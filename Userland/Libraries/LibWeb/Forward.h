@@ -290,6 +290,7 @@ class URLSearchParamsIterator;
 namespace Web::Bindings {
 class AbortControllerWrapper;
 class AbortSignalWrapper;
+struct CallbackType;
 class CryptoWrapper;
 class CSSRuleListWrapper;
 class CSSRuleWrapper;

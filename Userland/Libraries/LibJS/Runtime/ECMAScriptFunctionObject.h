@@ -77,6 +77,7 @@ public:
     // This unfortunately cannot be a reference as this must be accessible from FunctionObject, which is the base class of other function types such as BoundFunction,
     // which don't have a [[ScriptOrModule]] internal slot. Because of this, the base script_or_module must return a newly constructed Empty.
     virtual Variant<NonnullRefPtr<Script>, NonnullRefPtr<Module>, Empty> script_or_module() const override { return m_script_or_module; }
+    void set_script_or_module(Variant<NonnullRefPtr<Script>, NonnullRefPtr<Module>, Empty> value) { m_script_or_module = move(value); }
 
 protected:
     virtual bool is_strict_mode() const final { return m_strict; }
