@@ -72,7 +72,7 @@ public:
     Origin origin() const;
     void set_origin(const Origin& origin);
 
-    bool is_scripting_enabled() const { return true; }
+    bool is_scripting_enabled() const { return !is_scripting_disabled(); }
 
     AK::URL parse_url(String const&) const;
 

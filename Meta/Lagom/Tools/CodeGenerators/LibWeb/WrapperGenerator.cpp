@@ -1092,14 +1092,12 @@ static void generate_to_cpp(SourceGenerator& generator, ParameterType& parameter
 )~~~");
     } else if (parameter.type.name == "EventHandler") {
         // x.onfoo = function() { ... }
+        // NOTE: Anything else than a function or string will be treated as null. This is because EventHandler has the [LegacyTreatNonObjectAsNull] extended attribute:
+
         scoped_generator.append(R"~~~(
-    HTML::EventHandler @cpp_name@;
+    Optional<HTML::EventHandler> @cpp_name@;
     if (@js_name@@js_suffix@.is_function()) {
-        @cpp_name@.callback = JS::make_handle(&@js_name@@js_suffix@.as_function());
-    } else if (@js_name@@js_suffix@.is_string()) {
-        @cpp_name@.string = @js_name@@js_suffix@.as_string().string();
-    } else {
-        return JS::js_undefined();
+        @cpp_name@ = HTML::EventHandler { JS::make_handle(&@js_name@@js_suffix@.as_function()) };
     }
 )~~~");
     } else if (parameter.type.name == "Promise") {

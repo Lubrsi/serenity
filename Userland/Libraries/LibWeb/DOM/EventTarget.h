@@ -59,6 +59,8 @@ public:
 protected:
     explicit EventTarget(Bindings::ScriptExecutionContext&);
 
+    HTML::EventHandler* get_current_value_of_event_handler(FlyString const& name);
+
     virtual void ref_event_target() = 0;
     virtual void unref_event_target() = 0;
 
@@ -67,6 +69,9 @@ private:
     Bindings::ScriptExecutionContext* m_script_execution_context { nullptr };
 
     Vector<EventListenerRegistration> m_listeners;
+
+    // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-map
+    HashMap<FlyString, HTML::EventHandler> m_event_handler_map;
 };
 
 }

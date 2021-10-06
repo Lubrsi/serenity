@@ -44,6 +44,7 @@ ECMAScriptFunctionObject::ECMAScriptFunctionObject(FlyString name, Statement con
     , m_formal_parameters(move(formal_parameters))
     , m_ecmascript_code(ecmascript_code)
     , m_realm(vm().interpreter_if_exists() ? &vm().interpreter().realm() : nullptr)
+    , m_script_or_module(vm().get_active_script_or_module())
     , m_strict(strict)
     , m_name(move(name))
     , m_function_length(function_length)
