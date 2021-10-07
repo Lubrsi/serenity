@@ -107,7 +107,7 @@ NonnullRefPtr<Window> Window::create_with_document(Document& document)
 }
 
 Window::Window(Document& document)
-    : EventTarget(static_cast<Bindings::ScriptExecutionContext&>(document))
+    : EventTarget()
     , m_associated_document(document)
     , m_performance(make<HighResolutionTime::Performance>(*this))
     , m_crypto(Crypto::Crypto::create())

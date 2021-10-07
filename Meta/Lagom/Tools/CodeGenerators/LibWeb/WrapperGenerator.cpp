@@ -1099,7 +1099,7 @@ static void generate_to_cpp(SourceGenerator& generator, ParameterType& parameter
         scoped_generator.append(R"~~~(
     Optional<Bindings::CallbackType> @cpp_name@;
     if (@js_name@@js_suffix@.is_object()) {
-        @cpp_name@ = { JS::make_handle(&@js_name@@js_suffix@.as_object()), HTML::incumbent_settings_object() };
+        @cpp_name@ = Bindings::CallbackType { JS::make_handle(&@js_name@@js_suffix@.as_object()), HTML::incumbent_settings_object() };
     }
 )~~~");
     } else if (parameter.type.name == "Promise") {

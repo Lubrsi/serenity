@@ -11,6 +11,7 @@
 #include <AK/Noncopyable.h>
 #include <AK/Vector.h>
 #include <LibJS/Forward.h>
+#include <LibWeb/HTML/EventHandler.h>
 #include <LibWeb/DOM/ExceptionOr.h>
 #include <LibWeb/Forward.h>
 
@@ -56,20 +57,22 @@ public:
     void set_event_handler_attribute(FlyString const& name, Optional<Bindings::CallbackType>);
 
 protected:
-    explicit EventTarget();
-
-    Bindings::CallbackType* get_current_value_of_event_handler(FlyString const& name);
-    void activate_event_handler(FlyString const& name, HTML::EventHandler& event_handler);
-    void process_event_handler_for_event(FlyString const& name, Event& event);
+    EventTarget();
 
     virtual void ref_event_target() = 0;
     virtual void unref_event_target() = 0;
+
+    virtual void element_event_handler_attribute_changed(FlyString const& local_name, String const& value);
 
 private:
     Vector<EventListenerRegistration> m_listeners;
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-map
     HashMap<FlyString, HTML::EventHandler> m_event_handler_map;
+
+    Bindings::CallbackType* get_current_value_of_event_handler(FlyString const& name);
+    void activate_event_handler(FlyString const& name, HTML::EventHandler& event_handler);
+    void process_event_handler_for_event(FlyString const& name, Event& event);
 };
 
 }

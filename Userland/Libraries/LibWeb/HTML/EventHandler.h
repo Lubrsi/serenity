@@ -11,6 +11,7 @@
 #include <LibJS/Heap/Handle.h>
 #include <LibJS/Runtime/FunctionObject.h>
 #include <LibWeb/Bindings/CallbackType.h>
+#include <LibWeb/DOM/EventListener.h>
 
 namespace Web::HTML {
 

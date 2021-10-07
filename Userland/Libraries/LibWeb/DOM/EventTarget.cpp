@@ -19,7 +19,6 @@
 #include <LibWeb/DOM/Window.h>
 #include <LibWeb/HTML/HTMLBodyElement.h>
 #include <LibWeb/HTML/HTMLFrameSetElement.h>
-#include <LibWeb/HTML/EventHandler.h>
 #include <LibJS/Runtime/NativeFunction.h>
 #include <LibWeb/HTML/ErrorEvent.h>
 #include <LibWeb/Bindings/IDLAbstractOperations.h>
@@ -351,6 +350,7 @@ void EventTarget::process_event_handler_for_event(FlyString const& name, Event& 
     // 3. Let special error event handling be true if event is an ErrorEvent object, event's type is error, and event's currentTarget implements the WindowOrWorkerGlobalScope mixin.
     //    Otherwise, let special error event handling be false.
     // FIXME: This doesn't check for WorkerGlobalScape as we don't currently have it.
+    // FIXME: Should this be Bindings::WindowObject instead?
     bool special_error_event_handling = is<HTML::ErrorEvent>(event) && event.type() == HTML::EventNames::error && is<Window>(event.current_target().ptr());
 
     // 4. Process the Event object event as follows:
@@ -396,7 +396,54 @@ void EventTarget::process_event_handler_for_event(FlyString const& name, Event& 
         TODO();
     }
 
+    TODO();
+}
 
+// https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-attributes:concept-element-attributes-change-ext
+void EventTarget::element_event_handler_attribute_changed(FlyString const& local_name, String const& value)
+{
+    // NOTE: Step 1 of this algorithm was handled in HTMLElement::parse_attribute.
+
+    // 2. Let eventTarget be the result of determining the target of an event handler given element and localName.
+    // NOTE: element is `this`.
+    auto* event_target = determine_target_of_event_handler(*this, local_name);
+
+    // 3. If eventTarget is null, then return.
+    if (!event_target)
+        return;
+
+    // FIXME: 4. If value is null, then deactivate an event handler given eventTarget and localName.
+    if (value.is_null()) {
+        TODO();
+        return;
+    }
+
+    // 5. Otherwise:
+    //  FIXME: 1. If the Should element's inline behavior be blocked by Content Security Policy? algorithm returns "Blocked" when executed upon element, "script attribute", and value, then return. [CSP]
+
+    //  2. Let handlerMap be eventTarget's event handler map. (NOTE: Not necessary)
+
+    //  3. Let eventHandler be handlerMap[localName].
+    auto event_handler = m_event_handler_map.get(local_name);
+
+    // FIXME: 4. Let location be the script location that triggered the execution of these steps.
+
+    //  FIXME: 5. Set eventHandler's value to the internal raw uncompiled handler value/location.
+    //            (This currently sets the value to the uncompiled source code instead of the named struct)
+    if (!event_handler.has_value()) {
+        // NOTE: See the optimization comment in get_current_value_of_event_handler about why this is done.
+        event_handler = value;
+        m_event_handler_map.set(local_name, event_handler.value());
+    } else {
+        event_handler->value = value;
+    }
+
+    VERIFY(event_handler.has_value());
+    VERIFY(event_handler->value.has<String>());
+
+    //  6. Activate an event handler given eventTarget and localName.
+    // Optimization: We pass in the event handler here instead of having activate_event_handler do another hash map lookup just to get the same object.
+    activate_event_handler(local_name, event_handler.value());
 }
 
 bool EventTarget::dispatch_event(NonnullRefPtr<Event> event)
