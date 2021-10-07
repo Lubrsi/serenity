@@ -8,6 +8,8 @@
 
 #include <AK/String.h>
 #include <LibJS/Runtime/Object.h>
+#include <LibJS/Script.h>
+#include <LibJS/Module.h>
 
 namespace JS {
 

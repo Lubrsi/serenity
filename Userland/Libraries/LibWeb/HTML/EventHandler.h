@@ -31,6 +31,9 @@ struct EventHandler {
     // FIXME: The string should actually be an "internal raw uncompiled handler" struct. This struct is just the uncompiled source code plus a source location for reporting parse errors.
     //        https://html.spec.whatwg.org/multipage/webappapis.html#internal-raw-uncompiled-handler
     Variant<String, Bindings::CallbackType> value;
+
+    // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-listener
+    RefPtr<DOM::EventListener> listener;
 };
 
 }

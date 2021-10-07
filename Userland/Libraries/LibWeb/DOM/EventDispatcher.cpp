@@ -103,6 +103,7 @@ bool EventDispatcher::inner_invoke(Event& event, Vector<EventTarget::EventListen
             event.set_in_passive_listener(true);
 
         // 10. Call a user object’s operation with listener’s callback, "handleEvent", « event », and event’s currentTarget attribute value. If this throws an exception, then:
+        // FIXME: These should be wrapped for us in call_user_object_operation, but it currently doesn't do that.
         auto* this_value = Bindings::wrap(global, *event.current_target());
         auto* wrapped_event = Bindings::wrap(global, event);
         auto callback_completion = Bindings::IDL::call_user_object_operation(callback, "handleEvent", this_value, wrapped_event);

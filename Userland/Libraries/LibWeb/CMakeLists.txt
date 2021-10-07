@@ -90,6 +90,7 @@ set(SOURCES
     HTML/CanvasRenderingContext2D.cpp
     HTML/DOMParser.cpp
     HTML/DOMStringMap.cpp
+    HTML/ErrorEvent.cpp
     HTML/EventLoop/EventLoop.cpp
     HTML/EventLoop/Task.cpp
     HTML/EventLoop/TaskQueue.cpp
@@ -392,6 +393,7 @@ libweb_js_wrapper(HTML/CanvasRenderingContext2D)
 libweb_js_wrapper(HTML/CloseEvent)
 libweb_js_wrapper(HTML/DOMParser)
 libweb_js_wrapper(HTML/DOMStringMap)
+libweb_js_wrapper(HTML/ErrorEvent)
 libweb_js_wrapper(HTML/History)
 libweb_js_wrapper(HTML/HTMLAnchorElement)
 libweb_js_wrapper(HTML/HTMLAreaElement)

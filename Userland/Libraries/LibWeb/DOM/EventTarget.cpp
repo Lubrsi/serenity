@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021, Andreas Kling <kling@serenityos.org>
+ * Copyright (c) 2021, Luke Wilde <lukew@serenityos.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -9,6 +10,7 @@
 #include <LibJS/Parser.h>
 #include <LibJS/Runtime/ECMAScriptFunctionObject.h>
 #include <LibWeb/Bindings/ScriptExecutionContext.h>
+#include <LibWeb/Bindings/EventWrapper.h>
 #include <LibWeb/DOM/Document.h>
 #include <LibWeb/DOM/Event.h>
 #include <LibWeb/DOM/EventDispatcher.h>
@@ -18,11 +20,14 @@
 #include <LibWeb/HTML/HTMLBodyElement.h>
 #include <LibWeb/HTML/HTMLFrameSetElement.h>
 #include <LibWeb/HTML/EventHandler.h>
+#include <LibJS/Runtime/NativeFunction.h>
+#include <LibWeb/HTML/ErrorEvent.h>
+#include <LibWeb/Bindings/IDLAbstractOperations.h>
+#include <LibWeb/Bindings/EventTargetWrapperFactory.h>
 
 namespace Web::DOM {
 
-EventTarget::EventTarget(Bindings::ScriptExecutionContext& script_execution_context)
-    : m_script_execution_context(&script_execution_context)
+EventTarget::EventTarget()
 {
 }
 
@@ -36,7 +41,7 @@ void EventTarget::add_event_listener(const FlyString& event_name, RefPtr<EventLi
     if (listener.is_null())
         return;
     auto existing_listener = m_listeners.first_matching([&](auto& entry) {
-        return entry.listener->type() == event_name && &entry.listener->callback() == &listener->callback() && entry.listener->capture() == listener->capture();
+        return entry.listener->type() == event_name && entry.listener->callback().callback.cell() == listener->callback().callback.cell() && entry.listener->capture() == listener->capture();
     });
     if (existing_listener.has_value())
         return;
@@ -50,7 +55,7 @@ void EventTarget::remove_event_listener(const FlyString& event_name, RefPtr<Even
     if (listener.is_null())
         return;
     m_listeners.remove_first_matching([&](auto& entry) {
-        auto matches = entry.event_name == event_name && &entry.listener->callback() == &listener->callback() && entry.listener->capture() == listener->capture();
+        auto matches = entry.event_name == event_name && entry.listener->callback().callback.cell() == listener->callback().callback.cell() && entry.listener->capture() == listener->capture();
         if (matches)
             entry.listener->set_removed(true);
         return matches;
@@ -102,18 +107,18 @@ static EventTarget* determine_target_of_event_handler(EventTarget& event_target,
     return &event_target_element.document().window();
 }
 
-HTML::EventHandler EventTarget::event_handler_attribute(FlyString const& name)
+// https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-attributes:event-handler-idl-attributes-2
+Bindings::CallbackType* EventTarget::event_handler_attribute(FlyString const& name)
 {
+    // 1. Let eventTarget be the result of determining the target of an event handler given this object and name.
     auto target = determine_target_of_event_handler(*this, name);
-    if (!target)
-        return {};
 
-    for (auto& listener : target->listeners()) {
-        if (listener.event_name == name && listener.listener->is_attribute()) {
-            return HTML::EventHandler { listener.listener->callback().callback };
-        }
-    }
-    return {};
+    // 2. If eventTarget is null, then return null.
+    if (!target)
+        return nullptr;
+
+    // 3. Return the result of getting the current value of the event handler given eventTarget and name.
+    return target->get_current_value_of_event_handler(name);
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#getting-the-current-value-of-the-event-handler
@@ -254,7 +259,7 @@ Bindings::CallbackType* EventTarget::get_current_value_of_event_handler(FlyStrin
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-attributes:event-handler-idl-attributes-3
-void EventTarget::set_event_handler_attribute(FlyString const& name, HTML::EventHandler value)
+void EventTarget::set_event_handler_attribute(FlyString const& name, Optional<Bindings::CallbackType> value)
 {
     // 1. Let eventTarget be the result of determining the target of an event handler given this object and name.
     auto target = determine_target_of_event_handler(*this, name);
@@ -263,38 +268,118 @@ void EventTarget::set_event_handler_attribute(FlyString const& name, HTML::Event
     if (!target)
         return;
 
-    TODO();
+    // 3. If the given value is null, then deactivate an event handler given eventTarget and name.
+    if (!value.has_value()) {
+        TODO();
+        return;
+    }
 
-    // The EventListener's callback context can be arbitrary; it does not impact the steps of the event handler processing algorithm. [DOM]
-    // https://html.spec.whatwg.org/multipage/webappapis.html#activate-an-event-handler
-    // FIXME: Since this function is not spec compliant, the callback context probably matters here and is probably wrong.
-    RefPtr<DOM::EventListener> listener;
-    if (!value.callback.is_null()) {
-        Bindings::CallbackType callback(move(value.callback), HTML::incumbent_settings_object());
-        listener = adopt_ref(*new DOM::EventListener(move(callback), true));
+    // 4. Otherwise:
+    //  1. Let handlerMap be eventTarget's event handler map. (NOTE: Not necessary)
+
+    //  2. Let eventHandler be handlerMap[name].
+    auto event_handler = m_event_handler_map.get(name);
+
+    //  3. Set eventHandler's value to the given value.
+    if (!event_handler.has_value()) {
+        // NOTE: See the optimization comment in get_current_value_of_event_handler about why this is done.
+        event_handler = value.value();
+        m_event_handler_map.set(name, event_handler.value());
     } else {
-        StringBuilder builder;
-        builder.appendff("function {}(event) {{\n{}\n}}", name, value.string);
-        auto parser = JS::Parser(JS::Lexer(builder.string_view()));
-        auto program = parser.parse_function_node<JS::FunctionExpression>();
-        if (parser.has_errors()) {
-            dbgln("Failed to parse script in event handler attribute '{}'", name);
-            return;
-        }
-        auto* function = JS::ECMAScriptFunctionObject::create(target->script_execution_context()->realm().global_object(), name, program->body(), program->parameters(), program->function_length(), nullptr, JS::FunctionKind::Regular, false, false);
-        VERIFY(function);
-        Bindings::CallbackType callback(move(value.callback), HTML::incumbent_settings_object());
-        listener = adopt_ref(*new DOM::EventListener(move(callback), true));
+        event_handler->value = value.value();
     }
-    if (listener) {
-        for (auto& registered_listener : target->listeners()) {
-            if (registered_listener.event_name == name && registered_listener.listener->is_attribute()) {
-                target->remove_event_listener(name, registered_listener.listener);
-                break;
-            }
-        }
-        target->add_event_listener(name, listener.release_nonnull());
+
+    VERIFY(event_handler.has_value());
+    VERIFY(event_handler->value.has<Bindings::CallbackType>());
+
+    //  4. Activate an event handler given eventTarget and name.
+    // Optimization: We pass in the event handler here instead of having activate_event_handler do another hash map lookup just to get the same object.
+    activate_event_handler(name, event_handler.value());
+}
+
+// https://html.spec.whatwg.org/multipage/webappapis.html#activate-an-event-handler
+void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandler& event_handler)
+{
+    // 1. Let handlerMap be eventTarget's event handler map.
+    // 2. Let eventHandler be handlerMap[name].
+    // NOTE: These are achieved by using the passed in event handler.
+
+    // 3. If eventHandler's listener is not null, then return.
+    if (event_handler.listener)
+        return;
+
+    // 4. Let callback be the result of creating a Web IDL EventListener instance representing a reference to a function of one argument that executes the steps of the event handler processing algorithm, given eventTarget, name, and its argument.
+    //    The EventListener's callback context can be arbitrary; it does not impact the steps of the event handler processing algorithm. [DOM]
+    // NOTE: The callback must keep `this` alive. For example:
+    //          document.body.onunload = () => { console.log("onunload called!"); }
+    //          document.body.remove();
+    //          location.reload();
+    //       The body element is no longer in the DOM and there is no variable holding onto it. However, the onunload handler is still called, meaning the callback keeps the body element alive.
+    // FIXME: I'm not sure if the incumbent global object is correct here.
+    auto callback_function = JS::NativeFunction::create(HTML::incumbent_global_object(), "", [event_target = NonnullRefPtr(*this), name](JS::VM& vm, auto&) mutable {
+        // The event dispatcher should only call this with one argument.
+        VERIFY(vm.argument_count() == 1);
+
+        // The argument must be an object and it must be an EventWrapper.
+        auto event_wrapper_argument = vm.argument(0);
+        VERIFY(event_wrapper_argument.is_object());
+        auto& event_wrapper = verify_cast<Bindings::EventWrapper>(event_wrapper_argument.as_object());
+        auto& event = event_wrapper.impl();
+
+        event_target->process_event_handler_for_event(name, event);
+
+        return JS::js_undefined();
+    });
+
+    Bindings::CallbackType callback { JS::make_handle(static_cast<JS::Object*>(callback_function)), HTML::incumbent_settings_object() };
+
+    // 5. Let listener be a new event listener whose type is the event handler event type corresponding to eventHandler and callback is callback.
+    TODO();
+}
+
+// https://html.spec.whatwg.org/multipage/webappapis.html#the-event-handler-processing-algorithm
+void EventTarget::process_event_handler_for_event(FlyString const& name, Event& event)
+{
+    // 1. Let callback be the result of getting the current value of the event handler given eventTarget and name.
+    auto* callback = get_current_value_of_event_handler(name);
+
+    // 2. If callback is null, then return.
+    if (!callback)
+        return;
+
+    // 3. Let special error event handling be true if event is an ErrorEvent object, event's type is error, and event's currentTarget implements the WindowOrWorkerGlobalScope mixin.
+    //    Otherwise, let special error event handling be false.
+    // FIXME: This doesn't check for WorkerGlobalScape as we don't currently have it.
+    bool special_error_event_handling = is<HTML::ErrorEvent>(event) && event.type() == HTML::EventNames::error && is<Window>(event.current_target().ptr());
+
+    // 4. Process the Event object event as follows:
+    JS::Completion return_value;
+
+    // Needed for conversions.
+    auto* callback_object = callback->callback.cell();
+
+    if (special_error_event_handling) {
+        // -> If special error event handling is true
+        //    Invoke callback with five arguments, the first one having the value of event's message attribute, the second having the value of event's filename attribute, the third having the value of event's lineno attribute,
+        //    the fourth having the value of event's colno attribute, the fifth having the value of event's error attribute, and with the callback this value set to event's currentTarget.
+        //    Let return value be the callback's return value. [WEBIDL]
+        auto& error_event = verify_cast<HTML::ErrorEvent>(event);
+        auto* wrapped_message = JS::js_string(callback_object->heap(), error_event.message());
+        auto* wrapped_filename = JS::js_string(callback_object->heap(), error_event.filename());
+        auto wrapped_lineno = JS::Value(error_event.lineno());
+        auto wrapped_colno = JS::Value(error_event.colno());
+
+        // NOTE: error_event.error() is a JS::Value, so it does not require wrapping.
+
+        // NOTE: For special_error_event_handling to be true, current_target is non-null.
+        auto* this_value = Bindings::wrap(callback_object->global_object(), *error_event.current_target());
+
+        return_value = Bindings::IDL::invoke_callback(*callback, this_value, wrapped_message, wrapped_filename, wrapped_lineno, wrapped_colno, error_event.error());
+    } else {
+        
     }
+
+    // FIXME: If an exception gets thrown by the callback, end these steps and allow the exception to propagate. (It will propagate to the DOM event dispatch logic, which will then report the exception.)
 }
 
 bool EventTarget::dispatch_event(NonnullRefPtr<Event> event)

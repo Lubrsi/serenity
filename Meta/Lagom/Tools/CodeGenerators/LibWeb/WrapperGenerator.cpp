@@ -1091,13 +1091,15 @@ static void generate_to_cpp(SourceGenerator& generator, ParameterType& parameter
         @return_statement@
 )~~~");
     } else if (parameter.type.name == "EventHandler") {
-        // x.onfoo = function() { ... }
-        // NOTE: Anything else than a function or string will be treated as null. This is because EventHandler has the [LegacyTreatNonObjectAsNull] extended attribute:
+        // x.onfoo = function() { ... }, x.onfoo = () => { ... }, x.onfoo = {}
+        // NOTE: Anything else than an object will be treated as null. This is because EventHandler has the [LegacyTreatNonObjectAsNull] extended attribute.
+        //       Yes, you can store objects in event handler attributes. They just get ignored when there's any attempt to invoke them.
+        // FIXME: Replace this with proper support for callback function types.
 
         scoped_generator.append(R"~~~(
-    Optional<HTML::EventHandler> @cpp_name@;
-    if (@js_name@@js_suffix@.is_function()) {
-        @cpp_name@ = HTML::EventHandler { JS::make_handle(&@js_name@@js_suffix@.as_function()) };
+    Optional<Bindings::CallbackType> @cpp_name@;
+    if (@js_name@@js_suffix@.is_object()) {
+        @cpp_name@ = { JS::make_handle(&@js_name@@js_suffix@.as_object()), HTML::incumbent_settings_object() };
     }
 )~~~");
     } else if (parameter.type.name == "Promise") {
@@ -1292,11 +1294,15 @@ static void generate_wrap_statement(SourceGenerator& generator, String const& va
     @result_expression@ @value@;
 )~~~");
     } else if (type.name == "EventHandler") {
+        // FIXME: Replace this with proper support for callback function types.
+
         scoped_generator.append(R"~~~(
-    if (@value@.callback.is_null())
+    if (!@value@) {
         @result_expression@ JS::js_null();
-    else
+    } else {
+        VERIFY(!@value@.callback.is_null());
         @result_expression@ @value@.callback.cell();
+    }
 )~~~");
     } else {
         scoped_generator.append(R"~~~(
