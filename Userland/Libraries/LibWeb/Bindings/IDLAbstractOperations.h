@@ -165,7 +165,7 @@ JS::Completion invoke_callback(Bindings::CallbackType& callback, Optional<JS::Va
 
     // 12. If callResult is an abrupt completion, set completion to callResult and jump to the step labeled return.
     if (call_result.is_throw_completion()) {
-        completion = call_result;
+        completion = call_result.throw_completion();
         return clean_up_on_return(stored_settings, relevant_settings, completion);
     }
 

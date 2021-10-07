@@ -24,6 +24,7 @@
 #include <LibWeb/HTML/ErrorEvent.h>
 #include <LibWeb/Bindings/IDLAbstractOperations.h>
 #include <LibWeb/Bindings/EventTargetWrapperFactory.h>
+#include <LibWeb/Bindings/EventWrapperFactory.h>
 
 namespace Web::DOM {
 
@@ -371,15 +372,31 @@ void EventTarget::process_event_handler_for_event(FlyString const& name, Event& 
 
         // NOTE: error_event.error() is a JS::Value, so it does not require wrapping.
 
-        // NOTE: For special_error_event_handling to be true, current_target is non-null.
+        // NOTE: current_target is always non-null here, as the event dispatcher takes care to make sure it's non-null (and uses it as the this value for the callback!)
+        // FIXME: This is rewrapping the this value of the callback defined in activate_event_handler. While I don't think this is observable as the event dispatcher
+        //        calls directly into the callback without considering things such as proxies, it is a waste. However, if it observable, then we must reuse the this_value that was given to the callback.
         auto* this_value = Bindings::wrap(callback_object->global_object(), *error_event.current_target());
 
         return_value = Bindings::IDL::invoke_callback(*callback, this_value, wrapped_message, wrapped_filename, wrapped_lineno, wrapped_colno, error_event.error());
     } else {
-        
+        // -> Otherwise
+        // Invoke callback with one argument, the value of which is the Event object event, with the callback this value set to event's currentTarget. Let return value be the callback's return value. [WEBIDL]
+
+        // This has the same rewrapping issue as this_value.
+        auto* wrapped_event = Bindings::wrap(callback_object->global_object(), event);
+
+        // The comments about this in the special_error_event_handling path also apply here.
+        auto* this_value = Bindings::wrap(callback_object->global_object(), *event.current_target());
+
+        return_value = Bindings::IDL::invoke_callback(*callback, this_value, wrapped_event);
     }
 
     // FIXME: If an exception gets thrown by the callback, end these steps and allow the exception to propagate. (It will propagate to the DOM event dispatch logic, which will then report the exception.)
+    if (return_value.is_error()) {
+        TODO();
+    }
+
+
 }
 
 bool EventTarget::dispatch_event(NonnullRefPtr<Event> event)
