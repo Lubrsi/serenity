@@ -71,7 +71,7 @@ private:
     HashMap<FlyString, HTML::EventHandler> m_event_handler_map;
 
     Bindings::CallbackType* get_current_value_of_event_handler(FlyString const& name);
-    void activate_event_handler(FlyString const& name, HTML::EventHandler& event_handler);
+    void activate_event_handler(JS::GlobalObject& global_object, FlyString const& name, HTML::EventHandler& event_handler);
     void process_event_handler_for_event(FlyString const& name, Event& event);
 };
 

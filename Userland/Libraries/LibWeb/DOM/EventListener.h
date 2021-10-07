@@ -19,9 +19,8 @@ class EventListener
 public:
     using WrapperType = Bindings::EventListenerWrapper;
 
-    explicit EventListener(Bindings::CallbackType callback, bool is_attribute = false)
+    explicit EventListener(Bindings::CallbackType callback)
         : m_callback(move(callback))
-        , m_attribute(is_attribute)
     {
     }
 
@@ -42,8 +41,6 @@ public:
     bool removed() const { return m_removed; }
     void set_removed(bool removed) { m_removed = removed; }
 
-    bool is_attribute() const { return m_attribute; }
-
 private:
     FlyString m_type;
     Bindings::CallbackType m_callback;
@@ -51,7 +48,6 @@ private:
     bool m_passive { false };
     bool m_once { false };
     bool m_removed { false };
-    bool m_attribute { false };
 };
 
 }

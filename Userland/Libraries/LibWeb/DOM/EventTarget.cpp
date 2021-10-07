@@ -298,7 +298,7 @@ void EventTarget::set_event_handler_attribute(FlyString const& name, Optional<Bi
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#activate-an-event-handler
-void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandler& event_handler)
+void EventTarget::activate_event_handler(JS::GlobalObject& global_object, FlyString const& name, HTML::EventHandler& event_handler)
 {
     // 1. Let handlerMap be eventTarget's event handler map.
     // 2. Let eventHandler be handlerMap[name].
@@ -316,7 +316,7 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
     //          location.reload();
     //       The body element is no longer in the DOM and there is no variable holding onto it. However, the onunload handler is still called, meaning the callback keeps the body element alive.
     // FIXME: I'm not sure if the incumbent global object is correct here.
-    auto callback_function = JS::NativeFunction::create(HTML::incumbent_global_object(), "", [event_target = NonnullRefPtr(*this), name](JS::VM& vm, auto&) mutable {
+    auto callback_function = JS::NativeFunction::create(global_object, "", [event_target = NonnullRefPtr(*this), name](JS::VM& vm, auto&) mutable {
         // The event dispatcher should only call this with one argument.
         VERIFY(vm.argument_count() == 1);
 
@@ -334,7 +334,14 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
     Bindings::CallbackType callback { JS::make_handle(static_cast<JS::Object*>(callback_function)), HTML::incumbent_settings_object() };
 
     // 5. Let listener be a new event listener whose type is the event handler event type corresponding to eventHandler and callback is callback.
-    TODO();
+    auto listener = adopt_ref(*new EventListener(move(callback)));
+
+    // 6. Add an event listener with eventTarget and listener.
+    // FIXME: Make add_event_listener follow the spec more tightly. (Namely, don't allow taking a name and having a separate bindings version)
+    add_event_listener(name, listener);
+
+    // 7. Set eventHandler's listener to listener.
+    event_handler.listener = listener;
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#the-event-handler-processing-algorithm
