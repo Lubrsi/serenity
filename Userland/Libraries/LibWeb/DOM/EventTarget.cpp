@@ -274,7 +274,7 @@ void EventTarget::set_event_handler_attribute(FlyString const& name, Optional<Bi
 
     // 3. If the given value is null, then deactivate an event handler given eventTarget and name.
     if (!value.has_value()) {
-        deactivate_event_handler(name);
+        event_target->deactivate_event_handler(name);
         return;
     }
 
@@ -313,6 +313,8 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
     // 2. Let eventHandler be handlerMap[name].
     // NOTE: These are achieved by using the passed in event handler.
 
+    dbgln("activate {} {}", name, !!event_handler.listener);
+
     // 3. If eventHandler's listener is not null, then return.
     if (event_handler.listener)
         return;
@@ -320,19 +322,12 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
     // 4. Let callback be the result of creating a Web IDL EventListener instance representing a reference to a function of one argument that executes the steps of the event handler processing algorithm, given eventTarget, name, and its argument.
     //    The EventListener's callback context can be arbitrary; it does not impact the steps of the event handler processing algorithm. [DOM]
 
-    // NOTE: The callback must keep `this` alive. For example:
-    //          document.body.onunload = () => { console.log("onunload called!"); }
-    //          document.body.remove();
-    //          location.reload();
-    //       The body element is no longer in the DOM and there is no variable holding onto it. However, the onunload handler is still called, meaning the callback keeps the body element alive.
-
     // FIXME: This is complete guess work on what global object the NativeFunction should be allocated on.
     //        For <body> or <frameset> elements who just had an element attribute set, it will be this's wrapper, as `this` is the result of determine_target_of_event_handler
     //        returning the element's document's global object, which is the DOM::Window object.
     //        For any other HTMLElement, `this` will be that HTMLElement, so the global object is this's document's realm's global object.
     //        For anything else, it came from JavaScript, so use the incumbent global object (the global object of the realm of the code that called this)
     JS::GlobalObject* global_object = nullptr;
-
     if (is_attribute == IsAttribute::Yes) {
         if (is<Window>(this)) {
             auto* window_global_object = verify_cast<Window>(this)->wrapper();
@@ -347,7 +342,12 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
 
     VERIFY(global_object);
 
-    auto callback_function = JS::NativeFunction::create(*global_object, "", [event_target = NonnullRefPtr(*this), name](JS::VM& vm, auto&) mutable {
+    // NOTE: The callback must keep `this` alive. For example:
+    //          document.body.onunload = () => { console.log("onunload called!"); }
+    //          document.body.remove();
+    //          location.reload();
+    //       The body element is no longer in the DOM and there is no variable holding onto it. However, the onunload handler is still called, meaning the callback keeps the body element alive.
+    auto callback_function = JS::NativeFunction::create(*global_object, "", [event_target = NonnullRefPtr(*this), name](JS::VM& vm, auto&) mutable -> JS::Value {
         // The event dispatcher should only call this with one argument.
         VERIFY(vm.argument_count() == 1);
 
@@ -357,7 +357,7 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
         auto& event_wrapper = verify_cast<Bindings::EventWrapper>(event_wrapper_argument.as_object());
         auto& event = event_wrapper.impl();
 
-        event_target->process_event_handler_for_event(name, event);
+        TRY_OR_DISCARD(event_target->process_event_handler_for_event(name, event));
 
         return JS::js_undefined();
     });
@@ -381,15 +381,19 @@ void EventTarget::deactivate_event_handler(FlyString const& name)
     // 1. Let handlerMap be eventTarget's event handler map. (NOTE: Not necessary)
 
     // 2. Let eventHandler be handlerMap[name].
+    dbgln("deactivate {}...", name);
     auto event_handler = m_event_handler_map.find(name);
 
     // NOTE: See the optimization comment in get_current_value_of_event_handler about why this is done.
-    if (event_handler == m_event_handler_map.end())
+    if (event_handler == m_event_handler_map.end()) {
+        dbgln("...not found :(");
         return;
+    }
 
     // 4. Let listener be eventHandler's listener. (NOTE: Not necessary)
 
     // 5. If listener is not null, then remove an event listener with eventTarget and listener.
+    dbgln("is null? {}", !!event_handler->value.listener);
     if (event_handler->value.listener) {
         // FIXME: Make remove_event_listener follow the spec more tightly. (Namely, don't allow taking a name and having a separate bindings version)
         remove_event_listener(name, event_handler->value.listener);
@@ -405,14 +409,14 @@ void EventTarget::deactivate_event_handler(FlyString const& name)
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#the-event-handler-processing-algorithm
-void EventTarget::process_event_handler_for_event(FlyString const& name, Event& event)
+JS::ThrowCompletionOr<void> EventTarget::process_event_handler_for_event(FlyString const& name, Event& event)
 {
     // 1. Let callback be the result of getting the current value of the event handler given eventTarget and name.
     auto* callback = get_current_value_of_event_handler(name);
 
     // 2. If callback is null, then return.
     if (!callback)
-        return;
+        return {};
 
     // 3. Let special error event handling be true if event is an ErrorEvent object, event's type is error, and event's currentTarget implements the WindowOrWorkerGlobalScope mixin.
     //    Otherwise, let special error event handling be false.
@@ -457,16 +461,17 @@ void EventTarget::process_event_handler_for_event(FlyString const& name, Event& 
         return_value = Bindings::IDL::invoke_callback(*callback, this_value, wrapped_event);
     }
 
-    // FIXME: If an exception gets thrown by the callback, end these steps and allow the exception to propagate. (It will propagate to the DOM event dispatch logic, which will then report the exception.)
-    if (return_value.is_error()) {
-        TODO();
-    }
+    // If an exception gets thrown by the callback, end these steps and allow the exception to propagate. (It will propagate to the DOM event dispatch logic, which will then report the exception.)
+    if (return_value.is_error())
+        return return_value;
 
     //TODO();
     // FIXME: If special error event handling is true
     //          If return value is true, then set event's canceled flag.
     // FIXME: Otherwise
     //          If return value is false, then set event's canceled flag.
+
+    return {};
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-attributes:concept-element-attributes-change-ext
@@ -484,7 +489,7 @@ void EventTarget::element_event_handler_attribute_changed(FlyString const& local
 
     // 4. If value is null, then deactivate an event handler given eventTarget and localName.
     if (value.is_null()) {
-        deactivate_event_handler(local_name);
+        event_target->deactivate_event_handler(local_name);
         return;
     }
 

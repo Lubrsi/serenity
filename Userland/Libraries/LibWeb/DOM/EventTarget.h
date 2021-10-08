@@ -62,7 +62,7 @@ protected:
     virtual void ref_event_target() = 0;
     virtual void unref_event_target() = 0;
 
-    virtual void element_event_handler_attribute_changed(FlyString const& local_name, String const& value);
+    void element_event_handler_attribute_changed(FlyString const& local_name, String const& value);
 
 private:
     Vector<EventListenerRegistration> m_listeners;
@@ -78,7 +78,7 @@ private:
     Bindings::CallbackType* get_current_value_of_event_handler(FlyString const& name);
     void activate_event_handler(FlyString const& name, HTML::EventHandler& event_handler, IsAttribute is_attribute);
     void deactivate_event_handler(FlyString const& name);
-    void process_event_handler_for_event(FlyString const& name, Event& event);
+    JS::ThrowCompletionOr<void> process_event_handler_for_event(FlyString const& name, Event& event);
 };
 
 }

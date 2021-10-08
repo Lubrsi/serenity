@@ -108,6 +108,7 @@ bool EventDispatcher::inner_invoke(Event& event, Vector<EventTarget::EventListen
         auto* wrapped_event = Bindings::wrap(global, event);
         auto callback_completion = Bindings::IDL::call_user_object_operation(callback, "handleEvent", this_value, wrapped_event);
         if (callback_completion.is_error()) {
+
             // FIXME: 1. Report the exception.
             // FIXME: 2. Set legacyOutputDidListenersThrowFlag if given. (Only used by IndexedDB currently)
         }
