@@ -22,6 +22,7 @@
 #include <LibWeb/Loader/ContentFilter.h>
 #include <LibWeb/Loader/ResourceLoader.h>
 #include <LibWeb/Page/BrowsingContext.h>
+#include <LibWeb/HTML/Scripting/ClassicScript.h>
 #include <WebContent/ClientConnection.h>
 #include <WebContent/PageHost.h>
 #include <WebContent/WebContentClientEndpoint.h>
@@ -300,20 +301,31 @@ void ClientConnection::js_console_input(const String& js_source)
 
 void ClientConnection::run_javascript(String const& js_source)
 {
-    if (!page().top_level_browsing_context().active_document())
+    auto* active_document = page().top_level_browsing_context().active_document();
+
+    if (!active_document)
         return;
 
-    auto& interpreter = page().top_level_browsing_context().active_document()->interpreter();
+    // This is partially based on "execute a javascript: URL request" https://html.spec.whatwg.org/multipage/browsing-the-web.html#javascript-protocol
 
-    auto script_or_error = JS::Script::parse(js_source, interpreter.realm());
-    if (script_or_error.is_error())
-        return;
+    // Let settings be browsingContext's active document's relevant settings object.
+    auto& settings = active_document->relevant_settings_object();
 
-    interpreter.run(script_or_error.value());
+    // Let baseURL be settings's API base URL.
+    auto base_url = settings.api_base_url();
 
-    if (interpreter.vm().exception()) {
+    // Let script be the result of creating a classic script given scriptSource, settings, baseURL, and the default classic script fetch options.
+    // FIXME: This doesn't pass in "default classic script fetch options"
+    // FIXME: What should the filename be here?
+    auto script = Web::HTML::ClassicScript::create("", js_source, settings, move(base_url));
+
+    // Let evaluationStatus be the result of running the classic script script.
+    // NOTE: We don't use the evaluationStatus here.
+    script->run();
+
+    if (active_document->interpreter().vm().exception()) {
         dbgln("Exception :(");
-        interpreter.vm().clear_exception();
+        active_document->interpreter().vm().clear_exception();
     }
 }
 

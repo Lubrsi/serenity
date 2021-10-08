@@ -38,6 +38,7 @@ EventTarget::~EventTarget()
 // https://dom.spec.whatwg.org/#add-an-event-listener
 void EventTarget::add_event_listener(const FlyString& event_name, RefPtr<EventListener> listener)
 {
+    dbgln("Add event listener: {}", event_name);
     if (listener.is_null())
         return;
     auto existing_listener = m_listeners.first_matching([&](auto& entry) {
@@ -127,18 +128,21 @@ Bindings::CallbackType* EventTarget::get_current_value_of_event_handler(FlyStrin
     // 1. Let handlerMap be eventTarget's event handler map. (NOTE: Not necessary)
 
     // 2. Let eventHandler be handlerMap[name].
-    auto event_handler = m_event_handler_map.get(name);
+    dbgln("trying to find {}...", name);
+    auto event_handler = m_event_handler_map.find(name);
 
     // Optimization: The spec creates all the event handlers exposed on an object up front and has the initial value of the handler set to null.
     //               If the event handler hasn't been set, null would be returned in step 4.
     //               However, this would be very allocation heavy. For example, each DOM::Element includes GlobalEventHandlers, which defines 60+(!) event handler attributes.
     //               Plus, the vast majority of these allocations would be likely wasted, as I imagine web content will only use a handful of these attributes on certain elements, if any at all.
     //               Thus, we treat the event handler not being in the event handler map as being equivalent to an event handler with an initial null value.
-    if (!event_handler.has_value())
+    if (event_handler == m_event_handler_map.end()) {
+        dbgln("...not found :(");
         return nullptr;
+    }
 
     // 3. If eventHandler's value is an internal raw uncompiled handler, then:
-    if (event_handler->value.has<String>()) {
+    if (event_handler->value.value.has<String>()) {
         // 1. If eventTarget is an element, then let element be eventTarget, and document be element's node document.
         //    Otherwise, eventTarget is a Window object, let element be null, and document be eventTarget's associated Document.
         RefPtr<Element> element;
@@ -161,7 +165,7 @@ Bindings::CallbackType* EventTarget::get_current_value_of_event_handler(FlyStrin
             return nullptr;
 
         // 3. Let body be the uncompiled script body in eventHandler's value.
-        auto& body = event_handler->value.get<String>();
+        auto& body = event_handler->value.value.get<String>();
 
         // FIXME: 4. Let location be the location where the script body originated, as given by eventHandler's value.
 
@@ -254,51 +258,56 @@ Bindings::CallbackType* EventTarget::get_current_value_of_event_handler(FlyStrin
     }
 
     // 4. Return eventHandler's value.
-    VERIFY(event_handler->value.has<Bindings::CallbackType>());
-    return event_handler->value.get_pointer<Bindings::CallbackType>();
+    VERIFY(event_handler->value.value.has<Bindings::CallbackType>());
+    return event_handler->value.value.get_pointer<Bindings::CallbackType>();
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-attributes:event-handler-idl-attributes-3
 void EventTarget::set_event_handler_attribute(FlyString const& name, Optional<Bindings::CallbackType> value)
 {
     // 1. Let eventTarget be the result of determining the target of an event handler given this object and name.
-    auto target = determine_target_of_event_handler(*this, name);
+    auto event_target = determine_target_of_event_handler(*this, name);
 
     // 2. If eventTarget is null, then return.
-    if (!target)
+    if (!event_target)
         return;
 
     // 3. If the given value is null, then deactivate an event handler given eventTarget and name.
     if (!value.has_value()) {
-        TODO();
+        deactivate_event_handler(name);
         return;
     }
 
     // 4. Otherwise:
-    //  1. Let handlerMap be eventTarget's event handler map. (NOTE: Not necessary)
+    //  1. Let handlerMap be eventTarget's event handler map.
+    auto& handler_map = event_target->m_event_handler_map;
 
     //  2. Let eventHandler be handlerMap[name].
-    auto event_handler = m_event_handler_map.get(name);
+    auto event_handler = handler_map.find(name);
 
     //  3. Set eventHandler's value to the given value.
-    if (!event_handler.has_value()) {
+    if (event_handler == handler_map.end()) {
         // NOTE: See the optimization comment in get_current_value_of_event_handler about why this is done.
-        event_handler = value.value();
-        m_event_handler_map.set(name, event_handler.value());
-    } else {
-        event_handler->value = value.value();
+        auto new_event_handler = HTML::EventHandler { move(value.value()) };
+        handler_map.set(name, new_event_handler);
+
+        //  4. Activate an event handler given eventTarget and name.
+        // Optimization: We pass in the event handler here instead of having activate_event_handler do another hash map lookup just to get the same object.
+        //               This handles a new event handler while the other path handles an existing event handler. As such, both paths must have their own
+        //               unique call to activate_event_handler.
+        event_target->activate_event_handler(name, new_event_handler, IsAttribute::No);
+        return;
     }
 
-    VERIFY(event_handler.has_value());
-    VERIFY(event_handler->value.has<Bindings::CallbackType>());
+    event_handler->value.value = move(value.value());
 
     //  4. Activate an event handler given eventTarget and name.
-    // Optimization: We pass in the event handler here instead of having activate_event_handler do another hash map lookup just to get the same object.
-    activate_event_handler(name, event_handler.value());
+    //  NOTE: See the optimization comment above.
+    event_target->activate_event_handler(name, event_handler->value, IsAttribute::No);
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#activate-an-event-handler
-void EventTarget::activate_event_handler(JS::GlobalObject& global_object, FlyString const& name, HTML::EventHandler& event_handler)
+void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandler& event_handler, IsAttribute is_attribute)
 {
     // 1. Let handlerMap be eventTarget's event handler map.
     // 2. Let eventHandler be handlerMap[name].
@@ -310,13 +319,35 @@ void EventTarget::activate_event_handler(JS::GlobalObject& global_object, FlyStr
 
     // 4. Let callback be the result of creating a Web IDL EventListener instance representing a reference to a function of one argument that executes the steps of the event handler processing algorithm, given eventTarget, name, and its argument.
     //    The EventListener's callback context can be arbitrary; it does not impact the steps of the event handler processing algorithm. [DOM]
+
     // NOTE: The callback must keep `this` alive. For example:
     //          document.body.onunload = () => { console.log("onunload called!"); }
     //          document.body.remove();
     //          location.reload();
     //       The body element is no longer in the DOM and there is no variable holding onto it. However, the onunload handler is still called, meaning the callback keeps the body element alive.
-    // FIXME: I'm not sure if the incumbent global object is correct here.
-    auto callback_function = JS::NativeFunction::create(global_object, "", [event_target = NonnullRefPtr(*this), name](JS::VM& vm, auto&) mutable {
+
+    // FIXME: This is complete guess work on what global object the NativeFunction should be allocated on.
+    //        For <body> or <frameset> elements who just had an element attribute set, it will be this's wrapper, as `this` is the result of determine_target_of_event_handler
+    //        returning the element's document's global object, which is the DOM::Window object.
+    //        For any other HTMLElement, `this` will be that HTMLElement, so the global object is this's document's realm's global object.
+    //        For anything else, it came from JavaScript, so use the incumbent global object (the global object of the realm of the code that called this)
+    JS::GlobalObject* global_object = nullptr;
+
+    if (is_attribute == IsAttribute::Yes) {
+        if (is<Window>(this)) {
+            auto* window_global_object = verify_cast<Window>(this)->wrapper();
+            global_object = static_cast<JS::GlobalObject*>(window_global_object);
+        } else {
+            auto* html_element = verify_cast<HTML::HTMLElement>(this);
+            global_object = &html_element->document().realm().global_object();
+        }
+    } else {
+        global_object = &HTML::incumbent_global_object();
+    }
+
+    VERIFY(global_object);
+
+    auto callback_function = JS::NativeFunction::create(*global_object, "", [event_target = NonnullRefPtr(*this), name](JS::VM& vm, auto&) mutable {
         // The event dispatcher should only call this with one argument.
         VERIFY(vm.argument_count() == 1);
 
@@ -331,7 +362,8 @@ void EventTarget::activate_event_handler(JS::GlobalObject& global_object, FlyStr
         return JS::js_undefined();
     });
 
-    Bindings::CallbackType callback { JS::make_handle(static_cast<JS::Object*>(callback_function)), HTML::incumbent_settings_object() };
+    // NOTE: As per the spec, the callback context is arbitrary.
+    Bindings::CallbackType callback { JS::make_handle(static_cast<JS::Object*>(callback_function)), verify_cast<HTML::EnvironmentSettingsObject>(*global_object->realm()->custom_data()) };
 
     // 5. Let listener be a new event listener whose type is the event handler event type corresponding to eventHandler and callback is callback.
     auto listener = adopt_ref(*new EventListener(move(callback)));
@@ -342,6 +374,34 @@ void EventTarget::activate_event_handler(JS::GlobalObject& global_object, FlyStr
 
     // 7. Set eventHandler's listener to listener.
     event_handler.listener = listener;
+}
+
+void EventTarget::deactivate_event_handler(FlyString const& name)
+{
+    // 1. Let handlerMap be eventTarget's event handler map. (NOTE: Not necessary)
+
+    // 2. Let eventHandler be handlerMap[name].
+    auto event_handler = m_event_handler_map.find(name);
+
+    // NOTE: See the optimization comment in get_current_value_of_event_handler about why this is done.
+    if (event_handler == m_event_handler_map.end())
+        return;
+
+    // 4. Let listener be eventHandler's listener. (NOTE: Not necessary)
+
+    // 5. If listener is not null, then remove an event listener with eventTarget and listener.
+    if (event_handler->value.listener) {
+        // FIXME: Make remove_event_listener follow the spec more tightly. (Namely, don't allow taking a name and having a separate bindings version)
+        remove_event_listener(name, event_handler->value.listener);
+    }
+
+    // 6. Set eventHandler's listener to null.
+    event_handler->value.listener = nullptr;
+
+    // 3. Set eventHandler's value to null.
+    // NOTE: This is done out of order since our equivalent of setting value to null is removing the event handler from the map.
+    //       Given that event_handler is a reference to an entry, this would invalidate event_handler if we did it in order.
+    m_event_handler_map.remove(event_handler);
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#the-event-handler-processing-algorithm
@@ -357,13 +417,12 @@ void EventTarget::process_event_handler_for_event(FlyString const& name, Event& 
     // 3. Let special error event handling be true if event is an ErrorEvent object, event's type is error, and event's currentTarget implements the WindowOrWorkerGlobalScope mixin.
     //    Otherwise, let special error event handling be false.
     // FIXME: This doesn't check for WorkerGlobalScape as we don't currently have it.
-    // FIXME: Should this be Bindings::WindowObject instead?
     bool special_error_event_handling = is<HTML::ErrorEvent>(event) && event.type() == HTML::EventNames::error && is<Window>(event.current_target().ptr());
 
     // 4. Process the Event object event as follows:
     JS::Completion return_value;
 
-    // Needed for conversions.
+    // Needed for wrapping.
     auto* callback_object = callback->callback.cell();
 
     if (special_error_event_handling) {
@@ -403,7 +462,11 @@ void EventTarget::process_event_handler_for_event(FlyString const& name, Event& 
         TODO();
     }
 
-    TODO();
+    //TODO();
+    // FIXME: If special error event handling is true
+    //          If return value is true, then set event's canceled flag.
+    // FIXME: Otherwise
+    //          If return value is false, then set event's canceled flag.
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-attributes:concept-element-attributes-change-ext
@@ -419,38 +482,41 @@ void EventTarget::element_event_handler_attribute_changed(FlyString const& local
     if (!event_target)
         return;
 
-    // FIXME: 4. If value is null, then deactivate an event handler given eventTarget and localName.
+    // 4. If value is null, then deactivate an event handler given eventTarget and localName.
     if (value.is_null()) {
-        TODO();
+        deactivate_event_handler(local_name);
         return;
     }
 
     // 5. Otherwise:
     //  FIXME: 1. If the Should element's inline behavior be blocked by Content Security Policy? algorithm returns "Blocked" when executed upon element, "script attribute", and value, then return. [CSP]
 
-    //  2. Let handlerMap be eventTarget's event handler map. (NOTE: Not necessary)
+    //  2. Let handlerMap be eventTarget's event handler map.
+    auto& handler_map = event_target->m_event_handler_map;
 
     //  3. Let eventHandler be handlerMap[localName].
-    auto event_handler = m_event_handler_map.get(local_name);
+    auto event_handler = handler_map.find(local_name);
 
-    // FIXME: 4. Let location be the script location that triggered the execution of these steps.
+    //  FIXME: 4. Let location be the script location that triggered the execution of these steps.
 
     //  FIXME: 5. Set eventHandler's value to the internal raw uncompiled handler value/location.
     //            (This currently sets the value to the uncompiled source code instead of the named struct)
-    if (!event_handler.has_value()) {
-        // NOTE: See the optimization comment in get_current_value_of_event_handler about why this is done.
-        event_handler = value;
-        m_event_handler_map.set(local_name, event_handler.value());
-    } else {
-        event_handler->value = value;
+
+    // NOTE: See the optimization comments in set_event_handler_attribute.
+
+    if (event_handler == handler_map.end()) {
+        dbgln("Set attribute {}", local_name);
+        auto new_event_handler = HTML::EventHandler { local_name };
+        handler_map.set(local_name, new_event_handler);
+
+        //  6. Activate an event handler given eventTarget and name.
+        event_target->activate_event_handler(local_name, new_event_handler, IsAttribute::Yes);
+        return;
     }
 
-    VERIFY(event_handler.has_value());
-    VERIFY(event_handler->value.has<String>());
-
-    //  6. Activate an event handler given eventTarget and localName.
-    // Optimization: We pass in the event handler here instead of having activate_event_handler do another hash map lookup just to get the same object.
-    activate_event_handler(local_name, event_handler.value());
+    //  6. Activate an event handler given eventTarget and name.
+    event_handler->value.value = value;
+    event_target->activate_event_handler(local_name, event_handler->value, IsAttribute::Yes);
 }
 
 bool EventTarget::dispatch_event(NonnullRefPtr<Event> event)

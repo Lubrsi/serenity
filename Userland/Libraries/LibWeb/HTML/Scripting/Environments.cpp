@@ -137,6 +137,7 @@ EnvironmentSettingsObject& incumbent_settings_object()
     // 2. If context is null, or if context's skip-when-determining-incumbent counter is greater than zero, then:
     if (!context || context->skip_when_determining_incumbent_counter > 0) {
         // 1. Assert: the backup incumbent settings object stack is not empty.
+        // NOTE: If this assertion fails, it's because the incumbent settings object was used with no involvement of JavaScript.
         VERIFY(!event_loop.is_backup_incumbent_settings_object_stack_empty());
 
         // 2. Return the topmost entry of the backup incumbent settings object stack.

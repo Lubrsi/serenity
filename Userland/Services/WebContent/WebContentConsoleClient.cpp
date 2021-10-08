@@ -13,6 +13,7 @@
 #include <LibJS/Script.h>
 #include <LibWeb/Bindings/WindowObject.h>
 #include <WebContent/ConsoleGlobalObject.h>
+#include <LibWeb/HTML/Scripting/Environments.h>
 
 namespace WebContent {
 
@@ -30,6 +31,9 @@ WebContentConsoleClient::WebContentConsoleClient(JS::Console& console, WeakPtr<J
 void WebContentConsoleClient::handle_input(String const& js_source)
 {
     auto script_or_error = JS::Script::parse(js_source, m_interpreter->realm());
+    auto& settings = verify_cast<Web::HTML::EnvironmentSettingsObject>(*m_interpreter->realm().custom_data());
+
+    m_interpreter->vm().push_execution_context(settings.realm_execution_context(), settings.global_object());
 
     StringBuilder output_html;
     if (script_or_error.is_error()) {
@@ -41,6 +45,9 @@ void WebContentConsoleClient::handle_input(String const& js_source)
     } else {
         m_interpreter->run(script_or_error.value());
     }
+
+    VERIFY(&m_interpreter->vm().running_execution_context() == &settings.realm_execution_context());
+    m_interpreter->vm().pop_execution_context();
 
     if (m_interpreter->exception()) {
         auto* exception = m_interpreter->exception();
