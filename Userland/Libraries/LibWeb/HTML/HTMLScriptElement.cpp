@@ -467,4 +467,43 @@ void HTMLScriptElement::inserted()
     HTMLElement::inserted();
 }
 
+// https://html.spec.whatwg.org/multipage/scripting.html#dom-script-async
+bool HTMLScriptElement::async() const
+{
+    // On getting, it must return true if non-blocking is true. Otherwise, it must reflect the async attribute (in this context, it'll return true if the element has an async attribute)
+    if (m_non_blocking)
+        return true;
+
+    return has_attribute(HTML::AttributeNames::async);
+}
+
+// https://html.spec.whatwg.org/multipage/scripting.html#dom-script-async
+void HTMLScriptElement::set_async(bool value)
+{
+    // If the element's "non-blocking" flag is set, then, on setting, the "non-blocking" flag must first be unset, and then the content attribute must be removed if the IDL attribute's new value is false,
+    // and must be set to the empty string if the IDL attribute's new value is true.
+    // If the element's "non-blocking" flag is not set, the IDL attribute must reflect the async content attribute.
+
+    // NOTE: Checking that m_non_blocking is true is unnecessary. If it's true, it'll be changed to false. If it's false, it'll stay false.
+    m_non_blocking = false;
+
+    if (!value)
+        remove_attribute(HTML::AttributeNames::async);
+    else
+        set_attribute(HTML::AttributeNames::async, String::empty());
+}
+
+// https://html.spec.whatwg.org/multipage/scripting.html#dom-script-text
+String HTMLScriptElement::text() const
+{
+    // The text attribute's getter must return this script element's child text content.
+    return child_text_content();
+}
+
+void HTMLScriptElement::set_text(String const& value)
+{
+    // The text attribute's setter must string replace all with the given value within this script element.
+    string_replace_all(value);
+}
+
 }

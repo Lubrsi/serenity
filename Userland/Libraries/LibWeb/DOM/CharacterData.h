@@ -27,6 +27,10 @@ public:
 
     unsigned length() const { return m_data.length(); }
 
+    // ^Node
+    virtual String node_value() const final override;
+    virtual void set_node_value(String const&) final override;
+
 protected:
     explicit CharacterData(Document&, NodeType, const String&);
 

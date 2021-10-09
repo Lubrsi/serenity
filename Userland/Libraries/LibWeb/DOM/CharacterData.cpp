@@ -27,4 +27,17 @@ void CharacterData::set_data(String data)
     set_needs_style_update(true);
 }
 
+// https://dom.spec.whatwg.org/#dom-node-nodevalue
+String CharacterData::node_value() const
+{
+    return m_data;
+}
+
+// https://dom.spec.whatwg.org/#dom-node-nodevalue
+void CharacterData::set_node_value(String const& value)
+{
+    // FIXME: Replace data with node this, offset 0, count this’s length, and data the given value.
+    m_data = value;
+}
+
 }

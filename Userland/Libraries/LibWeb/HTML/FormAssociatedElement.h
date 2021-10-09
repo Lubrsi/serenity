@@ -7,11 +7,12 @@
 #pragma once
 
 #include <AK/WeakPtr.h>
+#include <LibWeb/HTML/HTMLElement.h>
 #include <LibWeb/Forward.h>
 
 namespace Web::HTML {
 
-class FormAssociatedElement {
+class FormAssociatedElement : public HTMLElement {
 public:
     HTMLFormElement* form() { return m_form; }
     HTMLFormElement const* form() const { return m_form; }
@@ -19,10 +20,12 @@ public:
     void set_form(HTMLFormElement*);
 
 protected:
-    FormAssociatedElement() = default;
-    virtual ~FormAssociatedElement() = default;
+    FormAssociatedElement(DOM::Document& document, QualifiedName qualified_name)
+        : HTMLElement(document, move(qualified_name))
+    {
+    }
 
-    virtual HTMLElement& form_associated_element_to_html_element() = 0;
+    virtual ~FormAssociatedElement() = default;
 
 private:
     WeakPtr<HTMLFormElement> m_form;

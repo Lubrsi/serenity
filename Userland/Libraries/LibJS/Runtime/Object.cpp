@@ -629,8 +629,6 @@ ThrowCompletionOr<bool> Object::internal_has_property(PropertyName const& proper
     return false;
 }
 
-static Vector<u32> tracker;
-
 // 10.1.8 [[Get]] ( P, Receiver ), https://tc39.es/ecma262/#sec-ordinary-object-internal-methods-and-internal-slots-get-p-receiver
 ThrowCompletionOr<Value> Object::internal_get(PropertyName const& property_name, Value receiver) const
 {
@@ -649,25 +647,11 @@ ThrowCompletionOr<Value> Object::internal_get(PropertyName const& property_name,
         auto* parent = TRY(internal_get_prototype_of());
 
         // b. If parent is null, return undefined.
-        if (!parent) {
-            if (tracker.is_empty() && !property_name.is_symbol())
-                dbgln("internal_get: Did not find property '{}' on '{}'.", property_name.to_string(), Value(this).to_string_without_side_effects());
+        if (!parent)
             return js_undefined();
-        }
 
-        tracker.append(1);
         // c. Return ? parent.[[Get]](P, Receiver).
-        auto blah = parent->internal_get(property_name, receiver);
-        tracker.take_last();
-
-        if (!blah.is_error() && blah.value().is_undefined() && tracker.is_empty() && !property_name.is_symbol()) {
-            auto string = Value(this).to_string_without_side_effects();
-            auto property_string = property_name.to_string();
-            if (!string.is_one_of("[object Object]", "[object ECMAScriptFunctionObject]", "[object Array]") && !property_string.is_one_of("defaultProps", "__esModule", "sham"))
-                dbgln("internal_get: Did not find property '{}' on '{}'.", property_string, string);
-        }
-
-        return blah;
+        return parent->internal_get(property_name, receiver);
     }
 
     // 4. If IsDataDescriptor(desc) is true, return desc.[[Value]].

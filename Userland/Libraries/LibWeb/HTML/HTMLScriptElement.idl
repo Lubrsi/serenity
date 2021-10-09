@@ -1,15 +1,18 @@
+[Exposed=Window]
 interface HTMLScriptElement : HTMLElement {
 
-    [Reflect] attribute DOMString src;
-    [Reflect] attribute DOMString type;
-    [Reflect=nomodule] attribute boolean noModule;
-    [Reflect] attribute boolean defer;
-    [Reflect] attribute DOMString integrity;
+    [Reflect, CEReactions] attribute DOMString src;
+    [Reflect, CEReactions] attribute DOMString type;
+    [Reflect=nomodule, CEReactions] attribute boolean noModule;
+    [CEReactions] attribute boolean async;
+    [Reflect, CEReactions] attribute boolean defer;
+    [CEReactions] attribute DOMString text;
+    [Reflect, CEReactions] attribute DOMString integrity;
 
     static boolean supports(DOMString type);
 
-    [Reflect] attribute DOMString charset;
-    [Reflect] attribute DOMString event;
-    [Reflect=for] attribute DOMString htmlFor;
+    [Reflect, CEReactions] attribute DOMString charset;
+    [Reflect, CEReactions] attribute DOMString event;
+    [Reflect=for, CEReactions] attribute DOMString htmlFor;
 
 };

@@ -100,6 +100,10 @@ void Interpreter::run(Script& script_record)
     // FIXME: 14. If result.[[Type]] is normal and result.[[Value]] is empty, then
     //          a. Set result to NormalCompletion(undefined).
 
+    // FIXME: We unconditionally stop the unwind here this should be done using completions leaving
+    //        the VM in a cleaner state after executing. For example it does still store the exception.
+    vm.stop_unwind();
+
     // FIXME: 15. Suspend scriptContext and remove it from the execution context stack.
     vm.pop_execution_context();
 

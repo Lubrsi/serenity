@@ -70,7 +70,7 @@ void EnvironmentSettingsObject::clean_up_after_running_script()
 
     // 3. If the JavaScript execution context stack is now empty, perform a microtask checkpoint. (If this runs scripts, these algorithms will be invoked reentrantly.)
     if (vm.execution_context_stack().is_empty())
-        HTML::main_thread_event_loop().perform_a_microtask_checkpoint();
+        responsible_event_loop().perform_a_microtask_checkpoint();
 }
 
 static JS::ExecutionContext* top_most_script_having_execution_context(JS::VM& vm)

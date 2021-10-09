@@ -24,6 +24,11 @@ public:
     {
     }
 
+    ~EventListener()
+    {
+        dbgln("EventListener destroyed at {:p}", this);
+    }
+
     Bindings::CallbackType& callback() { return m_callback; }
 
     const FlyString& type() const { return m_type; }

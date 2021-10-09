@@ -163,15 +163,12 @@ bool Node::is_link() const
     return enclosing_link_element();
 }
 
+// https://dom.spec.whatwg.org/#concept-child-text-content
 String Node::child_text_content() const
 {
-    if (!is<ParentNode>(*this))
-        return String::empty();
-
     StringBuilder builder;
-    verify_cast<ParentNode>(*this).for_each_child([&](auto& child) {
-        if (is<Text>(child))
-            builder.append(verify_cast<Text>(child).text_content());
+    for_each_child_of_type<Text>([&](auto& child) {
+        builder.append(child.data());
     });
     return builder.build();
 }

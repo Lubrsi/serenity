@@ -74,6 +74,11 @@ public:
     bool in_a_document_tree() const;
 
     // NOTE: This is intended for the JS bindings.
+    // https://dom.spec.whatwg.org/#dom-node-nodevalue
+    // FIXME: Attr nodes need a nodeValue override, however, they currently aren't nodes.
+    virtual String node_value() const { return {}; }
+    virtual void set_node_value(String const&) { }
+
     u16 node_type() const { return (u16)m_type; }
 
     virtual bool is_editable() const;

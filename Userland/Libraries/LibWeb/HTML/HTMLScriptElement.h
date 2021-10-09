@@ -40,6 +40,12 @@ public:
         return type.is_one_of("classic", "module");
     }
 
+    bool async() const;
+    void set_async(bool value);
+
+    String text() const;
+    void set_text(String const&);
+
 private:
     void prepare_script();
     void script_became_ready();
