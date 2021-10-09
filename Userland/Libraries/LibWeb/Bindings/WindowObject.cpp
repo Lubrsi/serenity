@@ -284,8 +284,8 @@ JS_DEFINE_NATIVE_FUNCTION(WindowObject::set_timeout)
         // The spec wants us to use a task for the "run function or script string" part,
         // using a NativeFunction for the latter is a workaround so that we can reuse the
         // DOM::Timer API unaltered (always expects a JS::FunctionObject).
-        callback = JS::NativeFunction::create(global_object, "", [impl, script_source = move(script_source)](auto&, auto&) mutable {
-            auto& settings_object = verify_cast<HTML::EnvironmentSettingsObject>(*impl->associated_document().realm().custom_data());
+        callback = JS::NativeFunction::create(global_object, "", [impl, script_source = move(script_source)](auto&, auto&) mutable -> JS::Value {
+            auto& settings_object = verify_cast<HTML::EnvironmentSettingsObject>(*impl->wrapper()->realm()->custom_data());
             auto script = HTML::ClassicScript::create(impl->associated_document().url().to_string(), script_source, settings_object, AK::URL());
             return script->run();
         });
@@ -383,7 +383,9 @@ JS_DEFINE_NATIVE_FUNCTION(WindowObject::queue_microtask)
         return {};
     }
 
-    impl->queue_microtask(static_cast<JS::FunctionObject&>(*callback_object));
+    auto callback = adopt_own(*new Bindings::CallbackType(JS::make_handle(callback_object), HTML::incumbent_settings_object()));
+
+    impl->queue_microtask(move(callback));
     return JS::js_undefined();
 }
 

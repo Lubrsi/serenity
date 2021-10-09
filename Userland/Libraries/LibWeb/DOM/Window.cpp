@@ -22,6 +22,7 @@
 #include <LibWeb/Page/BrowsingContext.h>
 #include <LibWeb/Page/Page.h>
 #include <LibWeb/Selection/Selection.h>
+#include <LibWeb/Bindings/IDLAbstractOperations.h>
 
 namespace Web::DOM {
 
@@ -371,12 +372,12 @@ void Window::fire_a_page_transition_event(FlyString const& event_name, bool pers
 }
 
 // https://html.spec.whatwg.org/#dom-queuemicrotask
-void Window::queue_microtask(JS::FunctionObject& callback)
+void Window::queue_microtask(NonnullOwnPtr<Bindings::CallbackType> callback)
 {
     // The queueMicrotask(callback) method must queue a microtask to invoke callback,
-    HTML::queue_a_microtask(associated_document(), [&callback, handle = JS::make_handle(&callback)]() {
-        auto& vm = callback.vm();
-        [[maybe_unused]] auto rc = vm.call(callback, JS::js_null());
+    HTML::queue_a_microtask(associated_document(), [callback = move(callback)]() mutable {
+        auto& vm = callback->callback.cell()->vm();
+        [[maybe_unused]] auto rc = Bindings::IDL::invoke_callback(*callback, {});
         // FIXME: ...and if callback throws an exception, report the exception.
         if (vm.exception())
             vm.clear_exception();

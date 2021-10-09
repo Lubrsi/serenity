@@ -55,7 +55,7 @@ public:
     void clear_timeout(i32);
     void clear_interval(i32);
 
-    void queue_microtask(JS::FunctionObject&);
+    void queue_microtask(NonnullOwnPtr<Bindings::CallbackType> callback);
 
     int inner_width() const;
     int inner_height() const;
