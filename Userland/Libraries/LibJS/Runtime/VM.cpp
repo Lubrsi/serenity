@@ -454,7 +454,7 @@ Reference VM::get_identifier_reference(Environment* environment, FlyString name,
 }
 
 // 9.4.1 GetActiveScriptOrModule ( ), https://tc39.es/ecma262/#sec-getactivescriptormodule
-Variant<NonnullRefPtr<Script>, NonnullRefPtr<Module>, Empty> VM::get_active_script_or_module()
+Variant<WeakPtr<Script>, WeakPtr<Module>, Empty> VM::get_active_script_or_module()
 {
     // 1. If the execution context stack is empty, return null.
     if (m_execution_context_stack.is_empty())

@@ -23,11 +23,11 @@ struct ExecutionContext {
     {
     }
 
-    FunctionObject* function { nullptr };                                             // [[Function]]
-    Realm* realm { nullptr };                                                         // [[Realm]]
-    Variant<NonnullRefPtr<Script>, NonnullRefPtr<Module>, Empty> script_or_module {}; // [[ScriptOrModule]]
-    Environment* lexical_environment { nullptr };                                     // [[LexicalEnvironment]]
-    Environment* variable_environment { nullptr };                                    // [[VariableEnvironment]]
+    FunctionObject* function { nullptr };                                 // [[Function]]
+    Realm* realm { nullptr };                                             // [[Realm]]
+    Variant<WeakPtr<Script>, WeakPtr<Module>, Empty> script_or_module {}; // [[ScriptOrModule]]
+    Environment* lexical_environment { nullptr };                         // [[LexicalEnvironment]]
+    Environment* variable_environment { nullptr };                        // [[VariableEnvironment]]
 
     ASTNode const* current_node { nullptr };
     FlyString function_name;

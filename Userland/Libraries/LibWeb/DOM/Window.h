@@ -47,11 +47,11 @@ public:
     void alert(String const&);
     bool confirm(String const&);
     String prompt(String const&, String const&);
-    i32 request_animation_frame(JS::FunctionObject&);
+    i32 request_animation_frame(NonnullOwnPtr<Bindings::CallbackType> js_callback);
     void cancel_animation_frame(i32);
 
-    i32 set_timeout(JS::FunctionObject&, i32);
-    i32 set_interval(JS::FunctionObject&, i32);
+    i32 set_timeout(NonnullOwnPtr<Bindings::CallbackType> callback, i32);
+    i32 set_interval(NonnullOwnPtr<Bindings::CallbackType> callback, i32);
     void clear_timeout(i32);
     void clear_interval(i32);
 

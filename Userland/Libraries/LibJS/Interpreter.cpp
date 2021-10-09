@@ -66,7 +66,7 @@ void Interpreter::run(Script& script_record)
     script_context.realm = &script_record.realm();
 
     // 5. Set the ScriptOrModule of scriptContext to scriptRecord.
-    script_context.script_or_module = NonnullRefPtr<Script> { script_record };
+    script_context.script_or_module = script_record.make_weak_ptr();
 
     // 6. Set the VariableEnvironment of scriptContext to globalEnv.
     script_context.variable_environment = &global_environment;
@@ -119,8 +119,6 @@ void Interpreter::run(Script& script_record)
     vm.run_queued_promise_jobs();
 
     vm.run_queued_finalization_registry_cleanup_jobs();
-
-    vm.pop_execution_context();
 
     vm.finish_execution_generation();
 }

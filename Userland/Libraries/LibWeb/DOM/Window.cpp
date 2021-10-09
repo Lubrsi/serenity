@@ -145,16 +145,16 @@ String Window::prompt(String const& message, String const& default_)
     return {};
 }
 
-i32 Window::set_interval(JS::FunctionObject& callback, i32 interval)
+i32 Window::set_interval(NonnullOwnPtr<Bindings::CallbackType> callback, i32 interval)
 {
-    auto timer = Timer::create_interval(*this, interval, callback);
+    auto timer = Timer::create_interval(*this, interval, move(callback));
     m_timers.set(timer->id(), timer);
     return timer->id();
 }
 
-i32 Window::set_timeout(JS::FunctionObject& callback, i32 interval)
+i32 Window::set_timeout(NonnullOwnPtr<Bindings::CallbackType> callback, i32 interval)
 {
-    auto timer = Timer::create_timeout(*this, interval, callback);
+    auto timer = Timer::create_timeout(*this, interval, move(callback));
     m_timers.set(timer->id(), timer);
     return timer->id();
 }
@@ -172,7 +172,7 @@ void Window::timer_did_fire(Badge<Timer>, Timer& timer)
         VERIFY(wrapper());
         auto& vm = wrapper()->vm();
 
-        [[maybe_unused]] auto rc = vm.call(strong_timer->callback(), wrapper());
+        [[maybe_unused]] auto rc = Bindings::IDL::invoke_callback(strong_timer->callback(), wrapper());
         if (vm.exception())
             vm.clear_exception();
     });
@@ -198,12 +198,11 @@ void Window::clear_interval(i32 timer_id)
     m_timers.remove(timer_id);
 }
 
-i32 Window::request_animation_frame(JS::FunctionObject& js_callback)
+i32 Window::request_animation_frame(NonnullOwnPtr<Bindings::CallbackType> js_callback)
 {
-    auto callback = request_animation_frame_driver().add([this, handle = JS::make_handle(&js_callback)](i32 id) mutable {
-        auto& function = *handle.cell();
-        auto& vm = function.vm();
-        (void)vm.call(function, JS::js_undefined(), JS::Value(performance().now()));
+    auto callback = request_animation_frame_driver().add([this, js_callback = move(js_callback)](i32 id) mutable {
+        auto& vm = js_callback->callback.cell()->vm();
+        (void)Bindings::IDL::invoke_callback(*js_callback, {}, JS::Value(performance().now()));
         if (vm.exception())
             vm.clear_exception();
         m_request_animation_frame_callbacks.remove(id);

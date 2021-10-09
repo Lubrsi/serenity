@@ -174,7 +174,6 @@ protected:
     void print_file_result(const JSFileResult& file_result) const;
 
     String m_common_path;
-    RefPtr<JS::Script> m_test_script;
 };
 
 class TestRunnerGlobalObject final : public JS::GlobalObject {
@@ -334,19 +333,17 @@ inline JSFileResult TestRunner::run_file_test(const String& test_path)
         }
     }
 
-    //if (!m_test_script) {
-        auto result = parse_script(m_common_path, interpreter->realm());
-        if (result.is_error()) {
-            warnln("Unable to parse test-common.js");
-            warnln("{}", result.error().error.to_string());
-            warnln("{}", result.error().hint);
-            cleanup_and_exit();
-        }
-        m_test_script = result.release_value();
-    //}
+    auto result = parse_script(m_common_path, interpreter->realm());
+    if (result.is_error()) {
+        warnln("Unable to parse test-common.js");
+        warnln("{}", result.error().error.to_string());
+        warnln("{}", result.error().hint);
+        cleanup_and_exit();
+    }
+    auto test_script = result.release_value();
 
     if (g_run_bytecode) {
-        auto unit = JS::Bytecode::Generator::generate(m_test_script->parse_node());
+        auto unit = JS::Bytecode::Generator::generate(test_script->parse_node());
         if (g_dump_bytecode) {
             for (auto& block : unit.basic_blocks)
                 block.dump(unit);
@@ -360,7 +357,7 @@ inline JSFileResult TestRunner::run_file_test(const String& test_path)
         bytecode_interpreter.run(unit);
     } else {
         g_vm->push_execution_context(global_execution_context, interpreter->global_object());
-        interpreter->run(*m_test_script);
+        interpreter->run(*test_script);
         g_vm->pop_execution_context();
     }
 

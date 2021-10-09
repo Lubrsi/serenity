@@ -37,7 +37,7 @@ public:
     virtual Realm* realm() const { return nullptr; }
 
     // [[ScriptOrModule]]
-    virtual Variant<NonnullRefPtr<Script>, NonnullRefPtr<Module>, Empty> script_or_module() const { return {}; }
+    virtual Variant<WeakPtr<Script>, WeakPtr<Module>, Empty> script_or_module() const { return {}; }
 
 protected:
     explicit FunctionObject(Object& prototype);
