@@ -1,0 +1,23 @@
+[Exposed=Window]
+interface MutationObserver {
+
+    constructor(MutationCallback callback);
+
+    undefined observe(Node target, optional MutationObserverInit options = {});
+    undefined disconnect();
+    // FIXME: This should be a sequence<MutationRecord>
+    ArrayFromVector takeRecords();
+
+};
+
+dictionary MutationObserverInit {
+
+    boolean childList = false;
+    boolean attributes;
+    boolean characterData;
+    boolean subtree = false;
+    boolean attributeOldValue;
+    boolean characterDataOldValue;
+    // FIXME: sequence<DOMString> attributeFilter;
+
+};

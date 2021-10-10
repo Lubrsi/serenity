@@ -945,6 +945,15 @@ static void generate_to_cpp(SourceGenerator& generator, ParameterType& parameter
     auto @cpp_name@ = adopt_ref(*new EventListener(JS::make_handle(&@js_name@@js_suffix@.as_function())));
 )~~~");
         }
+    } else if (parameter.type.name == "MutationCallback") {
+        // FIXME: This and EventListener should be replaced by callback types and interfaces.
+        scoped_generator.append(R"~~~(
+    if (!@js_name@@js_suffix@.is_function()) {
+        vm.throw_exception<JS::TypeError>(global_object, JS::ErrorType::NotAnObjectOfType, "Function");
+        @return_statement@
+    }
+    auto @cpp_name@ = JS::make_handle(&@js_name@@js_suffix@.as_function());
+)~~~");
     } else if (is_wrappable_type(parameter.type)) {
         if (!parameter.type.nullable) {
             scoped_generator.append(R"~~~(

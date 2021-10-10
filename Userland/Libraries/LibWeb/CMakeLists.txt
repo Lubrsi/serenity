@@ -71,6 +71,7 @@ set(SOURCES
     DOM/EventTarget.cpp
     DOM/HTMLCollection.cpp
     DOM/LiveNodeList.cpp
+    DOM/MutationObserver.cpp
     DOM/Node.cpp
     DOM/ParentNode.cpp
     DOM/Position.cpp
@@ -379,6 +380,8 @@ libweb_js_wrapper(DOM/EventTarget)
 libweb_js_wrapper(DOM/HTMLCollection)
 libweb_js_wrapper(DOM/ProcessingInstruction)
 libweb_js_wrapper(DOM/ShadowRoot)
+libweb_js_wrapper(DOM/MutationObserver)
+libweb_js_wrapper(DOM/MutationRecord)
 libweb_js_wrapper(DOM/Node)
 libweb_js_wrapper(DOM/NodeList)
 libweb_js_wrapper(DOM/Range)
