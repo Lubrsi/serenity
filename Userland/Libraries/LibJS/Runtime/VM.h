@@ -251,7 +251,7 @@ public:
     CommonPropertyNames names;
 
     void run_queued_promise_jobs();
-    void enqueue_promise_job(NativeFunction&, Realm*);
+    void enqueue_promise_job(Function<Value()> job, Realm*);
 
     void run_queued_finalization_registry_cleanup_jobs();
     void enqueue_finalization_registry_cleanup_job(FinalizationRegistry&);
@@ -277,7 +277,7 @@ public:
 
     Function<void(Promise&, Promise::RejectionOperation)> host_promise_rejection_tracker;
     Function<Value(JobCallback&, Value, MarkedValueList)> host_call_job_callback;
-    Function<void(NativeFunction&, Realm*)> host_enqueue_promise_job;
+    Function<void(Function<Value()>, Realm*)> host_enqueue_promise_job;
     Function<JobCallback(FunctionObject&)> host_make_job_callback;
 
 private:
@@ -309,7 +309,7 @@ private:
 
     HashMap<String, Symbol*> m_global_symbol_map;
 
-    Vector<NativeFunction*> m_promise_jobs;
+    Vector<Function<Value()>> m_promise_jobs;
 
     Vector<FinalizationRegistry*> m_finalization_registry_cleanup_jobs;
 

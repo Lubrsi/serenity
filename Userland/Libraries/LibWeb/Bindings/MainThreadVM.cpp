@@ -62,11 +62,12 @@ JS::VM& main_thread_vm()
                     TODO();
                 },
                 [](Empty) {
-                    // I'm not sure what we should do if there's no script or module here. Can that even happen here?
-                    VERIFY_NOT_REACHED();
                 }
             );
-            VERIFY(script);
+            //VERIFY(script);
+
+            if (!script)
+                return;
 
             // 2. If script's muted errors is true, terminate these steps.
             if (script->muted_errors() == HTML::ClassicScript::MutedErrors::Yes)
@@ -134,13 +135,13 @@ JS::VM& main_thread_vm()
 
             // 4. If script execution context is not null, then push script execution context onto the JavaScript execution context stack.
             if (callback_host_defined.active_script_context) {
-                vm->push_execution_context(*callback_host_defined.active_script_context, callback.callback->global_object());
+                vm->push_execution_context(*callback_host_defined.active_script_context, callback.callback.cell()->global_object());
                 if (vm->exception())
                     return {};
             }
 
             // 5. Let result be Call(callback.[[Callback]], V, argumentsList).
-            auto result = vm->call(*callback.callback, this_value, move(arguments_list));
+            auto result = vm->call(*callback.callback.cell(), this_value, move(arguments_list));
 
             // 6. If script execution context is not null, then pop script execution context from the JavaScript execution context stack.
             if (callback_host_defined.active_script_context) {
@@ -159,7 +160,7 @@ JS::VM& main_thread_vm()
         };
 
         // 8.1.5.3.3 HostEnqueuePromiseJob(job, realm), https://html.spec.whatwg.org/multipage/webappapis.html#hostenqueuepromisejob
-        vm->host_enqueue_promise_job = [](JS::NativeFunction& job, JS::Realm* realm) {
+        vm->host_enqueue_promise_job = [](Function<JS::Value()> job, JS::Realm* realm) {
             dbgln("web host_enqueue_promise_job! job={:p}, realm={:p}", &job, realm);
 
             // 1. If realm is not null, then let job settings be the settings object for realm. Otherwise, let job settings be null.
@@ -178,7 +179,7 @@ JS::VM& main_thread_vm()
             auto* script = active_script();
 
             // NOTE: This keeps job_settings alive by keeping realm alive, which is holding onto job_settings.
-            HTML::queue_a_microtask(script ? script->settings_object().responsible_document().ptr() : nullptr, [job_settings, job = JS::make_handle(&job), realm = realm ? JS::make_handle(realm) : JS::Handle<JS::Realm> {}, script_or_module = move(script_or_module)]() mutable {
+            HTML::queue_a_microtask(script ? script->settings_object().responsible_document().ptr() : nullptr, [job_settings, job = move(job), realm = realm ? JS::make_handle(realm) : JS::Handle<JS::Realm> {}, script_or_module = move(script_or_module)]() mutable {
                 if (job_settings) {
                     // 1. If job settings is not null, then check if we can run script with job settings. If this returns "do not run" then return.
                     if (job_settings->can_run_script() == HTML::RunScriptDecision::DoNotRun)
@@ -190,10 +191,21 @@ JS::VM& main_thread_vm()
                     // Implementation defined: Per the previous "implementation defined" comment, we must now make the script or module the active script or module.
                     //                         Since the only active execution context currently is the realm execution context of job settings, lets attach it here.
                     job_settings->realm_execution_context().script_or_module = script_or_module;
+                } else {
+                    // FIXME: We need to setup a dummy execution context in case a JS::NativeFunction is called when processing the job.
+                    //        This is because JS::NativeFunction::call excepts something to be on the execution context stack to be able to get the caller context to initialize the environment.
+                    //        Since this requires pushing an execution context onto the stack, it also requires a global object. The only thing we can get a global object from in this case is the script or module.
+                    //        To do this, we must assume script or module is not Empty. We must also assume that it is a Script Record for now as we don't currently run modules.
+                    //        Do note that the JS spec gives _no_ guarantee that the execution context stack has something on it if HostEnqueuePromiseJob was called with a null realm: https://tc39.es/ecma262/#job-preparedtoevaluatecode
+                    VERIFY(script_or_module.has<WeakPtr<JS::Script>>());
+                    auto script_record = script_or_module.get<WeakPtr<JS::Script>>();
+                    JS::ExecutionContext dummy_execution_context(vm->heap());
+                    dummy_execution_context.script_or_module = script_or_module;
+                    vm->push_execution_context(dummy_execution_context, script_record->realm().global_object());
                 }
 
                 // 3. Let result be job().
-                auto result = vm->call(*job.cell(), JS::js_undefined());
+                [[maybe_unused]] auto result = job();
 
                 // 4. If job settings is not null, then clean up after running script with job settings.
                 if (job_settings) {
@@ -201,13 +213,12 @@ JS::VM& main_thread_vm()
                     job_settings->realm_execution_context().script_or_module = Empty {};
 
                     job_settings->clean_up_after_running_script();
+                } else {
+                    // Pop off the dummy execution context. See the above FIXME block about why this is done.
+                    vm->pop_execution_context();
                 }
 
                 // FIXME: 5. If result is an abrupt completion, then report the exception given by result.[[Value]].
-                //           (I'm not sure why this step is here. The JS spec says a job must not return an abrupt completion.)
-                if (result.is_throw_completion()) {
-                    TODO();
-                }
             });
         };
 
@@ -235,7 +246,7 @@ JS::VM& main_thread_vm()
 
             // 5. Return the JobCallback Record { [[Callback]]: callable, [[HostDefined]]: { [[IncumbentSettings]]: incumbent settings, [[ActiveScriptContext]]: script execution context } }.
             auto host_defined = adopt_own(*new WebEngineCustomJobCallbackData(incumbent_settings, move(script_execution_context)));
-            return { &callable, move(host_defined) };
+            return { JS::make_handle(&callable), move(host_defined) };
         };
 
         // FIXME: Implement 8.1.5.4.1 HostGetImportMetaProperties(moduleRecord), https://html.spec.whatwg.org/multipage/webappapis.html#hostgetimportmetaproperties

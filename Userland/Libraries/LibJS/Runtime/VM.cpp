@@ -52,8 +52,8 @@ VM::VM(OwnPtr<CustomData> custom_data)
         return call_job_callback(*this, job_callback, this_value, move(arguments));
     };
 
-    host_enqueue_promise_job = [this](NativeFunction& job, Realm* realm) {
-        enqueue_promise_job(job, realm);
+    host_enqueue_promise_job = [this](Function<Value()> job, Realm* realm) {
+        enqueue_promise_job(move(job), realm);
     };
 
     host_make_job_callback = [](FunctionObject& function_object) {
@@ -141,9 +141,6 @@ void VM::gather_roots(HashTable<Cell*>& roots)
 
     for (auto& symbol : m_global_symbol_map)
         roots.set(symbol.value);
-
-    for (auto* job : m_promise_jobs)
-        roots.set(job);
 
     for (auto* finalization_registry : m_finalization_registry_cleanup_jobs)
         roots.set(finalization_registry);
@@ -579,37 +576,23 @@ void VM::run_queued_promise_jobs()
     // either way, and that can't happen if we already have an exception stored.
     TemporaryClearException clear_exception(*this);
     while (!m_promise_jobs.is_empty()) {
-        auto* job = m_promise_jobs.take_first();
-        dbgln_if(PROMISE_DEBUG, "Calling promise job function @ {}", job);
-
-        // NOTE: If the execution context stack is empty, we make and push a temporary context.
-        ExecutionContext execution_context(heap());
-        bool pushed_execution_context = false;
-        if (m_execution_context_stack.is_empty()) {
-            static FlyString promise_execution_context_name = "(promise execution context)";
-            execution_context.function_name = promise_execution_context_name;
-            push_execution_context(execution_context, job->global_object());
-            pushed_execution_context = true;
-        }
-
-        [[maybe_unused]] auto result = call(*job, js_undefined());
-
-        if (pushed_execution_context)
-            pop_execution_context();
+        auto job = m_promise_jobs.take_first();
+        dbgln_if(PROMISE_DEBUG, "Calling promise job function @ {}", &job);
+        [[maybe_unused]] auto result = job();
     }
     // Ensure no job has created a new exception, they must clean up after themselves.
     VERIFY(!m_exception);
 }
 
 // 9.5.4 HostEnqueuePromiseJob ( job, realm ), https://tc39.es/ecma262/#sec-hostenqueuepromisejob
-void VM::enqueue_promise_job(NativeFunction& job, Realm*)
+void VM::enqueue_promise_job(Function<Value()> job, Realm*)
 {
     // An implementation of HostEnqueuePromiseJob must conform to the requirements in 9.5 as well as the following:
     // - FIXME: If realm is not null, each time job is invoked the implementation must perform implementation-defined steps such that execution is prepared to evaluate ECMAScript code at the time of job's invocation.
     // - FIXME: Let scriptOrModule be GetActiveScriptOrModule() at the time HostEnqueuePromiseJob is invoked. If realm is not null, each time job is invoked the implementation must perform implementation-defined steps
     //          such that scriptOrModule is the active script or module at the time of job's invocation.
     // - Jobs must run in the same order as the HostEnqueuePromiseJob invocations that scheduled them.
-    m_promise_jobs.append(&job);
+    m_promise_jobs.append(move(job));
 }
 
 void VM::run_queued_finalization_registry_cleanup_jobs()

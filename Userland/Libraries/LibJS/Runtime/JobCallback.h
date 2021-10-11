@@ -17,21 +17,21 @@ struct JobCallback {
         virtual ~CustomData() = default;
     };
 
-    FunctionObject* callback { nullptr };
+    Handle<FunctionObject> callback;
     OwnPtr<CustomData> custom_data { nullptr };
 };
 
 // 9.5.2 HostMakeJobCallback ( callback ), https://tc39.es/ecma262/#sec-hostmakejobcallback
 inline JobCallback make_job_callback(FunctionObject& callback)
 {
-    return { &callback };
+    return { make_handle(&callback) };
 }
 
 // 9.5.3 HostCallJobCallback ( jobCallback, V, argumentsList ), https://tc39.es/ecma262/#sec-hostcalljobcallback
 [[nodiscard]] inline Value call_job_callback(VM& vm, JobCallback& job_callback, Value this_value, MarkedValueList args)
 {
-    VERIFY(job_callback.callback);
-    auto& callback = *job_callback.callback;
+    VERIFY(!job_callback.callback.is_null());
+    auto& callback = *job_callback.callback.cell();
     return TRY_OR_DISCARD(vm.call(callback, this_value, move(args)));
 }
 
