@@ -20,20 +20,27 @@ class Script
     : public RefCounted<Script>
     , public Weakable<Script> {
 public:
+    struct CustomData {
+        virtual ~CustomData() = default;
+    };
+
     ~Script();
-    static Result<NonnullRefPtr<Script>, Vector<Parser::Error>> parse(StringView source_text, Realm&, StringView filename = {});
+    static Result<NonnullRefPtr<Script>, Vector<Parser::Error>> parse(StringView source_text, Realm&, StringView filename = {}, CustomData* custom_data = nullptr);
 
     Realm& realm() { return *m_realm.cell(); }
     Program const& parse_node() const { return *m_parse_node; }
 
+    CustomData* custom_data() { return m_custom_data; }
+
 private:
-    Script(Realm&, NonnullRefPtr<Program>);
+    Script(Realm&, NonnullRefPtr<Program>, CustomData*);
 
     // Handles are not safe unless we keep the VM alive.
     NonnullRefPtr<VM> m_vm;
 
-    Handle<Realm> m_realm;               // [[Realm]]
-    NonnullRefPtr<Program> m_parse_node; // [[ECMAScriptCode]]
+    Handle<Realm> m_realm;                 // [[Realm]]
+    NonnullRefPtr<Program> m_parse_node;   // [[ECMAScriptCode]]
+    CustomData* m_custom_data { nullptr }; // [[HostDefined]]
 };
 
 }

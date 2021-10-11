@@ -36,6 +36,11 @@ public:
     JS::Promise const* promise() const { return m_promise.cell(); }
     JS::Value reason() const { return m_reason; }
 
+    void visit_edges(JS::Cell::Visitor& visitor)
+    {
+        visitor.visit(m_reason);
+    }
+
 protected:
     PromiseRejectionEvent(FlyString const& event_name, PromiseRejectionEventInit const& event_init)
         : DOM::Event(event_name, event_init)
@@ -45,7 +50,6 @@ protected:
     }
 
     JS::Handle<JS::Promise> m_promise;
-    // FIXME: Protect this from GC! Currently we have no handle for arbitrary JS::Value.
     JS::Value m_reason;
 };
 

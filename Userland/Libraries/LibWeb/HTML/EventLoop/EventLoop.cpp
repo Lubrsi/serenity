@@ -208,14 +208,25 @@ void EventLoop::process()
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#queue-a-global-task
-void queue_global_task(HTML::Task::Source source, DOM::Document& document, Function<void()> steps)
+void queue_global_task(HTML::Task::Source source, JS::GlobalObject& global_object, Function<void()> steps)
 {
-    // FIXME: This should take a global object as input and find the relevant document for it.
-    main_thread_event_loop().task_queue().add(HTML::Task::create(source, &document, move(steps)));
+    // 1. Let event loop be global's relevant agent's event loop.
+    auto& global_custom_data = verify_cast<Bindings::WebEngineCustomData>(*global_object.vm().custom_data());
+    auto& event_loop = global_custom_data.event_loop;
+
+    // 2. Let document be global's associated Document, if global is a Window object; otherwise null.
+    DOM::Document* document { nullptr };
+    if (is<Bindings::WindowObject>(global_object)) {
+        auto& window_object = verify_cast<Bindings::WindowObject>(global_object);
+        document = &window_object.impl().associated_document();
+    }
+
+    // 3. Queue a task given source, event loop, document, and steps.
+    event_loop.task_queue().add(HTML::Task::create(source, document, move(steps)));
 }
 
 // https://html.spec.whatwg.org/#queue-a-microtask
-void queue_a_microtask(DOM::Document& document, Function<void()> steps)
+void queue_a_microtask(DOM::Document* document, Function<void()> steps)
 {
     // 1. If event loop was not given, set event loop to the implied event loop.
     auto& event_loop = HTML::main_thread_event_loop();
@@ -226,7 +237,7 @@ void queue_a_microtask(DOM::Document& document, Function<void()> steps)
     // 4. Set microtask's steps to steps.
     // 5. Set microtask's source to the microtask task source.
     // 6. Set microtask's document to document.
-    auto microtask = HTML::Task::create(HTML::Task::Source::Microtask, &document, move(steps));
+    auto microtask = HTML::Task::create(HTML::Task::Source::Microtask, document, move(steps));
 
     // FIXME: 7. Set microtask's script evaluation environment settings object set to an empty set.
 
@@ -264,7 +275,7 @@ void EventLoop::perform_a_microtask_checkpoint()
     // FIXME: 5. Cleanup Indexed Database transactions.
 
     // 6. Perform ClearKeptObjects().
-    vm().run_queued_finalization_registry_cleanup_jobs();
+    vm().finish_execution_generation();
 
     // 7. Set the event loop's performing a microtask checkpoint to false.
     m_performing_a_microtask_checkpoint = false;

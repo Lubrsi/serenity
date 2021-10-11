@@ -14,6 +14,7 @@
 #include <LibWeb/Bindings/WindowObject.h>
 #include <WebContent/ConsoleGlobalObject.h>
 #include <LibWeb/HTML/Scripting/Environments.h>
+#include <LibWeb/HTML/Scripting/ClassicScript.h>
 
 namespace WebContent {
 
@@ -30,28 +31,19 @@ WebContentConsoleClient::WebContentConsoleClient(JS::Console& console, WeakPtr<J
 
 void WebContentConsoleClient::handle_input(String const& js_source)
 {
-    auto script_or_error = JS::Script::parse(js_source, m_interpreter->realm());
     auto& settings = verify_cast<Web::HTML::EnvironmentSettingsObject>(*m_interpreter->realm().custom_data());
+    auto script = Web::HTML::ClassicScript::create("(console)", js_source, settings, settings.api_base_url());
 
-    m_interpreter->vm().push_execution_context(settings.realm_execution_context(), settings.global_object());
+    // FIXME: Add parse error printouts back once ClassicScript can report parse errors.
 
+    script->run();
+
+    auto& vm = m_interpreter->global_object().vm();
     StringBuilder output_html;
-    if (script_or_error.is_error()) {
-        auto error = script_or_error.error()[0];
-        auto hint = error.source_location_hint(js_source);
-        if (!hint.is_empty())
-            output_html.append(String::formatted("<pre>{}</pre>", escape_html_entities(hint)));
-        m_interpreter->vm().throw_exception<JS::SyntaxError>(*m_console_global_object.cell(), error.to_string());
-    } else {
-        m_interpreter->run(script_or_error.value());
-    }
 
-    VERIFY(&m_interpreter->vm().running_execution_context() == &settings.realm_execution_context());
-    m_interpreter->vm().pop_execution_context();
-
-    if (m_interpreter->exception()) {
-        auto* exception = m_interpreter->exception();
-        m_interpreter->vm().clear_exception();
+    if (vm.exception()) {
+        auto* exception = vm.exception();
+        vm.clear_exception();
         output_html.append("Uncaught exception: ");
         auto error = exception->value();
         if (error.is_object())

@@ -359,7 +359,7 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
     //        For <body> or <frameset> elements who just had an element attribute set, it will be this's wrapper, as `this` is the result of determine_target_of_event_handler
     //        returning the element's document's global object, which is the DOM::Window object.
     //        For any other HTMLElement who just had an element attribute set, `this` will be that HTMLElement, so the global object is this's document's realm's global object.
-    //        For anything else, it came from JavaScript, so use the current global object from the main thread VM.
+    //        For anything else, it came from JavaScript, so use the global object of the provided callback function.
     //        Sadly, this doesn't work if an element attribute is set on a <body> element before any script is run, as Window::wrapper() will be null.
     JS::GlobalObject* global_object = nullptr;
     if (is_attribute == IsAttribute::Yes) {
@@ -371,7 +371,7 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
             global_object = &html_element->document().realm().global_object();
         }
     } else {
-        global_object = &Bindings::main_thread_vm().current_realm()->global_object();
+        global_object = &event_handler.value.get<Bindings::CallbackType>().callback.cell()->global_object();
     }
 
     VERIFY(global_object);

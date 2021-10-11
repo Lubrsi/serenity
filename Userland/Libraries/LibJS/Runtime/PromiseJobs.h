@@ -13,11 +13,16 @@
 
 namespace JS {
 
+struct PromiseJob {
+    NativeFunction& job;
+    Realm* realm { nullptr };
+};
+
 class PromiseReactionJob final : public NativeFunction {
     JS_OBJECT(PromiseReactionJob, NativeFunction);
 
 public:
-    static PromiseReactionJob* create(GlobalObject&, PromiseReaction&, Value argument);
+    static PromiseJob create(GlobalObject&, PromiseReaction&, Value argument);
 
     explicit PromiseReactionJob(PromiseReaction&, Value argument, Object& prototype);
     virtual ~PromiseReactionJob() override = default;
@@ -35,7 +40,7 @@ class PromiseResolveThenableJob final : public NativeFunction {
     JS_OBJECT(PromiseReactionJob, NativeFunction);
 
 public:
-    static PromiseResolveThenableJob* create(GlobalObject&, Promise&, Value thenable, JobCallback then);
+    static PromiseJob create(GlobalObject&, Promise&, Value thenable, JobCallback then);
 
     explicit PromiseResolveThenableJob(Promise&, Value thenable, JobCallback then, Object& prototype);
     virtual ~PromiseResolveThenableJob() override = default;

@@ -125,6 +125,30 @@ void EnvironmentSettingsObject::clean_up_after_running_callback()
     event_loop.pop_backup_incumbent_settings_object_stack({});
 }
 
+void EnvironmentSettingsObject::push_onto_outstanding_rejected_promises_weak_set(JS::Promise* promise)
+{
+    m_outstanding_rejected_promises_weak_set.append(promise);
+}
+
+bool EnvironmentSettingsObject::remove_from_outstanding_rejected_promises_weak_set(JS::Promise* promise)
+{
+    return m_outstanding_rejected_promises_weak_set.remove_first_matching([&](JS::Promise* promise_in_set) {
+        return promise == promise_in_set;
+    });
+}
+
+void EnvironmentSettingsObject::push_onto_about_to_be_notified_rejected_promises_list(JS::Handle<JS::Promise> promise)
+{
+    m_about_to_be_notified_rejected_promises_list.append(move(promise));
+}
+
+bool EnvironmentSettingsObject::remove_from_about_to_be_notified_rejected_promises_list(JS::Promise* promise)
+{
+    return m_about_to_be_notified_rejected_promises_list.remove_first_matching([&](JS::Handle<JS::Promise> promise_in_list) {
+        return promise == promise_in_list.cell();
+    });
+}
+
 // https://html.spec.whatwg.org/multipage/webappapis.html#incumbent-settings-object
 EnvironmentSettingsObject& incumbent_settings_object()
 {

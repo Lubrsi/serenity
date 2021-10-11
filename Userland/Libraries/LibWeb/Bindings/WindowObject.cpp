@@ -122,10 +122,11 @@ void WindowObject::initialize_global_object()
     // WebAssembly "namespace"
     define_direct_property("WebAssembly", heap().allocate<WebAssemblyObject>(*this, *this), JS::Attribute::Enumerable | JS::Attribute::Configurable);
 
-    // HTML::GlobalEventHandlers
+    // HTML::GlobalEventHandlers and WindowEventHandlers
 #define __ENUMERATE(attribute, event_name) \
     define_native_accessor(#attribute, attribute##_getter, attribute##_setter, attr);
     ENUMERATE_GLOBAL_EVENT_HANDLERS(__ENUMERATE);
+    ENUMERATE_WINDOW_EVENT_HANDLERS(__ENUMERATE);
 #undef __ENUMERATE
 
     ADD_WINDOW_OBJECT_INTERFACES;
@@ -766,31 +767,32 @@ JS_DEFINE_NATIVE_GETTER(WindowObject::screen_y_getter)
     return JS::Value(impl->screen_y());
 }
 
-#define __ENUMERATE(attribute, event_name)                                                          \
-    JS_DEFINE_NATIVE_FUNCTION(WindowObject::attribute##_getter)                                     \
-    {                                                                                               \
-        auto* impl = impl_from(vm, global_object);                                                  \
-        if (!impl)                                                                                  \
-            return {};                                                                              \
-        auto retval = impl->attribute();                                                            \
-        if (!retval)                                                                                \
-            return JS::js_null();                                                                   \
-        return retval->callback.cell();                                                             \
-    }                                                                                               \
-    JS_DEFINE_NATIVE_FUNCTION(WindowObject::attribute##_setter)                                     \
-    {                                                                                               \
-        auto* impl = impl_from(vm, global_object);                                                  \
-        if (!impl)                                                                                  \
-            return {};                                                                              \
-        auto value = vm.argument(0);                                                                \
-        Optional<Bindings::CallbackType> cpp_value;                                                 \
-        if (value.is_object()) {                                                                    \
+#define __ENUMERATE(attribute, event_name)                                                                                 \
+    JS_DEFINE_NATIVE_FUNCTION(WindowObject::attribute##_getter)                                                            \
+    {                                                                                                                      \
+        auto* impl = impl_from(vm, global_object);                                                                         \
+        if (!impl)                                                                                                         \
+            return {};                                                                                                     \
+        auto retval = impl->attribute();                                                                                   \
+        if (!retval)                                                                                                       \
+            return JS::js_null();                                                                                          \
+        return retval->callback.cell();                                                                                    \
+    }                                                                                                                      \
+    JS_DEFINE_NATIVE_FUNCTION(WindowObject::attribute##_setter)                                                            \
+    {                                                                                                                      \
+        auto* impl = impl_from(vm, global_object);                                                                         \
+        if (!impl)                                                                                                         \
+            return {};                                                                                                     \
+        auto value = vm.argument(0);                                                                                       \
+        Optional<Bindings::CallbackType> cpp_value;                                                                        \
+        if (value.is_object()) {                                                                                           \
             cpp_value = Bindings::CallbackType { JS::make_handle(&value.as_object()), HTML::incumbent_settings_object() }; \
-        }                                                                                           \
-        impl->set_##attribute(cpp_value);                                                           \
-        return JS::js_undefined();                                                                  \
+        }                                                                                                                  \
+        impl->set_##attribute(cpp_value);                                                                                  \
+        return JS::js_undefined();                                                                                         \
     }
 ENUMERATE_GLOBAL_EVENT_HANDLERS(__ENUMERATE)
+ENUMERATE_WINDOW_EVENT_HANDLERS(__ENUMERATE)
 #undef __ENUMERATE
 
 }

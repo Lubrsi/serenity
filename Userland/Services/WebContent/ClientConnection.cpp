@@ -317,7 +317,7 @@ void ClientConnection::run_javascript(String const& js_source)
     // Let script be the result of creating a classic script given scriptSource, settings, baseURL, and the default classic script fetch options.
     // FIXME: This doesn't pass in "default classic script fetch options"
     // FIXME: What should the filename be here?
-    auto script = Web::HTML::ClassicScript::create("", js_source, settings, move(base_url));
+    auto script = Web::HTML::ClassicScript::create("(client connection run_javascript)", js_source, settings, move(base_url));
 
     // Let evaluationStatus be the result of running the classic script script.
     // NOTE: We don't use the evaluationStatus here.

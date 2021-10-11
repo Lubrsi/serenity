@@ -112,6 +112,7 @@ class DOMRectReadOnly;
 
 namespace Web::HTML {
 class CanvasRenderingContext2D;
+class ClassicScript;
 class CloseEvent;
 class DOMParser;
 class DOMStringMap;
