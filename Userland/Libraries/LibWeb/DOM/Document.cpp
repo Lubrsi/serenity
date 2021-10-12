@@ -35,7 +35,6 @@
 #include <LibWeb/DOM/Text.h>
 #include <LibWeb/DOM/Window.h>
 #include <LibWeb/Dump.h>
-#include <LibWeb/HTML/Scripting/WindowEnvironmentSettingsObject.h>
 #include <LibWeb/HTML/AttributeNames.h>
 #include <LibWeb/HTML/EventLoop/EventLoop.h>
 #include <LibWeb/HTML/EventNames.h>
@@ -52,6 +51,7 @@
 #include <LibWeb/HTML/HTMLScriptElement.h>
 #include <LibWeb/HTML/HTMLTitleElement.h>
 #include <LibWeb/HTML/MessageEvent.h>
+#include <LibWeb/HTML/Scripting/WindowEnvironmentSettingsObject.h>
 #include <LibWeb/Layout/BlockFormattingContext.h>
 #include <LibWeb/Layout/InitialContainingBlock.h>
 #include <LibWeb/Layout/TreeBuilder.h>
@@ -711,42 +711,42 @@ JS::Interpreter& Document::interpreter()
         // `m_interpreter` being fully initialized yet.
         // TODO: Hook up vm.on_promise_unhandled_rejection and vm.on_promise_rejection_handled
         // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises#promise_rejection_events
-//        vm.on_call_stack_emptied = [this] {
-//            auto& vm = m_interpreter->vm();
-//            vm.run_queued_promise_jobs();
-//            vm.run_queued_finalization_registry_cleanup_jobs();
-//
-//            // FIXME: This isn't exactly the right place for this.
-//            HTML::main_thread_event_loop().perform_a_microtask_checkpoint();
-//
-//            // Note: This is not an exception check for the promise jobs, they will just leave any
-//            // exception that already exists intact and never throw a new one (without cleaning it
-//            // up, that is). Taking care of any previous unhandled exception just happens to be the
-//            // very last thing we want to do, even after running promise jobs.
-//            if (auto* exception = vm.exception()) {
-//                auto value = exception->value();
-//                if (value.is_object()) {
-//                    auto& object = value.as_object();
-//                    auto name = object.get_without_side_effects(vm.names.name).value_or(JS::js_undefined());
-//                    auto message = object.get_without_side_effects(vm.names.message).value_or(JS::js_undefined());
-//                    if (name.is_accessor() || message.is_accessor()) {
-//                        // The result is not going to be useful, let's just print the value. This affects DOMExceptions, for example.
-//                        dbgln("\033[31;1mUnhandled JavaScript exception:\033[0m {}", value);
-//                    } else {
-//                        dbgln("\033[31;1mUnhandled JavaScript exception:\033[0m [{}] {}", name, message);
-//                    }
-//                } else {
-//                    dbgln("\033[31;1mUnhandled JavaScript exception:\033[0m {}", value);
-//                }
-//                for (auto& traceback_frame : exception->traceback()) {
-//                    auto& function_name = traceback_frame.function_name;
-//                    auto& source_range = traceback_frame.source_range;
-//                    dbgln("  {} at {}:{}:{}", function_name, source_range.filename, source_range.start.line, source_range.start.column);
-//                }
-//            }
-//
-//            vm.finish_execution_generation();
-//        };
+        //        vm.on_call_stack_emptied = [this] {
+        //            auto& vm = m_interpreter->vm();
+        //            vm.run_queued_promise_jobs();
+        //            vm.run_queued_finalization_registry_cleanup_jobs();
+        //
+        //            // FIXME: This isn't exactly the right place for this.
+        //            HTML::main_thread_event_loop().perform_a_microtask_checkpoint();
+        //
+        //            // Note: This is not an exception check for the promise jobs, they will just leave any
+        //            // exception that already exists intact and never throw a new one (without cleaning it
+        //            // up, that is). Taking care of any previous unhandled exception just happens to be the
+        //            // very last thing we want to do, even after running promise jobs.
+        //            if (auto* exception = vm.exception()) {
+        //                auto value = exception->value();
+        //                if (value.is_object()) {
+        //                    auto& object = value.as_object();
+        //                    auto name = object.get_without_side_effects(vm.names.name).value_or(JS::js_undefined());
+        //                    auto message = object.get_without_side_effects(vm.names.message).value_or(JS::js_undefined());
+        //                    if (name.is_accessor() || message.is_accessor()) {
+        //                        // The result is not going to be useful, let's just print the value. This affects DOMExceptions, for example.
+        //                        dbgln("\033[31;1mUnhandled JavaScript exception:\033[0m {}", value);
+        //                    } else {
+        //                        dbgln("\033[31;1mUnhandled JavaScript exception:\033[0m [{}] {}", name, message);
+        //                    }
+        //                } else {
+        //                    dbgln("\033[31;1mUnhandled JavaScript exception:\033[0m {}", value);
+        //                }
+        //                for (auto& traceback_frame : exception->traceback()) {
+        //                    auto& function_name = traceback_frame.function_name;
+        //                    auto& source_range = traceback_frame.source_range;
+        //                    dbgln("  {} at {}:{}:{}", function_name, source_range.filename, source_range.start.line, source_range.start.column);
+        //                }
+        //            }
+        //
+        //            vm.finish_execution_generation();
+        //        };
     }
     return *m_interpreter;
 }

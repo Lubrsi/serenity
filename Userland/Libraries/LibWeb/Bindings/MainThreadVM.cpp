@@ -5,15 +5,15 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <LibJS/Runtime/FinalizationRegistry.h>
 #include <LibJS/Runtime/NativeFunction.h>
 #include <LibJS/Runtime/VM.h>
 #include <LibWeb/Bindings/MainThreadVM.h>
-#include <LibWeb/HTML/Scripting/Environments.h>
-#include <LibWeb/HTML/Scripting/ClassicScript.h>
 #include <LibWeb/DOM/Document.h>
-#include <LibWeb/HTML/PromiseRejectionEvent.h>
 #include <LibWeb/DOM/Window.h>
-#include <LibJS/Runtime/FinalizationRegistry.h>
+#include <LibWeb/HTML/PromiseRejectionEvent.h>
+#include <LibWeb/HTML/Scripting/ClassicScript.h>
+#include <LibWeb/HTML/Scripting/Environments.h>
 
 namespace Web::Bindings {
 
@@ -63,8 +63,7 @@ JS::VM& main_thread_vm()
                     TODO();
                 },
                 [](Empty) {
-                }
-            );
+                });
 
             // If there's no script, we're out of luck. Return.
             // FIXME: This can happen from JS::NativeFunction, which makes its callee contexts [[ScriptOrModule]] null.

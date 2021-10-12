@@ -220,14 +220,14 @@ JS::Object* WebSocket::create_wrapper(JS::GlobalObject& global_object)
 }
 
 #undef __ENUMERATE
-#define __ENUMERATE(attribute_name, event_name)                                    \
-    void WebSocket::set_##attribute_name(Optional<Bindings::CallbackType> value)   \
-    {                                                                              \
-        set_event_handler_attribute(event_name, move(value));                      \
-    }                                                                              \
-    Bindings::CallbackType* WebSocket::attribute_name()                            \
-    {                                                                              \
-        return event_handler_attribute(event_name);                                \
+#define __ENUMERATE(attribute_name, event_name)                                  \
+    void WebSocket::set_##attribute_name(Optional<Bindings::CallbackType> value) \
+    {                                                                            \
+        set_event_handler_attribute(event_name, move(value));                    \
+    }                                                                            \
+    Bindings::CallbackType* WebSocket::attribute_name()                          \
+    {                                                                            \
+        return event_handler_attribute(event_name);                              \
     }
 ENUMERATE_WEBSOCKET_EVENT_HANDLERS(__ENUMERATE)
 #undef __ENUMERATE

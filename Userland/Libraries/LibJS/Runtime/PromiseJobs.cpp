@@ -6,12 +6,12 @@
  */
 
 #include <AK/Debug.h>
+#include <LibJS/Runtime/AbstractOperations.h>
 #include <LibJS/Runtime/GlobalObject.h>
 #include <LibJS/Runtime/JobCallback.h>
 #include <LibJS/Runtime/Promise.h>
 #include <LibJS/Runtime/PromiseJobs.h>
 #include <LibJS/Runtime/PromiseReaction.h>
-#include <LibJS/Runtime/AbstractOperations.h>
 
 namespace JS {
 

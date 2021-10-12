@@ -9,10 +9,10 @@
 #include <AK/SinglyLinkedList.h>
 #include <LibJS/Runtime/FunctionObject.h>
 #include <LibJS/Runtime/GlobalObject.h>
+#include <LibJS/Runtime/JobCallback.h>
 #include <LibJS/Runtime/Object.h>
 #include <LibJS/Runtime/Value.h>
 #include <LibJS/Runtime/WeakContainer.h>
-#include <LibJS/Runtime/JobCallback.h>
 
 namespace JS {
 

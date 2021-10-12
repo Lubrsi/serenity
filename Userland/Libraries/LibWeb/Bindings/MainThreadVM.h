@@ -8,9 +8,9 @@
 #pragma once
 
 #include <LibJS/Forward.h>
+#include <LibJS/Runtime/JobCallback.h>
 #include <LibJS/Runtime/VM.h>
 #include <LibWeb/HTML/EventLoop/EventLoop.h>
-#include <LibJS/Runtime/JobCallback.h>
 
 namespace Web::Bindings {
 

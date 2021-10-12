@@ -12,9 +12,9 @@
 #include <LibJS/Parser.h>
 #include <LibJS/Script.h>
 #include <LibWeb/Bindings/WindowObject.h>
-#include <WebContent/ConsoleGlobalObject.h>
-#include <LibWeb/HTML/Scripting/Environments.h>
 #include <LibWeb/HTML/Scripting/ClassicScript.h>
+#include <LibWeb/HTML/Scripting/Environments.h>
+#include <WebContent/ConsoleGlobalObject.h>
 
 namespace WebContent {
 

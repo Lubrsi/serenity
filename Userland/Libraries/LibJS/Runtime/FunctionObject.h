@@ -7,9 +7,9 @@
 #pragma once
 
 #include <AK/String.h>
+#include <LibJS/Module.h>
 #include <LibJS/Runtime/Object.h>
 #include <LibJS/Script.h>
-#include <LibJS/Module.h>
 
 namespace JS {
 

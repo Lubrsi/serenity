@@ -22,6 +22,7 @@
 #include <LibJS/Bytecode/Interpreter.h>
 #include <LibJS/Interpreter.h>
 #include <LibJS/Lexer.h>
+#include <LibJS/MarkupGenerator.h>
 #include <LibJS/Parser.h>
 #include <LibJS/Runtime/Array.h>
 #include <LibJS/Runtime/GlobalObject.h>
@@ -36,7 +37,6 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <unistd.h>
-#    include <LibJS/MarkupGenerator.h>
 
 #ifdef __serenity__
 #    include <serenity.h>
@@ -388,7 +388,6 @@ inline JSFileResult TestRunner::run_file_test(const String& test_path)
         g_vm->push_execution_context(global_execution_context, interpreter->global_object());
         interpreter->run(file_script.value());
         g_vm->pop_execution_context();
-
     }
 
     if (g_vm->exception())

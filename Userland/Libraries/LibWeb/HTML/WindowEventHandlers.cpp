@@ -7,8 +7,8 @@
 #include <LibJS/Heap/Handle.h>
 #include <LibWeb/Bindings/CallbackType.h>
 #include <LibWeb/DOM/EventTarget.h>
-#include <LibWeb/HTML/WindowEventHandlers.h>
 #include <LibWeb/HTML/EventNames.h>
+#include <LibWeb/HTML/WindowEventHandlers.h>
 
 namespace Web::HTML {
 

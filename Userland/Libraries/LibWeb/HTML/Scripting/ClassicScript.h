@@ -7,8 +7,8 @@
 #pragma once
 
 #include <LibJS/Script.h>
-#include <LibWeb/HTML/Scripting/Script.h>
 #include <LibWeb/Forward.h>
+#include <LibWeb/HTML/Scripting/Script.h>
 
 namespace Web::HTML {
 

@@ -38,7 +38,7 @@ class Interpreter : public Weakable<Interpreter> {
 public:
     // 9.6 InitializeHostDefinedRealm ( ), https://tc39.es/ecma262/#sec-initializehostdefinedrealm
     template<typename GlobalObjectType, typename GlobalThisObjectType, typename... Args>
-    static NonnullOwnPtr<Interpreter> create(VM& vm, Args&&... args) requires(IsBaseOf<GlobalObject, GlobalObjectType> && IsBaseOf<Object, GlobalThisObjectType>)
+    static NonnullOwnPtr<Interpreter> create(VM& vm, Args&&... args) requires(IsBaseOf<GlobalObject, GlobalObjectType>&& IsBaseOf<Object, GlobalThisObjectType>)
     {
         DeferGC defer_gc(vm.heap());
         auto interpreter = adopt_own(*new Interpreter(vm));

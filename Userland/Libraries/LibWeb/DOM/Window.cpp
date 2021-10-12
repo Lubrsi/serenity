@@ -7,6 +7,7 @@
 
 #include <LibGUI/DisplayLink.h>
 #include <LibJS/Runtime/FunctionObject.h>
+#include <LibWeb/Bindings/IDLAbstractOperations.h>
 #include <LibWeb/CSS/Parser/Parser.h>
 #include <LibWeb/CSS/ResolvedCSSStyleDeclaration.h>
 #include <LibWeb/Crypto/Crypto.h>
@@ -22,7 +23,6 @@
 #include <LibWeb/Page/BrowsingContext.h>
 #include <LibWeb/Page/Page.h>
 #include <LibWeb/Selection/Selection.h>
-#include <LibWeb/Bindings/IDLAbstractOperations.h>
 
 namespace Web::DOM {
 

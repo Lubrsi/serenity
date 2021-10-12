@@ -112,7 +112,6 @@ JS::Value ClassicScript::run(RethrowErrors rethrow_errors)
         //          3. Return evaluationStatus.
     }
 
-
     dbgln("ClassicScript: Finished running script {}, Duration: {}ms", filename(), timer.elapsed());
 
     // 8. Clean up after running script with settings.

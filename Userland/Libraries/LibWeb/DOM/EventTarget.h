@@ -11,9 +11,9 @@
 #include <AK/Noncopyable.h>
 #include <AK/Vector.h>
 #include <LibJS/Forward.h>
-#include <LibWeb/HTML/EventHandler.h>
 #include <LibWeb/DOM/ExceptionOr.h>
 #include <LibWeb/Forward.h>
+#include <LibWeb/HTML/EventHandler.h>
 
 namespace Web::DOM {
 

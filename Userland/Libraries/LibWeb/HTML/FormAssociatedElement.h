@@ -7,8 +7,8 @@
 #pragma once
 
 #include <AK/WeakPtr.h>
-#include <LibWeb/HTML/HTMLElement.h>
 #include <LibWeb/Forward.h>
+#include <LibWeb/HTML/HTMLElement.h>
 
 namespace Web::HTML {
 

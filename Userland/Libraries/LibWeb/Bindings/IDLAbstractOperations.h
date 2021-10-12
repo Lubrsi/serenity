@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include <LibWeb/Bindings/CallbackType.h>
-#include <LibJS/Runtime/FunctionObject.h>
 #include <LibJS/Forward.h>
+#include <LibJS/Runtime/FunctionObject.h>
+#include <LibWeb/Bindings/CallbackType.h>
 #include <LibWeb/HTML/Scripting/Environments.h>
 
 namespace Web::Bindings::IDL {

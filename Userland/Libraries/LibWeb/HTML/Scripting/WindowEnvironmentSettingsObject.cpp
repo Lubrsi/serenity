@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <LibWeb/DOM/Document.h>
 #include <LibWeb/Bindings/WindowObject.h>
+#include <LibWeb/DOM/Document.h>
 #include <LibWeb/HTML/Scripting/WindowEnvironmentSettingsObject.h>
 
 namespace Web::HTML {

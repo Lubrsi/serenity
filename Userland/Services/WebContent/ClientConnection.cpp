@@ -18,11 +18,11 @@
 #include <LibWeb/Cookie/ParsedCookie.h>
 #include <LibWeb/DOM/Document.h>
 #include <LibWeb/Dump.h>
+#include <LibWeb/HTML/Scripting/ClassicScript.h>
 #include <LibWeb/Layout/InitialContainingBlock.h>
 #include <LibWeb/Loader/ContentFilter.h>
 #include <LibWeb/Loader/ResourceLoader.h>
 #include <LibWeb/Page/BrowsingContext.h>
-#include <LibWeb/HTML/Scripting/ClassicScript.h>
 #include <WebContent/ClientConnection.h>
 #include <WebContent/PageHost.h>
 #include <WebContent/WebContentClientEndpoint.h>

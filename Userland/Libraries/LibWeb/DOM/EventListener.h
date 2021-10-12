@@ -8,8 +8,8 @@
 
 #include <AK/RefCounted.h>
 #include <LibJS/Heap/Handle.h>
-#include <LibWeb/Bindings/Wrappable.h>
 #include <LibWeb/Bindings/CallbackType.h>
+#include <LibWeb/Bindings/Wrappable.h>
 
 namespace Web::DOM {
 
