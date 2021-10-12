@@ -13,6 +13,7 @@
 #include <LibWeb/DOM/Document.h>
 #include <LibWeb/HTML/PromiseRejectionEvent.h>
 #include <LibWeb/DOM/Window.h>
+#include <LibJS/Runtime/FinalizationRegistry.h>
 
 namespace Web::Bindings {
 
@@ -64,10 +65,13 @@ JS::VM& main_thread_vm()
                 [](Empty) {
                 }
             );
-            //VERIFY(script);
 
-            if (!script)
+            // If there's no script, we're out of luck. Return.
+            // FIXME: This can happen from JS::NativeFunction, which makes its callee contexts [[ScriptOrModule]] null.
+            if (!script) {
+                dbgln("FIXME: Unable to process unhandled promise rejection in host_promise_rejection_tracker as the running script is null.");
                 return;
+            }
 
             // 2. If script's muted errors is true, terminate these steps.
             if (script->muted_errors() == HTML::ClassicScript::MutedErrors::Yes)
@@ -159,6 +163,37 @@ JS::VM& main_thread_vm()
             return result.release_value();
         };
 
+        // 8.1.5.3.2 HostEnqueueFinalizationRegistryCleanupJob(finalizationRegistry), https://html.spec.whatwg.org/multipage/webappapis.html#hostenqueuefinalizationregistrycleanupjob
+        vm->host_enqueue_finalization_registry_cleanup_job = [](JS::FinalizationRegistry& finalization_registry) {
+            // 1. Let global be finalizationRegistry.[[Realm]]'s global object.
+            auto& global = finalization_registry.realm()->global_object();
+
+            // 2. Queue a global task on the JavaScript engine task source given global to perform the following steps:
+            HTML::queue_global_task(HTML::Task::Source::JavaScriptEngine, global, [finalization_registry = JS::make_handle(&finalization_registry)] {
+                // 1. Let entry be finalizationRegistry.[[CleanupCallback]].[[Callback]].[[Realm]]'s environment settings object.
+                auto& entry = verify_cast<HTML::EnvironmentSettingsObject>(*finalization_registry.cell()->cleanup_callback().callback.cell()->realm()->custom_data());
+
+                // 2. Check if we can run script with entry. If this returns "do not run", then return.
+                if (entry.can_run_script() == HTML::RunScriptDecision::DoNotRun)
+                    return;
+
+                // 3. Prepare to run script with entry.
+                entry.prepare_to_run_script();
+
+                // 4. Let result be the result of performing CleanupFinalizationRegistry(finalizationRegistry).
+                // FIXME: CleanupFinalizationRegistry currently does not return a completion.
+
+                // 5. Clean up after running script with entry.
+                entry.clean_up_after_running_script();
+
+                // FIXME: 6. If result is an abrupt completion, then report the exception given by result.[[Value]].
+                if (vm->exception()) {
+                    vm->clear_exception();
+                    vm->stop_unwind();
+                }
+            });
+        };
+
         // 8.1.5.3.3 HostEnqueuePromiseJob(job, realm), https://html.spec.whatwg.org/multipage/webappapis.html#hostenqueuepromisejob
         vm->host_enqueue_promise_job = [](Function<JS::Value()> job, JS::Realm* realm) {
             dbgln("web host_enqueue_promise_job! job={:p}, realm={:p}", &job, realm);
@@ -168,7 +203,7 @@ JS::VM& main_thread_vm()
             if (realm)
                 job_settings = verify_cast<HTML::EnvironmentSettingsObject>(realm->custom_data());
 
-            // Implementation defined: The JS spec says we must take implementation defined steps to make the currently active script or module at the time of HostEnqueuePromiseJob being invoked
+            // IMPLEMENTATION DEFINED: The JS spec says we must take implementation defined steps to make the currently active script or module at the time of HostEnqueuePromiseJob being invoked
             //                         also be the active script or module of the job at the time of its invocation.
             //                         This means taking it here now and passing it through to the lambda.
             auto script_or_module = vm->get_active_script_or_module();
@@ -180,6 +215,9 @@ JS::VM& main_thread_vm()
 
             // NOTE: This keeps job_settings alive by keeping realm alive, which is holding onto job_settings.
             HTML::queue_a_microtask(script ? script->settings_object().responsible_document().ptr() : nullptr, [job_settings, job = move(job), realm = realm ? JS::make_handle(realm) : JS::Handle<JS::Realm> {}, script_or_module = move(script_or_module)]() mutable {
+                // The dummy execution context has to be kept up here to keep it alive for the duration of the function.
+                Optional<JS::ExecutionContext> dummy_execution_context;
+
                 if (job_settings) {
                     // 1. If job settings is not null, then check if we can run script with job settings. If this returns "do not run" then return.
                     if (job_settings->can_run_script() == HTML::RunScriptDecision::DoNotRun)
@@ -188,7 +226,7 @@ JS::VM& main_thread_vm()
                     // 2. If job settings is not null, then prepare to run script with job settings.
                     job_settings->prepare_to_run_script();
 
-                    // Implementation defined: Per the previous "implementation defined" comment, we must now make the script or module the active script or module.
+                    // IMPLEMENTATION DEFINED: Per the previous "implementation defined" comment, we must now make the script or module the active script or module.
                     //                         Since the only active execution context currently is the realm execution context of job settings, lets attach it here.
                     job_settings->realm_execution_context().script_or_module = script_or_module;
                 } else {
@@ -199,9 +237,9 @@ JS::VM& main_thread_vm()
                     //        Do note that the JS spec gives _no_ guarantee that the execution context stack has something on it if HostEnqueuePromiseJob was called with a null realm: https://tc39.es/ecma262/#job-preparedtoevaluatecode
                     VERIFY(script_or_module.has<WeakPtr<JS::Script>>());
                     auto script_record = script_or_module.get<WeakPtr<JS::Script>>();
-                    JS::ExecutionContext dummy_execution_context(vm->heap());
-                    dummy_execution_context.script_or_module = script_or_module;
-                    vm->push_execution_context(dummy_execution_context, script_record->realm().global_object());
+                    dummy_execution_context = JS::ExecutionContext { vm->heap() };
+                    dummy_execution_context->script_or_module = script_or_module;
+                    vm->push_execution_context(dummy_execution_context.value(), script_record->realm().global_object());
                 }
 
                 // 3. Let result be job().
@@ -209,7 +247,7 @@ JS::VM& main_thread_vm()
 
                 // 4. If job settings is not null, then clean up after running script with job settings.
                 if (job_settings) {
-                    // Implementation defined: Disassociate the realm execution context from the script or module.
+                    // IMPLEMENTATION DEFINED: Disassociate the realm execution context from the script or module.
                     job_settings->realm_execution_context().script_or_module = Empty {};
 
                     job_settings->clean_up_after_running_script();
@@ -219,6 +257,7 @@ JS::VM& main_thread_vm()
                 }
 
                 // FIXME: 5. If result is an abrupt completion, then report the exception given by result.[[Value]].
+                //           (I'm not sure why this step is here. The JS spec says a job must not return an abrupt completion, https://tc39.es/ecma262/#sec-jobs)
             });
         };
 

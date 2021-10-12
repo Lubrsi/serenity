@@ -505,18 +505,17 @@ JS::ThrowCompletionOr<void> EventTarget::process_event_handler_for_event(FlyStri
     //              1. Set event's canceled flag.
     //              2. If event's returnValue attribute's value is the empty string, then set event's returnValue attribute's value to return value.
 
-    // FIXME: EventHandler actually returns the any type, so it is it really to_boolean?
     if (special_error_event_handling) {
         // -> If special error event handling is true
         //      If return value is true, then set event's canceled flag.
-        // NOTE: to_boolean cannot throw. Additionally, it's checking an IDL bool, which is JS to_boolean.
-        if (return_value.to_boolean())
+        // NOTE: the return type of EventHandler is `any`, so no coercion happens, meaning we have to check if it's a boolean first.
+        if (return_value.is_boolean() && return_value.as_bool())
             event.set_cancelled(true);
     } else {
         // -> Otherwise
         //      If return value is false, then set event's canceled flag.
-        // NOTE: to_boolean cannot throw. Additionally, it's checking an IDL bool, which is JS to_boolean.
-        if (!return_value.to_boolean())
+        // NOTE: the return type of EventHandler is `any`, so no coercion happens, meaning we have to check if it's a boolean first.
+        if (return_value.is_boolean() && !return_value.as_bool())
             event.set_cancelled(true);
     }
 

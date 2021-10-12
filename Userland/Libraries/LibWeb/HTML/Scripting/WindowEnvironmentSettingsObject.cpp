@@ -11,8 +11,8 @@
 namespace Web::HTML {
 
 WindowEnvironmentSettingsObject::WindowEnvironmentSettingsObject(DOM::Window& window, JS::ExecutionContext& execution_context)
-    : m_window(window)
-    , m_execution_context(execution_context)
+    : EnvironmentSettingsObject(execution_context)
+    , m_window(window)
 {
 }
 
@@ -43,13 +43,6 @@ void WindowEnvironmentSettingsObject::setup(AK::URL& creation_url, JS::Execution
 
     // 7. Set realm's [[HostDefined]] field to settings object.
     realm->set_custom_data(move(settings_object));
-}
-
-// https://html.spec.whatwg.org/multipage/window-object.html#script-settings-for-window-objects:realm-execution-context
-JS::ExecutionContext& WindowEnvironmentSettingsObject::realm_execution_context()
-{
-    // Return execution context.
-    return m_execution_context;
 }
 
 // https://html.spec.whatwg.org/multipage/window-object.html#script-settings-for-window-objects:responsible-document

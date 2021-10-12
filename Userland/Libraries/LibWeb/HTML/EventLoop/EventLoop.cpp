@@ -207,6 +207,13 @@ void EventLoop::process()
         schedule();
 }
 
+// FIXME: This is here to paper over an issue in the HTML parser where it'll create new interpreters (and thus ESOs) on temporary documents created for innerHTML if it uses Document::realm() to get the global object.
+//        Use queue_global_task instead.
+void old_queue_global_task_with_document(HTML::Task::Source source, DOM::Document& document, Function<void()> steps)
+{
+    main_thread_event_loop().task_queue().add(HTML::Task::create(source, &document, move(steps)));
+}
+
 // https://html.spec.whatwg.org/multipage/webappapis.html#queue-a-global-task
 void queue_global_task(HTML::Task::Source source, JS::GlobalObject& global_object, Function<void()> steps)
 {
@@ -270,7 +277,9 @@ void EventLoop::perform_a_microtask_checkpoint()
         m_currently_running_task = nullptr;
     }
 
-    // FIXME: 4. For each environment settings object whose responsible event loop is this event loop, notify about rejected promises on that environment settings object.
+    // 4. For each environment settings object whose responsible event loop is this event loop, notify about rejected promises on that environment settings object.
+    for (auto& environment_settings_object : m_related_environment_settings_objects)
+        environment_settings_object.notify_about_rejected_promises({});
 
     // FIXME: 5. Cleanup Indexed Database transactions.
 
@@ -315,6 +324,17 @@ void EventLoop::pop_backup_incumbent_settings_object_stack(Badge<EnvironmentSett
 EnvironmentSettingsObject& EventLoop::top_of_backup_incumbent_settings_object_stack()
 {
     return m_backup_incumbent_settings_object_stack.last();
+}
+
+void EventLoop::register_environment_settings_object(Badge<EnvironmentSettingsObject>, EnvironmentSettingsObject& environment_settings_object)
+{
+    m_related_environment_settings_objects.append(environment_settings_object);
+}
+
+void EventLoop::unregister_environment_settings_object(Badge<EnvironmentSettingsObject>, EnvironmentSettingsObject& environment_settings_object)
+{
+    bool did_remove = m_related_environment_settings_objects.remove_first_matching([&](auto& entry) { return &entry == &environment_settings_object; });
+    VERIFY(did_remove);
 }
 
 }

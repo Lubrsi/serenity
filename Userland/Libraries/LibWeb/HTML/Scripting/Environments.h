@@ -52,8 +52,10 @@ enum class RunScriptDecision {
 struct EnvironmentSettingsObject
     : public Environment
     , public JS::Realm::CustomData {
+    virtual ~EnvironmentSettingsObject() override;
+
     // https://html.spec.whatwg.org/multipage/webappapis.html#concept-environment-target-browsing-context
-    virtual JS::ExecutionContext& realm_execution_context() = 0;
+    JS::ExecutionContext& realm_execution_context();
 
     // FIXME: A module map https://html.spec.whatwg.org/multipage/webappapis.html#concept-settings-object-module-map
 
@@ -95,7 +97,14 @@ struct EnvironmentSettingsObject
     // Returns true if removed, false otherwise.
     bool remove_from_about_to_be_notified_rejected_promises_list(JS::Promise*);
 
+    void notify_about_rejected_promises(Badge<EventLoop>);
+
+protected:
+    explicit EnvironmentSettingsObject(JS::ExecutionContext& realm_execution_context);
+
 private:
+    JS::ExecutionContext& m_realm_execution_context;
+
     // https://html.spec.whatwg.org/multipage/webappapis.html#outstanding-rejected-promises-weak-set
     // The outstanding rejected promises weak set must not create strong references to any of its members, and implementations are free to limit its size, e.g. by removing old entries from it when new ones are added.
     Vector<JS::Promise*> m_outstanding_rejected_promises_weak_set;

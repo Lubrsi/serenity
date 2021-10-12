@@ -9,8 +9,31 @@
 #include <LibWeb/Bindings/WindowObject.h>
 #include <LibWeb/Bindings/MainThreadVM.h>
 #include <LibWeb/HTML/Scripting/Environments.h>
+#include <LibWeb/HTML/PromiseRejectionEvent.h>
 
 namespace Web::HTML {
+
+EnvironmentSettingsObject::EnvironmentSettingsObject(JS::ExecutionContext& realm_execution_context)
+    : m_realm_execution_context(realm_execution_context)
+{
+    dbgln("ESO! {}", this);
+    // Register with the responsible event loop so we can perform step 4 of "perform a microtask checkpoint".
+    responsible_event_loop().register_environment_settings_object({}, *this);
+}
+
+EnvironmentSettingsObject::~EnvironmentSettingsObject()
+{
+    dbgln("ESNO :( {}", this);
+
+    // Deregister with the responsible event loop.
+    responsible_event_loop().unregister_environment_settings_object({}, *this);
+}
+
+JS::ExecutionContext& EnvironmentSettingsObject::realm_execution_context()
+{
+    // NOTE: All environment settings objects are created with a realm execution context, so it's stored and returned here in the base class.
+    return m_realm_execution_context;
+}
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#environment-settings-object%27s-realm
 JS::Realm& EnvironmentSettingsObject::realm()
@@ -146,6 +169,64 @@ bool EnvironmentSettingsObject::remove_from_about_to_be_notified_rejected_promis
 {
     return m_about_to_be_notified_rejected_promises_list.remove_first_matching([&](JS::Handle<JS::Promise> promise_in_list) {
         return promise == promise_in_list.cell();
+    });
+}
+
+// https://html.spec.whatwg.org/multipage/webappapis.html#notify-about-rejected-promises
+void EnvironmentSettingsObject::notify_about_rejected_promises(Badge<EventLoop>)
+{
+    // 1. Let list be a copy of settings object's about-to-be-notified rejected promises list.
+    auto list = m_about_to_be_notified_rejected_promises_list;
+
+    // 2. If list is empty, return.
+    if (list.is_empty())
+        return;
+
+    // 3. Clear settings object's about-to-be-notified rejected promises list.
+    m_about_to_be_notified_rejected_promises_list.clear();
+
+    // 4. Let global be settings object's global object.
+    auto& global = global_object();
+
+    // 5. Queue a global task on the DOM manipulation task source given global to run the following substep:
+    queue_global_task(Task::Source::DOMManipulation, global, [this, global = JS::make_handle(&global), list = move(list)]() mutable {
+        // 1. For each promise p in list:
+        for (auto promise_handle : list) {
+            auto& promise = *promise_handle.cell();
+
+            // 1. If p's [[PromiseIsHandled]] internal slot is true, continue to the next iteration of the loop.
+            if (promise.is_handled())
+                continue;
+
+            // 2. Let notHandled be the result of firing an event named unhandledrejection at global, using PromiseRejectionEvent, with the cancelable attribute initialized to true,
+            //    the promise attribute initialized to p, and the reason attribute initialized to the value of p's [[PromiseResult]] internal slot.
+            PromiseRejectionEventInit event_init {
+                {
+                    /* bubbles = */ false,
+                    /* cancelable = */ true,
+                    /* composed = */ false,
+                },
+                /* promise = */ promise_handle,
+                /* reason = */ promise.result(),
+            };
+            auto promise_rejection_event = PromiseRejectionEvent::create(HTML::EventNames::unhandledrejection, event_init);
+
+            // FIXME: This currently assumes that global is a WindowObject.
+            auto& window = verify_cast<Bindings::WindowObject>(*global.cell());
+
+            bool not_handled = window.impl().dispatch_event(move(promise_rejection_event));
+
+            // 3. If notHandled is false, then the promise rejection is handled. Otherwise, the promise rejection is not handled.
+
+            // 4. If p's [[PromiseIsHandled]] internal slot is false, add p to settings object's outstanding rejected promises weak set.
+            if (!promise.is_handled())
+                m_outstanding_rejected_promises_weak_set.append(&promise);
+
+            // This algorithm results in promise rejections being marked as handled or not handled. These concepts parallel handled and not handled script errors.
+            // If a rejection is still not handled after this, then the rejection may be reported to a developer console.
+            if (not_handled)
+                dbgln("WARNING: A promise was rejected without any handlers. promise={:p}, result={}", &promise, promise.result().to_string_without_side_effects());
+        }
     });
 }
 

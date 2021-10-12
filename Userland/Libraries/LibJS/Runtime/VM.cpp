@@ -52,6 +52,10 @@ VM::VM(OwnPtr<CustomData> custom_data)
         return call_job_callback(*this, job_callback, this_value, move(arguments));
     };
 
+    host_enqueue_finalization_registry_cleanup_job = [this](FinalizationRegistry& finalization_registry) {
+        enqueue_finalization_registry_cleanup_job(finalization_registry);
+    };
+
     host_enqueue_promise_job = [this](Function<Value()> job, Realm* realm) {
         enqueue_promise_job(move(job), realm);
     };
