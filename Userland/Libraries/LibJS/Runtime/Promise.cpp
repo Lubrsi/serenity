@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#define PROMISE_DEBUG 1
-
 #include <AK/Debug.h>
 #include <AK/Function.h>
 #include <AK/Optional.h>

@@ -60,7 +60,7 @@ void Interpreter::run(Script& script_record)
     // 2. Let scriptContext be a new ECMAScript code execution context.
     ExecutionContext script_context(vm.heap());
 
-    // 3. Set the Function of scriptContext to null. (This was done in the construction of ExecutionContext)
+    // 3. Set the Function of scriptContext to null. (This was done in the construction of script_context)
 
     // 4. Set the Realm of scriptContext to scriptRecord.[[Realm]].
     script_context.realm = &script_record.realm();
@@ -75,6 +75,9 @@ void Interpreter::run(Script& script_record)
     script_context.lexical_environment = &global_environment;
 
     // FIXME: 8. Set the PrivateEnvironment of scriptContext to null.
+
+    // NOTE: This isn't in the spec, but we require it.
+    script_context.is_strict_mode = script_record.parse_node().is_strict_mode();
 
     // FIXME: 9. Suspend the currently running execution context.
 

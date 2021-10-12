@@ -5,8 +5,6 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#define PROMISE_DEBUG 1
-
 #include <AK/Debug.h>
 #include <LibJS/Runtime/GlobalObject.h>
 #include <LibJS/Runtime/JobCallback.h>

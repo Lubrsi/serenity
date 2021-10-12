@@ -32,9 +32,11 @@ public:
 
     CustomData* custom_data() { return m_custom_data; }
 
-private:
-    Script(Realm&, NonnullRefPtr<Program>, CustomData*);
+    // FIXME: This has to be public for libjs-test262 because JS::Interpreter doesn't currently support running modules and JS::Module doesn't have a parse function,
+    //        so it has to still manually parse and lie that a module is a normal script.
+    Script(Realm&, NonnullRefPtr<Program>, CustomData* custom_data = nullptr);
 
+private:
     // Handles are not safe unless we keep the VM alive.
     NonnullRefPtr<VM> m_vm;
 
