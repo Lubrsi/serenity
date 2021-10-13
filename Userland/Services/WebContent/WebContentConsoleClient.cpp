@@ -41,6 +41,7 @@ void WebContentConsoleClient::handle_input(String const& js_source)
     auto& vm = m_interpreter->global_object().vm();
     StringBuilder output_html;
 
+    // FIXME: ClassicScript::run clears exceptions, meaning this is never true currently.
     if (vm.exception()) {
         auto* exception = vm.exception();
         vm.clear_exception();

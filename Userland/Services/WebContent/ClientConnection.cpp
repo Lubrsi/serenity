@@ -320,9 +320,10 @@ void ClientConnection::run_javascript(String const& js_source)
     auto script = Web::HTML::ClassicScript::create("(client connection run_javascript)", js_source, settings, move(base_url));
 
     // Let evaluationStatus be the result of running the classic script script.
-    // NOTE: We don't use the evaluationStatus here.
+    // FIXME: We don't use the evaluationStatus here.
     script->run();
 
+    // FIXME: ClassicScript::run clears exceptions, meaning this is never true currently.
     if (active_document->interpreter().vm().exception()) {
         dbgln("Exception :(");
         active_document->interpreter().vm().clear_exception();
