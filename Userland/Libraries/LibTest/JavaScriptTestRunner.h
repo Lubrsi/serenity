@@ -101,6 +101,16 @@
     } __testjs_common_run_file {};                                                          \
     ::Test::JS::IntermediateRunFileResult __TestJS_run_file::hook(__VA_ARGS__)
 
+#define TESTJS_CREATE_INTERPRETER_HOOK(...)               \
+    struct __TestJS_create_interpreter_hook {             \
+        __TestJS_create_interpreter_hook()                \
+        {                                                 \
+            ::Test::JS::g_create_interpreter_hook = hook; \
+        }                                                 \
+        static NonnullOwnPtr<JS::Interpreter> hook();     \
+    } __testjs_create_interpreter_hook {};                \
+    NonnullOwnPtr<JS::Interpreter> __TestJS_create_interpreter_hook::hook(__VA_ARGS__)
+
 namespace Test::JS {
 
 namespace JS = ::JS;
@@ -130,6 +140,7 @@ extern String g_test_root;
 extern int g_test_argc;
 extern char** g_test_argv;
 extern Function<void()> g_main_hook;
+extern Function<NonnullOwnPtr<JS::Interpreter>()> g_create_interpreter_hook;
 extern HashMap<bool*, Tuple<String, String, char>> g_extra_args;
 
 struct ParserError {
@@ -279,7 +290,14 @@ inline JSFileResult TestRunner::run_file_test(const String& test_path)
 #endif
 
     double start_time = get_time_in_ms();
-    auto interpreter = JS::Interpreter::create<TestRunnerGlobalObject>(*g_vm);
+    OwnPtr<JS::Interpreter> interpreter;
+
+    if (g_create_interpreter_hook)
+        interpreter = g_create_interpreter_hook();
+    else
+        interpreter = JS::Interpreter::create<TestRunnerGlobalObject>(*g_vm);
+
+    VERIFY(interpreter);
 
     // Since g_vm is reused for each new interpreter, Interpreter::create will end up pushing multiple
     // global execution contexts onto the VM's execution context stack. To prevent this, we immediately

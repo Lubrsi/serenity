@@ -47,7 +47,6 @@ Sheet::Sheet(const StringView& name, Workbook& workbook)
 Sheet::Sheet(Workbook& workbook)
     : m_workbook(workbook)
     , m_interpreter(JS::Interpreter::create<SheetGlobalObject>(global_vm(), *this))
-    , m_interpreter_scope(JS::VM::InterpreterExecutionScope(interpreter()))
     , m_global_object(verify_cast<SheetGlobalObject>(&interpreter().global_object()))
 {
     global_object().define_direct_property("workbook", interpreter().heap().allocate<WorkbookObject>(interpreter().global_object(), m_workbook, interpreter().global_object()), JS::default_attributes);

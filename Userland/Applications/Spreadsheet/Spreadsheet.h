@@ -146,7 +146,6 @@ private:
 
     Workbook& m_workbook;
     NonnullOwnPtr<JS::Interpreter> m_interpreter;
-    JS::VM::InterpreterExecutionScope m_interpreter_scope;
     mutable SheetGlobalObject* m_global_object;
 
     Cell* m_current_cell_being_evaluated { nullptr };

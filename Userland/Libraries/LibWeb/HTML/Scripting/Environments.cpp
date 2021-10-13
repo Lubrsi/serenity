@@ -16,16 +16,12 @@ namespace Web::HTML {
 EnvironmentSettingsObject::EnvironmentSettingsObject(JS::ExecutionContext& realm_execution_context)
     : m_realm_execution_context(realm_execution_context)
 {
-    dbgln("ESO! {}", this);
     // Register with the responsible event loop so we can perform step 4 of "perform a microtask checkpoint".
     responsible_event_loop().register_environment_settings_object({}, *this);
 }
 
 EnvironmentSettingsObject::~EnvironmentSettingsObject()
 {
-    dbgln("ESNO :( {}", this);
-
-    // Deregister with the responsible event loop.
     responsible_event_loop().unregister_environment_settings_object({}, *this);
 }
 
@@ -53,8 +49,15 @@ JS::GlobalObject& EnvironmentSettingsObject::global_object()
 EventLoop& EnvironmentSettingsObject::responsible_event_loop()
 {
     // An environment settings object's responsible event loop is its global object's relevant agent's event loop.
+    // This is here in case the realm that is holding onto this ESO is destroyed before the ESO is. The responsible event loop pointer is needed in the ESO destructor to deregister from the event loop.
+    // FIXME: Figure out why the realm can be destroyed before the ESO, as the realm is holding onto this with an OwnPtr, but the heap block deallocator calls the ESO destructor directly instead of through the realm destructor.
+    if (m_responsible_event_loop)
+        return *m_responsible_event_loop;
+
     auto& vm = global_object().vm();
-    return verify_cast<Bindings::WebEngineCustomData>(vm.custom_data())->event_loop;
+    auto& event_loop = verify_cast<Bindings::WebEngineCustomData>(vm.custom_data())->event_loop;
+    m_responsible_event_loop = &event_loop;
+    return event_loop;
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#check-if-we-can-run-script
@@ -77,7 +80,6 @@ void EnvironmentSettingsObject::prepare_to_run_script()
     global_object().vm().push_execution_context(realm_execution_context(), global_object());
 
     // FIXME: 2. Add settings to the currently running task's script evaluation environment settings object set.
-    //        (This is currently only used by the Long Tasks API)
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#clean-up-after-running-script
