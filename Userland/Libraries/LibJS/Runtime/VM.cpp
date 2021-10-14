@@ -43,6 +43,27 @@ VM::VM(OwnPtr<CustomData> custom_data)
         m_single_ascii_character_strings[i] = m_heap.allocate_without_global_object<PrimitiveString>(String::formatted("{:c}", i));
     }
 
+    // Default hook implementations. These can be overridden by the host, for example, LibWeb overrides the default hooks to place promise jobs on the microtask queue.
+    host_promise_rejection_tracker = [this](Promise& promise, Promise::RejectionOperation operation) {
+        promise_rejection_tracker(promise, operation);
+    };
+
+    host_call_job_callback = [this](JobCallback& job_callback, Value this_value, MarkedValueList arguments) {
+        return call_job_callback(*this, job_callback, this_value, move(arguments));
+    };
+
+    host_enqueue_finalization_registry_cleanup_job = [this](FinalizationRegistry& finalization_registry) {
+        enqueue_finalization_registry_cleanup_job(finalization_registry);
+    };
+
+    host_enqueue_promise_job = [this](Function<ThrowCompletionOr<Value>()> job, Realm* realm) {
+        enqueue_promise_job(move(job), realm);
+    };
+
+    host_make_job_callback = [](FunctionObject& function_object) {
+        return make_job_callback(function_object);
+    };
+
 #define __JS_ENUMERATE(SymbolName, snake_name) \
     m_well_known_symbol_##snake_name = js_symbol(*this, "Symbol." #SymbolName, false);
     JS_ENUMERATE_WELL_KNOWN_SYMBOLS
@@ -122,9 +143,6 @@ void VM::gather_roots(HashTable<Cell*>& roots)
 
     for (auto& symbol : m_global_symbol_map)
         roots.set(symbol.value);
-
-    for (auto* job : m_promise_jobs)
-        roots.set(job);
 
     for (auto* finalization_registry : m_finalization_registry_cleanup_jobs)
         roots.set(finalization_registry);
@@ -600,7 +618,7 @@ void VM::run_queued_promise_jobs()
             pushed_execution_context = true;
         }
 
-        [[maybe_unused]] auto result = call(*job, js_undefined());
+        [[maybe_unused]] auto result = job();
 
         // This doesn't match the spec, it actually defines that Job Abstract Closures must return
         // a normal completion. In reality that's not the case however, and all major engines clear
@@ -617,9 +635,14 @@ void VM::run_queued_promise_jobs()
 }
 
 // 9.5.4 HostEnqueuePromiseJob ( job, realm ), https://tc39.es/ecma262/#sec-hostenqueuepromisejob
-void VM::enqueue_promise_job(NativeFunction& job)
+void VM::enqueue_promise_job(Function<ThrowCompletionOr<Value>()> job, Realm*)
 {
-    m_promise_jobs.append(&job);
+    // An implementation of HostEnqueuePromiseJob must conform to the requirements in 9.5 as well as the following:
+    // - FIXME: If realm is not null, each time job is invoked the implementation must perform implementation-defined steps such that execution is prepared to evaluate ECMAScript code at the time of job's invocation.
+    // - FIXME: Let scriptOrModule be GetActiveScriptOrModule() at the time HostEnqueuePromiseJob is invoked. If realm is not null, each time job is invoked the implementation must perform implementation-defined steps
+    //          such that scriptOrModule is the active script or module at the time of job's invocation.
+    // - Jobs must run in the same order as the HostEnqueuePromiseJob invocations that scheduled them.
+    m_promise_jobs.append(move(job));
 }
 
 void VM::run_queued_finalization_registry_cleanup_jobs()
@@ -637,7 +660,7 @@ void VM::enqueue_finalization_registry_cleanup_job(FinalizationRegistry& registr
 }
 
 // 27.2.1.9 HostPromiseRejectionTracker ( promise, operation ), https://tc39.es/ecma262/#sec-host-promise-rejection-tracker
-void VM::promise_rejection_tracker(const Promise& promise, Promise::RejectionOperation operation) const
+void VM::promise_rejection_tracker(Promise& promise, Promise::RejectionOperation operation) const
 {
     switch (operation) {
     case Promise::RejectionOperation::Reject:
