@@ -28,6 +28,22 @@ JS::Object* AbortSignal::create_wrapper(JS::GlobalObject& global_object)
     return wrap(global_object, *this);
 }
 
+// https://dom.spec.whatwg.org/#dom-abortsignal-abort
+NonnullRefPtr<AbortSignal> AbortSignal::abort(JS::GlobalObject& global_object, JS::Value reason)
+{
+    // 1. Let signal be a new AbortSignal object.
+    auto signal = AbortSignal::create();
+
+    // 2. Set signal’s abort reason to reason if it is given; otherwise to a new "AbortError" DOMException.
+    if (!reason.is_undefined())
+        signal->m_abort_reason = reason;
+    else
+        signal->m_abort_reason = wrap(global_object, AbortError::create("Aborted without reason"));
+
+    // 3. Return signal.
+    return signal;
+}
+
 // https://dom.spec.whatwg.org/#abortsignal-add
 void AbortSignal::add_abort_algorithm(Function<void()> abort_algorithm)
 {
