@@ -371,7 +371,7 @@ public:
     NonnullRefPtrVector<ImportStatement> const& imports() const { return m_imports; }
     NonnullRefPtrVector<ExportStatement> const& exports() const { return m_exports; }
 
-    ThrowCompletionOr<void> global_declaration_instantiation(Interpreter& interpreter, GlobalObject& global_object, GlobalEnvironment& global_environment) const;
+    ThrowCompletionOr<Value> global_declaration_instantiation(Interpreter& interpreter, GlobalObject& global_object, GlobalEnvironment& global_environment) const;
 
 private:
     virtual bool is_program() const override { return true; }

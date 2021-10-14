@@ -243,16 +243,7 @@ Completion BlockStatement::execute(Interpreter& interpreter, GlobalObject& globa
 
 Completion Program::execute(Interpreter& interpreter, GlobalObject& global_object) const
 {
-    // FIXME: This tries to be "ScriptEvaluation" and "evaluating scriptBody" at once. It shouldn't.
-    //        Clean this up and update perform_eval() / perform_shadow_realm_eval()
-
     InterpreterNodeScope node_scope { interpreter, *this };
-
-    VERIFY(interpreter.lexical_environment() && interpreter.lexical_environment()->is_global_environment());
-    auto& global_env = static_cast<GlobalEnvironment&>(*interpreter.lexical_environment());
-
-    TRY(global_declaration_instantiation(interpreter, global_object, global_env));
-
     return evaluate_statements(interpreter, global_object);
 }
 
@@ -4146,7 +4137,7 @@ void ScopeNode::block_declaration_instantiation(GlobalObject& global_object, Env
 }
 
 // 16.1.7 GlobalDeclarationInstantiation ( script, env ), https://tc39.es/ecma262/#sec-globaldeclarationinstantiation
-ThrowCompletionOr<void> Program::global_declaration_instantiation(Interpreter& interpreter, GlobalObject& global_object, GlobalEnvironment& global_environment) const
+ThrowCompletionOr<Value> Program::global_declaration_instantiation(Interpreter& interpreter, GlobalObject& global_object, GlobalEnvironment& global_environment) const
 {
     for_each_lexically_declared_name([&](FlyString const& name) {
         if (global_environment.has_var_declaration(name) || global_environment.has_lexical_declaration(name)) {
@@ -4292,7 +4283,7 @@ ThrowCompletionOr<void> Program::global_declaration_instantiation(Interpreter& i
     for (auto& var_name : declared_var_names)
         TRY(global_environment.create_global_var_binding(var_name, false));
 
-    return {};
+    return normal_completion({});
 }
 
 }

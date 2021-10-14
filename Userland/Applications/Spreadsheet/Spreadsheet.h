@@ -145,6 +145,7 @@ private:
     HashTable<Position> m_selected_cells;
 
     Workbook& m_workbook;
+    NonnullOwnPtr<JS::Interpreter> m_interpreter;
     mutable SheetGlobalObject* m_global_object;
 
     NonnullOwnPtr<JS::Interpreter> m_interpreter;
