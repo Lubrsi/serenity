@@ -9,9 +9,11 @@
 
 #include <AK/FlyString.h>
 #include <LibJS/Forward.h>
+#include <LibJS/Module.h>
 #include <LibJS/Runtime/MarkedValueList.h>
 #include <LibJS/Runtime/PrivateEnvironment.h>
 #include <LibJS/Runtime/Value.h>
+#include <LibJS/Script.h>
 
 namespace JS {
 
@@ -28,6 +30,7 @@ struct ExecutionContext {
 
         copy.function = function;
         copy.realm = realm;
+        copy.script_or_module = script_or_module;
         copy.lexical_environment = lexical_environment;
         copy.variable_environment = variable_environment;
         copy.private_environment = private_environment;
@@ -46,17 +49,21 @@ private:
     }
 
 public:
-    FunctionObject* function { nullptr };                // [[Function]]
-    Realm* realm { nullptr };                            // [[Realm]]
-    Environment* lexical_environment { nullptr };        // [[LexicalEnvironment]]
-    Environment* variable_environment { nullptr };       // [[VariableEnvironment]]
-    PrivateEnvironment* private_environment { nullptr }; // [[PrivateEnvironment]]
+    FunctionObject* function { nullptr };                                 // [[Function]]
+    Realm* realm { nullptr };                                             // [[Realm]]
+    Variant<WeakPtr<Script>, WeakPtr<Module>, Empty> script_or_module {}; // [[ScriptOrModule]]
+    Environment* lexical_environment { nullptr };                         // [[LexicalEnvironment]]
+    Environment* variable_environment { nullptr };                        // [[VariableEnvironment]]
+    PrivateEnvironment* private_environment { nullptr };                  // [[PrivateEnvironment]]
 
     ASTNode const* current_node { nullptr };
     FlyString function_name;
     Value this_value;
     MarkedValueList arguments;
     bool is_strict_mode { false };
+
+    // https://html.spec.whatwg.org/multipage/webappapis.html#skip-when-determining-incumbent-counter
+    size_t skip_when_determining_incumbent_counter { 0 };
 };
 
 }

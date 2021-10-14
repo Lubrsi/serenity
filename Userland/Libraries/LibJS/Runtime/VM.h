@@ -159,6 +159,7 @@ public:
     u32 execution_generation() const { return m_execution_generation; }
     void finish_execution_generation() { ++m_execution_generation; }
 
+    Variant<WeakPtr<Script>, WeakPtr<Module>, Empty> get_active_script_or_module();
     ThrowCompletionOr<Reference> resolve_binding(FlyString const&, Environment* = nullptr);
     ThrowCompletionOr<Reference> get_identifier_reference(Environment*, FlyString, bool strict, size_t hops = 0);
 
