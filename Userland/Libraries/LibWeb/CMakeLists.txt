@@ -197,6 +197,7 @@ set(SOURCES
     HTML/TagNames.cpp
     HTML/TextMetrics.cpp
     HTML/WebSocket.cpp
+    HTML/WindowEventHandlers.cpp
     HighResolutionTime/Performance.cpp
     ImageDecoding.cpp
     InProcessWebView.cpp
