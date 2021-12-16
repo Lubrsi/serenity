@@ -8,6 +8,7 @@
 
 #include <LibJS/Bytecode/Interpreter.h>
 #include <LibJS/Runtime/ECMAScriptFunctionObject.h>
+#include <LibJS/Runtime/ExecutionContext.h>
 #include <LibJS/Runtime/Object.h>
 
 namespace JS {

@@ -18,8 +18,7 @@ namespace JS {
 // 27.2.2.1 NewPromiseReactionJob ( reaction, argument ), https://tc39.es/ecma262/#sec-newpromisereactionjob
 static ThrowCompletionOr<Value> run_reaction_job(GlobalObject& global_object, PromiseReaction& reaction, Value argument)
 {
-    auto& vm = this->vm();
-    auto& global_object = this->global_object();
+    auto& vm = global_object.vm();
 
     // a. Let promiseCapability be reaction.[[Capability]].
     auto& promise_capability = reaction.capability();
@@ -39,7 +38,7 @@ static ThrowCompletionOr<Value> run_reaction_job(GlobalObject& global_object, Pr
         // i. If type is Fulfill, let handlerResult be NormalCompletion(argument).
         if (type == PromiseReaction::Type::Fulfill) {
             dbgln_if(PROMISE_DEBUG, "[PromiseReactionJob]: Reaction type is Type::Fulfill, setting handler result to {}", argument);
-            handler_result = normal_completion(m_argument);
+            handler_result = normal_completion(argument);
         }
         // ii. Else,
         else {
@@ -48,7 +47,7 @@ static ThrowCompletionOr<Value> run_reaction_job(GlobalObject& global_object, Pr
 
             // 2. Let handlerResult be ThrowCompletion(argument).
             dbgln_if(PROMISE_DEBUG, "[PromiseReactionJob]: Reaction type is Type::Reject, throwing exception with argument {}", argument);
-            handler_result = throw_completion(m_argument);
+            handler_result = throw_completion(argument);
         }
     }
     // e. Else, let handlerResult be HostCallJobCallback(handler, undefined, « argument »).
@@ -56,7 +55,7 @@ static ThrowCompletionOr<Value> run_reaction_job(GlobalObject& global_object, Pr
         dbgln_if(PROMISE_DEBUG, "[PromiseReactionJob]: Calling handler callback {} @ {} with argument {}", handler.value().callback.cell()->class_name(), handler.value().callback.cell(), argument);
         MarkedValueList arguments(vm.heap());
         arguments.append(argument);
-        handler_result = vm.host_call_job_callback(handler.value(), js_undefined(), move(arguments));
+        handler_result = vm.host_call_job_callback(global_object, handler.value(), js_undefined(), move(arguments));
     }
 
     // f. If promiseCapability is undefined, then
@@ -131,8 +130,7 @@ PromiseJob create_promise_reaction_job(GlobalObject& global_object, PromiseReact
 // 27.2.2.2 NewPromiseResolveThenableJob ( promiseToResolve, thenable, then ), https://tc39.es/ecma262/#sec-newpromiseresolvethenablejob
 static ThrowCompletionOr<Value> run_resolve_thenable_job(GlobalObject& global_object, Promise& promise_to_resolve, Value thenable, JobCallback& then)
 {
-    auto& vm = this->vm();
-    auto& global_object = this->global_object();
+    auto& vm = global_object.vm();
 
     // a. Let resolvingFunctions be CreateResolvingFunctions(promiseToResolve).
     auto [resolve_function, reject_function] = promise_to_resolve.create_resolving_functions();
@@ -142,14 +140,14 @@ static ThrowCompletionOr<Value> run_resolve_thenable_job(GlobalObject& global_ob
     MarkedValueList arguments(vm.heap());
     arguments.append(Value(&resolve_function));
     arguments.append(Value(&reject_function));
-    auto then_call_result = vm.host_call_job_callback(then, thenable, move(arguments));
+    auto then_call_result = vm.host_call_job_callback(global_object, then, thenable, move(arguments));
 
     // c. If thenCallResult is an abrupt completion, then
     if (then_call_result.is_error()) {
         vm.clear_exception();
 
         // i. Let status be Call(resolvingFunctions.[[Reject]], undefined, « thenCallResult.[[Value]] »).
-        dbgln_if(PROMISE_DEBUG, "[PromiseResolveThenableJob @ {}]: then_call_result is an abrupt completion, calling reject function with value {}", this, *then_call_result.throw_completion().value());
+        dbgln_if(PROMISE_DEBUG, "[PromiseResolveThenableJob]: then_call_result is an abrupt completion, calling reject function with value {}", *then_call_result.throw_completion().value());
         auto status = JS::call(global_object, &reject_function, js_undefined(), *then_call_result.throw_completion().value());
 
         // ii. Return Completion(status).

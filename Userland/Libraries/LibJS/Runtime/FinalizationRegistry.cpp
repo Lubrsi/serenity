@@ -56,13 +56,14 @@ void FinalizationRegistry::remove_dead_cells(Badge<Heap>)
 void FinalizationRegistry::cleanup(Optional<JobCallback> callback)
 {
     auto& vm = this->vm();
+    auto& global_object = this->global_object();
     auto& cleanup_callback = callback.has_value() ? callback.value() : m_cleanup_callback;
     for (auto it = m_records.begin(); it != m_records.end(); ++it) {
         if (it->target != nullptr)
             continue;
         MarkedValueList arguments(vm.heap());
         arguments.append(it->held_value);
-        (void)vm.host_call_job_callback(cleanup_callback, js_undefined(), move(arguments));
+        (void)vm.host_call_job_callback(global_object, cleanup_callback, js_undefined(), move(arguments));
         it.remove(m_records);
         if (vm.exception())
             return;

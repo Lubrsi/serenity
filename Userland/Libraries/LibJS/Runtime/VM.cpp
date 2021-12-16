@@ -48,8 +48,8 @@ VM::VM(OwnPtr<CustomData> custom_data)
         promise_rejection_tracker(promise, operation);
     };
 
-    host_call_job_callback = [this](JobCallback& job_callback, Value this_value, MarkedValueList arguments) {
-        return call_job_callback(*this, job_callback, this_value, move(arguments));
+    host_call_job_callback = [](GlobalObject& global_object, JobCallback& job_callback, Value this_value, MarkedValueList arguments) {
+        return call_job_callback(global_object, job_callback, this_value, move(arguments));
     };
 
     host_enqueue_finalization_registry_cleanup_job = [this](FinalizationRegistry& finalization_registry) {
@@ -604,19 +604,8 @@ void VM::run_queued_promise_jobs()
     // either way, and that can't happen if we already have an exception stored.
     TemporaryClearException temporary_clear_exception(*this);
     while (!m_promise_jobs.is_empty()) {
-        auto* job = m_promise_jobs.take_first();
+        auto job = m_promise_jobs.take_first();
         dbgln_if(PROMISE_DEBUG, "Calling promise job function @ {}", job);
-
-        // NOTE: If the execution context stack is empty, we make and push a temporary context.
-        ExecutionContext execution_context(heap());
-        bool pushed_execution_context = false;
-        if (m_execution_context_stack.is_empty()) {
-            static FlyString promise_execution_context_name = "(promise execution context)";
-            execution_context.function_name = promise_execution_context_name;
-            // FIXME: Propagate potential failure
-            MUST(push_execution_context(execution_context, job->global_object()));
-            pushed_execution_context = true;
-        }
 
         [[maybe_unused]] auto result = job();
 
@@ -625,9 +614,6 @@ void VM::run_queued_promise_jobs()
         // exceptions when running Promise jobs. See the commit where these two lines were initially
         // added for a much more detailed explanation.
         clear_exception();
-
-        if (pushed_execution_context)
-            pop_execution_context();
     }
     // Ensure no job has created a new exception, they must clean up after themselves.
     // If they don't, we help a little (see above) so that this assumption remains valid.

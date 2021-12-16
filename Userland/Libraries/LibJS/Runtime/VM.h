@@ -243,7 +243,7 @@ public:
     void restore_execution_context_stack();
 
     Function<void(Promise&, Promise::RejectionOperation)> host_promise_rejection_tracker;
-    Function<Value(JobCallback&, Value, MarkedValueList)> host_call_job_callback;
+    Function<ThrowCompletionOr<Value>(GlobalObject&, JobCallback&, Value, MarkedValueList)> host_call_job_callback;
     Function<void(FinalizationRegistry&)> host_enqueue_finalization_registry_cleanup_job;
     Function<void(Function<ThrowCompletionOr<Value>()>, Realm*)> host_enqueue_promise_job;
     Function<JobCallback(FunctionObject&)> host_make_job_callback;

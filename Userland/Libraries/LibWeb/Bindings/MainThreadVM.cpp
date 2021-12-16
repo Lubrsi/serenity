@@ -123,7 +123,7 @@ JS::VM& main_thread_vm()
         };
 
         // 8.1.5.3.1 HostCallJobCallback(callback, V, argumentsList), https://html.spec.whatwg.org/multipage/webappapis.html#hostcalljobcallback
-        vm->host_call_job_callback = [](JS::JobCallback& callback, JS::Value this_value, JS::MarkedValueList arguments_list) -> JS::Value {
+        vm->host_call_job_callback = [](JS::GlobalObject&, JS::JobCallback& callback, JS::Value this_value, JS::MarkedValueList arguments_list) {
             auto& callback_host_defined = verify_cast<WebEngineCustomJobCallbackData>(*callback.custom_data);
 
             // 1. Let incumbent settings be callback.[[HostDefined]].[[IncumbentSettings]]. (NOTE: Not necessary)
@@ -133,18 +133,15 @@ JS::VM& main_thread_vm()
             callback_host_defined.incumbent_settings.prepare_to_run_callback();
 
             // 4. If script execution context is not null, then push script execution context onto the JavaScript execution context stack.
-            if (callback_host_defined.active_script_context) {
-                vm->push_execution_context(*callback_host_defined.active_script_context, callback.callback.cell()->global_object());
-                if (vm->exception())
-                    return {};
-            }
+            if (callback_host_defined.active_script_context)
+                MUST(vm->push_execution_context(*callback_host_defined.active_script_context, callback.callback.cell()->global_object()));
 
             // 5. Let result be Call(callback.[[Callback]], V, argumentsList).
             auto result = vm->call(*callback.callback.cell(), this_value, move(arguments_list));
 
             // 6. If script execution context is not null, then pop script execution context from the JavaScript execution context stack.
             if (callback_host_defined.active_script_context) {
-                VERIFY(vm->execution_context_stack().last() == callback_host_defined.active_script_context.ptr());
+                VERIFY(&vm->running_execution_context() == callback_host_defined.active_script_context.ptr());
                 vm->pop_execution_context();
             }
 
@@ -152,10 +149,7 @@ JS::VM& main_thread_vm()
             callback_host_defined.incumbent_settings.clean_up_after_running_callback();
 
             // 8. Return result.
-            if (result.is_throw_completion())
-                return {};
-
-            return result.release_value();
+            return result;
         };
 
         // 8.1.5.3.2 HostEnqueueFinalizationRegistryCleanupJob(finalizationRegistry), https://html.spec.whatwg.org/multipage/webappapis.html#hostenqueuefinalizationregistrycleanupjob

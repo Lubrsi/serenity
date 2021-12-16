@@ -108,8 +108,8 @@ bool EventDispatcher::inner_invoke(Event& event, Vector<EventTarget::EventListen
         auto callback_completion = Bindings::IDL::call_user_object_operation(callback, "handleEvent", this_value, wrapped_event);
         if (callback_completion.is_error()) {
             // Even though we don't report the exception, make sure we clear the exception anyway so we don't crash when trying to run any script afterwards.
-            VERIFY(global.vm().exception());
             global.vm().clear_exception();
+            global.vm().stop_unwind();
             // FIXME: 1. Report the exception.
             // FIXME: 2. Set legacyOutputDidListenersThrowFlag if given. (Only used by IndexedDB currently)
         }

@@ -10,9 +10,9 @@
 #include <LibJS/Runtime/ExecutionContext.h>
 #include <LibJS/Runtime/GlobalObject.h>
 #include <LibJS/Runtime/Realm.h>
+#include <LibWeb/HTML/BrowsingContext.h>
 #include <LibWeb/HTML/EventLoop/EventLoop.h>
 #include <LibWeb/Origin.h>
-#include <LibWeb/Page/BrowsingContext.h>
 
 namespace Web::HTML {
 

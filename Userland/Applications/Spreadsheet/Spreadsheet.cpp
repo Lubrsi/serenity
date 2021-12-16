@@ -29,8 +29,8 @@ static JS::VM& global_vm()
 {
     static RefPtr<JS::VM> vm;
     if (!vm)
-    return *vm;
         vm = JS::VM::create();
+    return *vm;
 }
 
 Sheet::Sheet(StringView name, Workbook& workbook)
