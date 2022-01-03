@@ -1427,6 +1427,11 @@ JS_DEFINE_NATIVE_FUNCTION(@class_name@::@function.name:snakecase@)
     generate_argument_count_check(generator, function);
 
     StringBuilder arguments_builder;
+
+    if (function.extended_attributes.contains("CallWithGlobalObject")) {
+        arguments_builder.append("global_object, ");
+    }
+
     generate_arguments(generator, function.parameters, arguments_builder, dictionaries);
     function_generator.set(".arguments", arguments_builder.string_view());
 
