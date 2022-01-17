@@ -64,10 +64,17 @@ public:
 
     virtual JS::ThrowCompletionOr<bool> internal_set_prototype_of(JS::Object* prototype) override;
 
+    // These functions are public because they need to be accessible from the cross-origin abstract operations.
+    // When one of these setters/getters/functions of a cross-origin Window object is accessed, it is shadowed by an anonymous native function that will call the original function declared here.
+    JS_DECLARE_NATIVE_FUNCTION(window_getter);
+    JS_DECLARE_NATIVE_FUNCTION(location_getter);
+    JS_DECLARE_NATIVE_FUNCTION(location_setter);
+    JS_DECLARE_NATIVE_FUNCTION(length_getter);
+    JS_DECLARE_NATIVE_FUNCTION(top_getter);
+    JS_DECLARE_NATIVE_FUNCTION(parent_getter);
+
 private:
     virtual void visit_edges(Visitor&) override;
-
-    JS_DECLARE_NATIVE_FUNCTION(top_getter);
 
     JS_DECLARE_NATIVE_FUNCTION(document_getter);
 
@@ -80,8 +87,6 @@ private:
 
     JS_DECLARE_NATIVE_FUNCTION(inner_width_getter);
     JS_DECLARE_NATIVE_FUNCTION(inner_height_getter);
-
-    JS_DECLARE_NATIVE_FUNCTION(parent_getter);
 
     JS_DECLARE_NATIVE_FUNCTION(device_pixel_ratio_getter);
 

@@ -148,8 +148,6 @@ private:
     NonnullOwnPtr<JS::Interpreter> m_interpreter;
     mutable SheetGlobalObject* m_global_object;
 
-    NonnullOwnPtr<JS::Interpreter> m_interpreter;
-
     Cell* m_current_cell_being_evaluated { nullptr };
 
     HashTable<Cell*> m_visited_cells_in_update;

@@ -20,7 +20,7 @@ public:
     virtual RefPtr<DOM::Document> responsible_document() override;
     virtual String api_url_character_encoding() override;
     virtual AK::URL api_base_url() override;
-    virtual Origin origin() override;
+    virtual Origin origin() const override;
     virtual CanUseCrossOriginIsolatedAPIs cross_origin_isolated_capability() override;
 
 private:

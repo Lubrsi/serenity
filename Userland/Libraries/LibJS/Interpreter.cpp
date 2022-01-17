@@ -71,7 +71,7 @@ ThrowCompletionOr<Value> Interpreter::run(Script& script_record)
     // 7. Set the LexicalEnvironment of scriptContext to globalEnv.
     script_context.lexical_environment = &global_environment;
 
-    // FIXME: 8. Set the PrivateEnvironment of scriptContext to null.
+    // 8. Set the PrivateEnvironment of scriptContext to null. (This was done in the construction of script_context)
 
     // NOTE: This isn't in the spec, but we require it.
     script_context.is_strict_mode = script_record.parse_node().is_strict_mode();
@@ -85,7 +85,7 @@ ThrowCompletionOr<Value> Interpreter::run(Script& script_record)
     auto& script_body = script_record.parse_node();
 
     // 12. Let result be GlobalDeclarationInstantiation(scriptBody, globalEnv).
-    Completion result = script_body.global_declaration_instantiation(*this, global_object, global_environment);
+    auto result = script_body.global_declaration_instantiation(*this, global_object, global_environment);
 
     // 13. If result.[[Type]] is normal, then
     if (!result.is_abrupt()) {
@@ -124,7 +124,9 @@ ThrowCompletionOr<Value> Interpreter::run(Script& script_record)
         VERIFY(result.type() == Completion::Type::Throw);
         return result.release_error();
     }
-    return result;
+
+    // NOTE: The Optional<Value> will always have a value here because of step 14.a.
+    return result.release_value().release_value();
 }
 
 ThrowCompletionOr<Value> Interpreter::run(SourceTextModule&)

@@ -69,7 +69,7 @@ struct EnvironmentSettingsObject
     virtual AK::URL api_base_url() = 0;
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#concept-settings-object-origin
-    virtual Origin origin() = 0;
+    virtual Origin origin() const = 0;
 
     // FIXME: A policy container https://html.spec.whatwg.org/multipage/webappapis.html#concept-settings-object-policy-container
 

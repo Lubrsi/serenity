@@ -26,7 +26,7 @@ public:
     const String& host() const { return m_host; }
     u16 port() const { return m_port; }
 
-    bool is_same(const Origin& other) const
+    [[nodiscard]] bool is_same(Origin const& other) const
     {
         return protocol() == other.protocol()
             && host() == other.host()

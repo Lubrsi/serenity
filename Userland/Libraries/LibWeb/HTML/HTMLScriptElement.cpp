@@ -31,10 +31,6 @@ HTMLScriptElement::~HTMLScriptElement()
 void HTMLScriptElement::set_parser_document(Badge<HTMLParser>, DOM::Document& document)
 {
     m_parser_document = document;
-
-    // https://html.spec.whatwg.org/multipage/scripting.html#concept-script-script
-    // The user agent must delay the load event of the element's node document until the script is ready.
-    m_document_load_event_delayer.emplace(document);
 }
 
 void HTMLScriptElement::set_non_blocking(Badge<HTMLParser>, bool non_blocking)
@@ -85,7 +81,7 @@ void HTMLScriptElement::execute_script()
             dbgln_if(HTML_SCRIPT_DEBUG, "HTMLScriptElement: Running inline script");
 
         // 3. Run the classic script given by the script's script for scriptElement.
-        verify_cast<ClassicScript>(*m_script).run();
+        (void)verify_cast<ClassicScript>(*m_script).run();
 
         // 4. Set document's currentScript attribute to oldCurrentScript.
         node_document->set_current_script({}, old_current_script);
@@ -374,6 +370,11 @@ void HTMLScriptElement::prepare_script()
     // -> If the script's type is "module", and the element does not have an async attribute, and the element does not have the "non-blocking" flag set
     else if ((m_script_type == ScriptType::Classic && has_attribute(HTML::AttributeNames::src) && !has_attribute(HTML::AttributeNames::async) && !m_non_blocking)
         || (m_script_type == ScriptType::Module && !has_attribute(HTML::AttributeNames::async) && !m_non_blocking)) {
+        dbgln("delay type 1 for script @ {:p}", this);
+
+        // NOTE: The specification does not say exactly when to start delaying the document's load event. Delaying here at least matches both WebKit and Blink, which only delay the load event when adding to the list of scripts to execute as soon as possible.
+        m_document_load_event_delayer.emplace(*m_preparation_time_document.ptr());
+
         // Add the element to the end of the list of scripts that will execute in order as soon as possible associated with the element's preparation-time document.
         m_preparation_time_document->add_script_to_execute_as_soon_as_possible({}, *this);
 
@@ -408,6 +409,11 @@ void HTMLScriptElement::prepare_script()
     // -> If the script's type is "classic", and the element has a src attribute
     // -> If the script's type is "module"
     else if ((m_script_type == ScriptType::Classic && has_attribute(HTML::AttributeNames::src)) || m_script_type == ScriptType::Module) {
+        dbgln("delay type 2 for script @ {:p}", this);
+
+        // NOTE: The specification does not say exactly when to start delaying the document's load event. Delaying here at least matches both WebKit and Blink, which only delay the load event when adding to the list of scripts to execute as soon as possible.
+        m_document_load_event_delayer.emplace(*m_preparation_time_document.ptr());
+
         // The element must be added to the set of scripts that will execute as soon as possible of the element's preparation-time document.
         // FIXME: This should add to a set, not a list.
         m_preparation_time_document->add_script_to_execute_as_soon_as_possible({}, *this);
@@ -440,6 +446,7 @@ void HTMLScriptElement::prepare_script()
 
 void HTMLScriptElement::script_became_ready()
 {
+    dbgln("script @ {:p} became ready", this);
     m_script_ready = true;
     m_document_load_event_delayer.clear();
     if (!m_script_ready_callback)

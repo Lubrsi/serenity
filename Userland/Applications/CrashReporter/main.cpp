@@ -163,19 +163,19 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     auto pid = coredump->process_pid();
     auto termination_signal = coredump->process_termination_signal();
 
-    if (unlink_on_exit)
-        TRY(Core::System::unveil(coredump_path, "c"));
-    TRY(Core::System::unveil(executable_path.characters(), "r"));
-    TRY(Core::System::unveil("/bin/HackStudio", "rx"));
-    TRY(Core::System::unveil("/res", "r"));
-    TRY(Core::System::unveil("/tmp/portal/launch", "rw"));
-    TRY(Core::System::unveil("/usr/lib", "r"));
-    coredump->for_each_library([](auto library_info) {
-        // FIXME: Make for_each_library propagate ErrorOr values so we can use TRY.
-        if (library_info.path.starts_with('/'))
-            MUST(Core::System::unveil(library_info.path, "r"));
-    });
-    TRY(Core::System::unveil(nullptr, nullptr));
+//    if (unlink_on_exit)
+//        TRY(Core::System::unveil(coredump_path, "c"));
+//    TRY(Core::System::unveil(executable_path.characters(), "r"));
+//    TRY(Core::System::unveil("/bin/HackStudio", "rx"));
+//    TRY(Core::System::unveil("/res", "r"));
+//    TRY(Core::System::unveil("/tmp/portal/launch", "rw"));
+//    TRY(Core::System::unveil("/usr/lib", "r"));
+//    coredump->for_each_library([](auto library_info) {
+//        // FIXME: Make for_each_library propagate ErrorOr values so we can use TRY.
+//        if (library_info.path.starts_with('/'))
+//            MUST(Core::System::unveil(library_info.path, "r"));
+//    });
+//    TRY(Core::System::unveil(nullptr, nullptr));
 
     auto app_icon = GUI::Icon::default_icon("app-crash-reporter");
 

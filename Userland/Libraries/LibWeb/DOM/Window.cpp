@@ -430,4 +430,21 @@ Selection::Selection* Window::get_selection()
     return nullptr;
 }
 
+// https://html.spec.whatwg.org/multipage/window-object.html#number-of-document-tree-child-browsing-contexts
+u32 Window::number_of_document_tree_child_browsing_contexts() const
+{
+    // 1. If W's browsing context is null, then return 0.
+    if (!associated_document().browsing_context())
+        return 0;
+
+    // 2. Return the number of document-tree child browsing contexts of W's browsing context.
+    u32 num_document_tree_children = 0;
+    associated_document().browsing_context()->for_each_child([&](auto& child) {
+        // A browsing context child is a document-tree child browsing context of parent if child is a child browsing context and child's container is in a document tree.
+        if (child.container() && child.container()->in_a_document_tree())
+            num_document_tree_children++;
+    });
+    return num_document_tree_children;
+}
+
 }

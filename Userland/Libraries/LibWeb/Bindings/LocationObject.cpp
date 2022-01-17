@@ -11,11 +11,13 @@
 #include <LibWeb/Bindings/WindowObject.h>
 #include <LibWeb/DOM/Document.h>
 #include <LibWeb/DOM/Window.h>
+#include <LibWeb/HTML/AbstractOperations.h>
 
 namespace Web::Bindings {
 
 LocationObject::LocationObject(JS::GlobalObject& global_object)
     : Object(*global_object.object_prototype())
+    , m_default_properties(global_object.heap())
 {
 }
 
@@ -38,6 +40,23 @@ void LocationObject::initialize(JS::GlobalObject& global_object)
     define_native_function("replace", replace, 1, JS::Attribute::Enumerable);
 
     define_native_function(vm.names.toString, href_getter, 0, JS::Attribute::Enumerable);
+
+    // https://html.spec.whatwg.org/#the-location-interface
+    // To create a Location object, run these steps:
+    // 1. Let location be a new Location platform object.
+    // 2. Let valueOf be location's relevant Realm.[[Intrinsics]].[[%Object.prototype.valueOf%]].
+    auto value_of = global_object.object_prototype()->get_without_side_effects(vm.names.valueOf);
+
+    // 3. Perform ! location.[[DefineOwnProperty]]("valueOf", { [[Value]]: valueOf, [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false }).
+    define_direct_property(vm.names.valueOf, value_of, 0);
+
+    // 4. Perform ! location.[[DefineOwnProperty]](@@toPrimitive, { [[Value]]: undefined, [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false }).
+    define_direct_property(*vm.well_known_symbol_to_primitive(), JS::js_undefined(), 0);
+
+    // 5. Set the value of the [[DefaultProperties]] internal slot of location to location.[[OwnPropertyKeys]]().
+    m_default_properties = MUST(Object::internal_own_property_keys());
+
+    // 6. Return location.
 }
 
 LocationObject::~LocationObject()
@@ -135,6 +154,17 @@ JS_DEFINE_NATIVE_FUNCTION(LocationObject::replace)
     return JS::js_undefined();
 }
 
+// https://html.spec.whatwg.org/multipage/history.html#location-getprototypeof
+JS::ThrowCompletionOr<JS::Object*> LocationObject::internal_get_prototype_of() const
+{
+    // 1. If ! IsPlatformObjectSameOrigin(this) is true, then return ! OrdinaryGetPrototypeOf(this).
+    if (HTML::is_platform_object_same_origin(vm(), *this))
+        return Object::internal_get_prototype_of();
+
+    // 2. Return null.
+    return nullptr;
+}
+
 // https://html.spec.whatwg.org/multipage/history.html#location-setprototypeof
 JS::ThrowCompletionOr<bool> LocationObject::internal_set_prototype_of(Object* prototype)
 {
@@ -154,6 +184,49 @@ JS::ThrowCompletionOr<bool> LocationObject::internal_prevent_extensions()
 {
     // 1. Return false.
     return false;
+}
+
+// https://html.spec.whatwg.org/multipage/history.html#location-getownproperty
+JS::ThrowCompletionOr<Optional<JS::PropertyDescriptor>> LocationObject::internal_get_own_property(JS::PropertyKey const& property_key) const
+{
+    // 1. If ! IsPlatformObjectSameOrigin(this) is true, then:
+    if (HTML::is_platform_object_same_origin(vm(), *this)) {
+        // 1. Let desc be ! OrdinaryGetOwnProperty(this, P).
+        auto desc = MUST(Object::internal_get_own_property(property_key));
+
+        // 2. If the value of the [[DefaultProperties]] internal slot of this contains P, then set desc.[[Configurable]] to true.
+        bool is_default_property = false;
+        for (auto& property : m_default_properties) {
+            auto property_name = MUST(JS::PropertyKey::from_value(global_object(), property));
+
+            if (property_name == property_key) {
+                is_default_property = true;
+                break;
+            }
+        }
+
+        if (is_default_property) {
+            VERIFY(desc.has_value());
+            desc->configurable = true;
+        }
+
+        // 3. Return desc.
+        return desc;
+    }
+
+    // 2. Let property be ! CrossOriginGetOwnPropertyHelper(this, P).
+    TODO();
+}
+
+// https://html.spec.whatwg.org/multipage/history.html#location-ownpropertykeys
+JS::ThrowCompletionOr<JS::MarkedValueList> LocationObject::internal_own_property_keys() const
+{
+    // 1. If ! IsPlatformObjectSameOrigin(this) is true, then return ! OrdinaryOwnPropertyKeys(this).
+    if (HTML::is_platform_object_same_origin(vm(), *this))
+        return Object::internal_own_property_keys();
+
+    // 2. Return ! CrossOriginOwnPropertyKeys(this).
+    return HTML::cross_origin_own_property_keys(vm(), *this);
 }
 
 }

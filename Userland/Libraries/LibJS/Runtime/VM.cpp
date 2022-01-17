@@ -546,6 +546,25 @@ ThrowCompletionOr<void> VM::initialize_instance_elements(Object& object, ECMAScr
 
 void VM::throw_exception(Exception& exception)
 {
+    auto value = exception.value();
+    if (value.is_object()) {
+        auto& object = value.as_object();
+        auto name = object.get_without_side_effects(names.name).value_or(JS::js_undefined());
+        auto message = object.get_without_side_effects(names.message).value_or(JS::js_undefined());
+        if (name.is_accessor() || message.is_accessor()) {
+            // The result is not going to be useful, let's just print the value. This affects DOMExceptions, for example.
+            dbgln("Throwing JavaScript exception: {}", value);
+        } else {
+            dbgln("Throwing JavaScript exception: [{}] {}", name, message);
+        }
+    } else {
+        dbgln("Throwing JavaScript exception: {}", value);
+    }
+    for (auto& traceback_frame : exception.traceback()) {
+        auto& function_name = traceback_frame.function_name;
+        auto& source_range = traceback_frame.source_range;
+        dbgln("  {} at {}:{}:{}", function_name, source_range.filename, source_range.start.line, source_range.start.column);
+    }
     set_exception(exception);
 }
 

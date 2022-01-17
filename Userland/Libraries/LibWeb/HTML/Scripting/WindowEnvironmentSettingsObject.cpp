@@ -68,7 +68,7 @@ AK::URL WindowEnvironmentSettingsObject::api_base_url()
 }
 
 // https://html.spec.whatwg.org/multipage/window-object.html#script-settings-for-window-objects:concept-settings-object-origin
-Origin WindowEnvironmentSettingsObject::origin()
+Origin WindowEnvironmentSettingsObject::origin() const
 {
     // Return the origin of window's associated Document.
     return m_window->associated_document().origin();

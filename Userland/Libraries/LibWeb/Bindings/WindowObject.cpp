@@ -11,6 +11,7 @@
 #include <LibJS/Runtime/Completion.h>
 #include <LibJS/Runtime/Error.h>
 #include <LibJS/Runtime/FunctionObject.h>
+#include <LibJS/Runtime/GlobalEnvironment.h>
 #include <LibJS/Runtime/Shape.h>
 #include <LibTextCodec/Decoder.h>
 #include <LibWeb/Bindings/CSSNamespace.h>
@@ -61,9 +62,9 @@ void WindowObject::initialize_global_object()
     Object::set_prototype(&ensure_web_prototype<EventTargetPrototype>("EventTarget"));
 
     // FIXME: These should be native accessors, not properties
-    define_direct_property("window", this, JS::Attribute::Enumerable);
-    define_direct_property("frames", this, JS::Attribute::Enumerable);
-    define_direct_property("self", this, JS::Attribute::Enumerable);
+    define_native_accessor("window", window_getter, nullptr, JS::Attribute::Enumerable);
+    define_native_accessor("frames", window_getter, nullptr, JS::Attribute::Enumerable);
+    define_native_accessor("self", window_getter, nullptr, JS::Attribute::Enumerable);
     define_native_accessor("top", top_getter, nullptr, JS::Attribute::Enumerable);
     define_native_accessor("parent", parent_getter, {}, JS::Attribute::Enumerable);
     define_native_accessor("document", document_getter, {}, JS::Attribute::Enumerable);
@@ -108,6 +109,9 @@ void WindowObject::initialize_global_object()
     define_native_accessor("screenLeft", screen_left_getter, {}, attr);
     define_native_accessor("screenTop", screen_top_getter, {}, attr);
 
+    // FIXME: This should be [Replaceable].
+    define_native_accessor("length", length_getter, {}, attr);
+
     define_direct_property("CSS", heap().allocate<CSSNamespace>(*this, *this), 0);
 
     // Legacy
@@ -118,7 +122,7 @@ void WindowObject::initialize_global_object()
     define_direct_property("navigator", heap().allocate<NavigatorObject>(*this, *this), JS::Attribute::Enumerable | JS::Attribute::Configurable);
 
     // NOTE: location is marked as [LegacyUnforgeable], meaning it isn't configurable.
-    define_direct_property("location", m_location_object, JS::Attribute::Enumerable);
+    define_native_accessor("location", location_getter, location_setter, JS::Attribute::Enumerable);
 
     // WebAssembly "namespace"
     define_direct_property("WebAssembly", heap().allocate<WebAssemblyObject>(*this, *this), JS::Attribute::Enumerable | JS::Attribute::Configurable);
@@ -176,6 +180,70 @@ static JS::ThrowCompletionOr<DOM::Window*> impl_from(JS::VM& vm, JS::GlobalObjec
     if (StringView("WindowObject") != this_object->class_name())
         return vm.throw_completion<JS::TypeError>(global_object, JS::ErrorType::NotAnObjectOfType, "WindowObject");
     return &static_cast<WindowObject*>(this_object)->impl();
+}
+
+// https://html.spec.whatwg.org/multipage/window-object.html#dom-window
+JS_DEFINE_NATIVE_FUNCTION(WindowObject::window_getter)
+{
+    // The window, frames, and self attributes' getters must return this Window object's relevant Realm.[[GlobalEnv]]'s EnvironmentRecord's [[GlobalThisValue]].
+    auto* impl = TRY(impl_from(vm, global_object));
+    return &impl->associated_document().realm().global_environment().global_this_value();
+}
+
+// https://html.spec.whatwg.org/multipage/history.html#dom-location
+JS_DEFINE_NATIVE_FUNCTION(WindowObject::location_getter)
+{
+    // The Window object's location getter steps are to return this's Location object.
+    auto* impl = TRY(impl_from(vm, global_object));
+    // This is a bit roundabout as we currently store the location object on WindowObject, but the `this` value must be validated as the IDL function for the location attribute does not have `LegacyLenientThis` specified.
+    return impl->wrapper()->location_object();
+}
+
+JS_DEFINE_NATIVE_FUNCTION(WindowObject::location_setter)
+{
+    // 4.1. If no arguments were passed, then throw a TypeError.
+    if (vm.argument_count() == 0)
+        return vm.throw_completion<JS::TypeError>(global_object, JS::ErrorType::BadArgCountOne);
+
+    // 4.2. Let V be the value of the first argument passed.
+    auto href_value = vm.argument(0);
+
+    // NOTE: The location attribute on the IDL interface for Window has [PutForwards=href] on it. This means we forward this setter to the href_setter in location setter.
+    // https://webidl.spec.whatwg.org/#dfn-attribute-setter
+
+    // FIXME: 4.5.1. Let esValue be the this value, if it is not null or undefined, or realm’s global object otherwise. (This will subsequently cause a TypeError in a few steps, if the global object does not implement target and [LegacyLenientThis] is not specified.)
+    //        4.5.2. If esValue is a platform object, then perform a security check, passing esValue, id, and "setter".
+    //        4.5.3. Let validThis be true if esValue implements target, or false otherwise.
+    //        4.5.4. If validThis is false and attribute was not specified with the [LegacyLenientThis] extended attribute, then throw a TypeError.
+
+    auto* impl = TRY(impl_from(vm, global_object));
+
+    // 4.8. If attribute is declared with a [PutForwards] extended attribute, then:
+    // 1. Let Q be ? Get(esValue, id).
+    // FIXME: Is this necessary? I don't think the location getter can be changed/proxied, plus we've already validated that `this` is a WindowObject.
+    auto location_value = TRY(impl->wrapper()->get("location"));
+
+    // 2. If Type(Q) is not Object, then throw a TypeError.
+    // FIXME: Same as above.
+    if (!location_value.is_object())
+        return vm.throw_completion<JS::TypeError>(global_object, JS::ErrorType::NotAnObject, location_value.to_string_without_side_effects());
+
+    // 3. Let forwardId be the identifier argument of the [PutForwards] extended attribute. (In this case, href)
+
+    // 4. Perform ? Set(Q, forwardId, V, false).
+    auto& location_object = location_value.as_object();
+    TRY(location_object.set("href", href_value, JS::Object::ShouldThrowExceptions::No));
+
+    // 5. Return undefined.
+    return JS::js_undefined();
+}
+
+// https://html.spec.whatwg.org/multipage/window-object.html#dom-length
+JS_DEFINE_NATIVE_FUNCTION(WindowObject::length_getter)
+{
+    // The length getter steps are to return the number of document-tree child browsing contexts of this.
+    auto* impl = TRY(impl_from(vm, global_object));
+    return impl->number_of_document_tree_child_browsing_contexts();
 }
 
 JS_DEFINE_NATIVE_FUNCTION(WindowObject::alert)
@@ -269,7 +337,7 @@ JS_DEFINE_NATIVE_FUNCTION(WindowObject::set_timeout)
         // The spec wants us to use a task for the "run function or script string" part,
         // using a NativeFunction for the latter is a workaround so that we can reuse the
         // DOM::Timer API unaltered (always expects a JS::FunctionObject).
-        callback_object = JS::NativeFunction::create(global_object, "", [impl, script_source = move(script_source)](auto&, auto&) mutable -> JS::Value {
+        callback_object = JS::NativeFunction::create(global_object, "", [impl, script_source = move(script_source)](auto&, auto&) mutable {
             auto& settings_object = verify_cast<HTML::EnvironmentSettingsObject>(*impl->associated_document().realm().custom_data());
             auto script = HTML::ClassicScript::create(impl->associated_document().url().to_string(), script_source, settings_object, AK::URL());
             return script->run();

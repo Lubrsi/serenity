@@ -374,7 +374,7 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
     //          document.body.remove();
     //          location.reload();
     //       The body element is no longer in the DOM and there is no variable holding onto it. However, the onunload handler is still called, meaning the callback keeps the body element alive.
-    auto callback_function = JS::NativeFunction::create(*global_object, "", [event_target = NonnullRefPtr(*this), name](JS::VM& vm, auto&) mutable -> JS::Value {
+    auto callback_function = JS::NativeFunction::create(*global_object, "", [event_target = NonnullRefPtr(*this), name](JS::VM& vm, auto&) mutable -> JS::ThrowCompletionOr<JS::Value> {
         // The event dispatcher should only call this with one argument.
         VERIFY(vm.argument_count() == 1);
 
@@ -384,8 +384,7 @@ void EventTarget::activate_event_handler(FlyString const& name, HTML::EventHandl
         auto& event_wrapper = verify_cast<Bindings::EventWrapper>(event_wrapper_argument.as_object());
         auto& event = event_wrapper.impl();
 
-        TRY_OR_DISCARD(event_target->process_event_handler_for_event(name, event));
-
+        TRY(event_target->process_event_handler_for_event(name, event));
         return JS::js_undefined();
     });
 
@@ -491,7 +490,7 @@ JS::ThrowCompletionOr<void> EventTarget::process_event_handler_for_event(FlyStri
         return return_value_or_error.release_error();
 
     // FIXME: Ideally, invoke_callback would convert JS::Value to the appropriate return type for us as per the spec, but it doesn't currently.
-    auto return_value = return_value_or_error.value();
+    auto return_value = *return_value_or_error.value();
 
     // FIXME: If event is a BeforeUnloadEvent object and event's type is beforeunload
     //          If return value is not null, then: (NOTE: When implementing, if we still return a JS::Value from invoke_callback, use is_nullish instead of is_null, as "null" refers to IDL null, which is JS null or undefined)

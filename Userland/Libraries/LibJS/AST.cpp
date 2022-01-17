@@ -4137,7 +4137,7 @@ void ScopeNode::block_declaration_instantiation(GlobalObject& global_object, Env
 }
 
 // 16.1.7 GlobalDeclarationInstantiation ( script, env ), https://tc39.es/ecma262/#sec-globaldeclarationinstantiation
-ThrowCompletionOr<Value> Program::global_declaration_instantiation(Interpreter& interpreter, GlobalObject& global_object, GlobalEnvironment& global_environment) const
+Completion Program::global_declaration_instantiation(Interpreter& interpreter, GlobalObject& global_object, GlobalEnvironment& global_environment) const
 {
     for_each_lexically_declared_name([&](FlyString const& name) {
         if (global_environment.has_var_declaration(name) || global_environment.has_lexical_declaration(name)) {

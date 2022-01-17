@@ -6,6 +6,7 @@
 
 #include <LibCore/ElapsedTimer.h>
 #include <LibJS/Interpreter.h>
+#include <LibWeb/Bindings/ExceptionOrUtils.h>
 #include <LibWeb/DOM/DOMException.h>
 #include <LibWeb/HTML/Scripting/ClassicScript.h>
 #include <LibWeb/HTML/Scripting/Environments.h>
@@ -59,7 +60,7 @@ NonnullRefPtr<ClassicScript> ClassicScript::create(String filename, StringView s
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#run-a-classic-script
-JS::ThrowCompletionOr<JS::Value> ClassicScript::run(RethrowErrors rethrow_errors)
+JS::Completion ClassicScript::run(RethrowErrors rethrow_errors)
 {
     // FIXME: Remove this once this function is spec compliant.
     if (!m_script_record) {
@@ -71,8 +72,10 @@ JS::ThrowCompletionOr<JS::Value> ClassicScript::run(RethrowErrors rethrow_errors
     // 1. Let settings be the settings object of script. (NOTE: Not necessary)
 
     // 2. Check if we can run script with settings. If this returns "do not run" then return NormalCompletion(empty).
-    if (m_settings_object.can_run_script() == RunScriptDecision::DoNotRun)
+    if (m_settings_object.can_run_script() == RunScriptDecision::DoNotRun) {
+        dbgln("ClassicScript: Refusing to run script because either the document is not fully active or scripting is disabled.");
         return JS::normal_completion({});
+    }
 
     // 3. Prepare to run script given settings.
     m_settings_object.prepare_to_run_script();
@@ -121,7 +124,7 @@ JS::ThrowCompletionOr<JS::Value> ClassicScript::run(RethrowErrors rethrow_errors
             // 2. Throw a "NetworkError" DOMException.
             return Bindings::throw_dom_exception_if_needed(interpreter->global_object(), []{
                 return DOM::NetworkError::create("Script error.");
-            });
+            }).release_error();
         }
 
         // 3. Otherwise, rethrow errors is false. Perform the following steps:

@@ -93,6 +93,7 @@ set(SOURCES
     Dump.cpp
     Encoding/TextEncoder.cpp
     FontCache.cpp
+    HTML/AbstractOperations.cpp
     HTML/AttributeNames.cpp
     HTML/BrowsingContext.cpp
     HTML/BrowsingContextContainer.cpp

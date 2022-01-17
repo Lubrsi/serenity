@@ -36,17 +36,15 @@ void WebContentConsoleClient::handle_input(String const& js_source)
 
     // FIXME: Add parse error printouts back once ClassicScript can report parse errors.
 
-    script->run();
+    auto result = script->run();
 
     auto& vm = m_interpreter->global_object().vm();
     StringBuilder output_html;
 
-    // FIXME: ClassicScript::run clears exceptions, meaning this is never true currently.
-    if (vm.exception()) {
-        auto* exception = vm.exception();
+    if (result.is_abrupt()) {
         vm.clear_exception();
         output_html.append("Uncaught exception: ");
-        auto error = *result.throw_completion().value();
+        auto error = *result.release_error().value();
         if (error.is_object())
             output_html.append(JS::MarkupGenerator::html_from_error(error.as_object()));
         else
@@ -55,7 +53,11 @@ void WebContentConsoleClient::handle_input(String const& js_source)
         return;
     }
 
-    print_html(JS::MarkupGenerator::html_from_value(result.value()));
+    if (result.value().has_value())
+        print_html(JS::MarkupGenerator::html_from_value(result.value().release_value()));
+    else
+        print_html(JS::MarkupGenerator::html_from_value({}));
+
 }
 
 void WebContentConsoleClient::print_html(String const& line)

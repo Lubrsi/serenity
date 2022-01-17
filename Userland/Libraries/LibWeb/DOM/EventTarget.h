@@ -68,6 +68,7 @@ private:
     Vector<EventListenerRegistration> m_listeners;
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-map
+    // Spec Note: The order of the entries of event handler map could be arbitrary. It is not observable through any algorithms that operate on the map.
     HashMap<FlyString, HTML::EventHandler> m_event_handler_map;
 
     enum class IsAttribute {

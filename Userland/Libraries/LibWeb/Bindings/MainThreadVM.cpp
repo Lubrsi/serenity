@@ -175,10 +175,8 @@ JS::VM& main_thread_vm()
 
                 // FIXME: 6. If result is an abrupt completion, then report the exception given by result.[[Value]].
                 // FIXME: This is done out of order, because clean_up_after_running_script might run script, so we must clear the exception beforehand.
-                if (vm->exception()) {
+                if (vm->exception())
                     vm->clear_exception();
-                    vm->stop_unwind();
-                }
 
                 // 5. Clean up after running script with entry.
                 entry.clean_up_after_running_script();
@@ -248,7 +246,6 @@ JS::VM& main_thread_vm()
                 // 5. If result is an abrupt completion, then report the exception given by result.[[Value]].
                 if (result.is_throw_completion()) {
                     vm->clear_exception();
-                    vm->stop_unwind();
                     // FIXME: Report the exception given by result.[[Value]].
                 }
             });

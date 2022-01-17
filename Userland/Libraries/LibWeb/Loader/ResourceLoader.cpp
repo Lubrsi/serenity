@@ -140,7 +140,9 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, con
     if (ContentFilter::the().is_filtered(url)) {
         auto filter_message = "URL was filtered"sv;
         log_failure(request, filter_message);
-        error_callback(filter_message, {});
+        deferred_invoke([filter_message = move(filter_message), error_callback = move(error_callback)] {
+            error_callback(filter_message, {});
+        });
         return;
     }
 
@@ -165,7 +167,9 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, con
             if (!data_maybe.has_value()) {
                 auto error_message = "Base64 data contains an invalid character"sv;
                 log_failure(request, error_message);
-                error_callback(error_message, {});
+                deferred_invoke([error_message = move(error_message), error_callback = move(error_callback)] {
+                    error_callback(error_message, {});
+                });
                 return;
             }
             data = data_maybe.value();
@@ -185,8 +189,11 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, con
         if (file_result.is_error()) {
             auto& error = file_result.error();
             log_failure(request, error);
-            if (error_callback)
-                error_callback(String::formatted("{}", error), error.code());
+            if (error_callback) {
+                deferred_invoke([error = move(error), error_callback = move(error_callback)] {
+                    error_callback(String::formatted("{}", error), error.code());
+                });
+            }
             return;
         }
 
@@ -212,8 +219,11 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, con
         if (!protocol_request) {
             auto start_request_failure_msg = "Failed to initiate load"sv;
             log_failure(request, start_request_failure_msg);
-            if (error_callback)
-                error_callback(start_request_failure_msg, {});
+            if (error_callback) {
+                deferred_invoke([start_request_failure_msg = move(start_request_failure_msg), error_callback = move(error_callback)] {
+                    error_callback(start_request_failure_msg, {});
+                });
+            }
             return;
         }
         m_active_requests.set(*protocol_request);
@@ -246,8 +256,11 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, con
 
     auto not_implemented_error = String::formatted("Protocol not implemented: {}", url.protocol());
     log_failure(request, not_implemented_error);
-    if (error_callback)
-        error_callback(not_implemented_error, {});
+    if (error_callback) {
+        deferred_invoke([not_implemented_error = move(not_implemented_error), error_callback = move(error_callback)] {
+            error_callback(not_implemented_error, {});
+        });
+    }
 }
 
 void ResourceLoader::load(const AK::URL& url, Function<void(ReadonlyBytes, const HashMap<String, String, CaseInsensitiveStringTraits>& response_headers, Optional<u32> status_code)> success_callback, Function<void(const String&, Optional<u32> status_code)> error_callback)

@@ -22,6 +22,9 @@ public:
         static String textarea = "textarea";
         return textarea;
     }
+
+    String default_value() const;
+    void set_default_value(String const& default_value);
 };
 
 }

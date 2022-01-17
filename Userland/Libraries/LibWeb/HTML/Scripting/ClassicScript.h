@@ -34,7 +34,7 @@ public:
         No,
         Yes,
     };
-    JS::ThrowCompletionOr<JS::Value> run(RethrowErrors = RethrowErrors::No);
+    JS::Completion run(RethrowErrors = RethrowErrors::No);
 
     MutedErrors muted_errors() const { return m_muted_errors; }
 

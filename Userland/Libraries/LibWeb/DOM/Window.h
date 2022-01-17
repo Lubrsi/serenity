@@ -100,6 +100,9 @@ public:
 
     Selection::Selection* get_selection();
 
+    // NOTE: The Window.length IDL property is of type `unsigned long` which is u32.
+    u32 number_of_document_tree_child_browsing_contexts() const;
+
 private:
     explicit Window(Document&);
 

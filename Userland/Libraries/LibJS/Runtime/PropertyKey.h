@@ -181,6 +181,33 @@ public:
         return StringOrSymbol(as_symbol());
     }
 
+    unsigned hash() const
+    {
+        VERIFY(is_valid());
+        if (is_string())
+            return as_string().hash();
+        if (is_number())
+            return int_hash(as_number());
+        return ptr_hash(as_symbol());
+    }
+
+    bool operator==(PropertyKey const& other) const
+    {
+        if (type() != other.type())
+            return false;
+
+        switch (type()) {
+        case JS::PropertyKey::Type::Number:
+            return as_number() == other.as_number();
+        case JS::PropertyKey::Type::String:
+            return as_string() == other.as_string();
+        case JS::PropertyKey::Type::Symbol:
+            return as_symbol() == other.as_symbol();
+        default:
+            VERIFY_NOT_REACHED();
+        }
+    }
+
 private:
     bool m_string_may_be_number { true };
     Type m_type { Type::Invalid };
@@ -197,29 +224,12 @@ template<>
 struct Traits<JS::PropertyKey> : public GenericTraits<JS::PropertyKey> {
     static unsigned hash(JS::PropertyKey const& name)
     {
-        VERIFY(name.is_valid());
-        if (name.is_string())
-            return name.as_string().hash();
-        if (name.is_number())
-            return int_hash(name.as_number());
-        return ptr_hash(name.as_symbol());
+        return name.hash();
     }
 
     static bool equals(JS::PropertyKey const& a, JS::PropertyKey const& b)
     {
-        if (a.type() != b.type())
-            return false;
-
-        switch (a.type()) {
-        case JS::PropertyKey::Type::Number:
-            return a.as_number() == b.as_number();
-        case JS::PropertyKey::Type::String:
-            return a.as_string() == b.as_string();
-        case JS::PropertyKey::Type::Symbol:
-            return a.as_symbol() == b.as_symbol();
-        default:
-            VERIFY_NOT_REACHED();
-        }
+        return a == b;
     }
 };
 

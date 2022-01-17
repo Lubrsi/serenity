@@ -346,7 +346,7 @@ void ClientConnection::run_javascript(String const& js_source)
     // Let evaluationStatus be the result of running the classic script script.
     auto evaluation_status = script->run();
 
-    if (evaluation_status.is_throw_completion()) {
+    if (evaluation_status.is_abrupt()) {
         dbgln("Exception :(");
         active_document->interpreter().vm().clear_exception();
     }

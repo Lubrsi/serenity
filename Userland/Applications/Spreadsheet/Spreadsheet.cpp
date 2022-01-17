@@ -25,14 +25,6 @@
 
 namespace Spreadsheet {
 
-static JS::VM& global_vm()
-{
-    static RefPtr<JS::VM> vm;
-    if (!vm)
-        vm = JS::VM::create();
-    return *vm;
-}
-
 Sheet::Sheet(StringView name, Workbook& workbook)
     : Sheet(workbook)
 {
@@ -172,7 +164,7 @@ Sheet::ValueAndException Sheet::evaluate(StringView source, Cell* on_behalf_of)
     if (script_or_error.is_error() || interpreter().exception())
         return { JS::js_undefined(), interpreter().exception() };
 
-    auto result = interpreter().run(global_object(), program);
+    auto result = interpreter().run(script_or_error.value());
     if (result.is_error()) {
         auto exc = interpreter().exception();
         return { JS::js_undefined(), exc };

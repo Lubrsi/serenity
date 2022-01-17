@@ -116,7 +116,6 @@ PromiseJob create_promise_reaction_job(GlobalObject& global_object, PromiseReact
         } else {
             // c. Else, set handlerRealm to the current Realm Record.
             global_object.vm().clear_exception();
-            global_object.vm().stop_unwind();
             handler_realm = global_object.vm().current_realm();
         }
 
@@ -172,7 +171,6 @@ PromiseJob create_promise_resolve_thenable_job(GlobalObject& global_object, Prom
     } else {
         // 4. Else, let thenRealm be the current Realm Record.
         global_object.vm().clear_exception();
-        global_object.vm().stop_unwind();
         then_realm = global_object.vm().current_realm();
     }
 

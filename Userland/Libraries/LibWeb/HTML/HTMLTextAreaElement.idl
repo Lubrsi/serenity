@@ -4,6 +4,7 @@ interface HTMLTextAreaElement : HTMLElement {
     [Reflect] attribute DOMString name;
     [Reflect] attribute DOMString wrap;
     readonly attribute DOMString type;
+    [CEReactions] attribute DOMString defaultValue;
 
     [Reflect] attribute boolean disabled;
     [Reflect=readonly] attribute boolean readOnly;
