@@ -833,22 +833,32 @@ ExceptionOr<NonnullRefPtr<Node>> Document::import_node(NonnullRefPtr<Node> node,
 // https://dom.spec.whatwg.org/#concept-node-adopt
 void Document::adopt_node(Node& node)
 {
+    // 1. Let oldDocument be node’s node document.
     auto& old_document = node.document();
+
+    // 2. If node’s parent is non-null, then remove node.
     if (node.parent())
         node.remove();
 
+    // 3. If document is not oldDocument, then:
     if (&old_document != this) {
+        // 1. For each inclusiveDescendant in node’s shadow-including inclusive descendants:
         // FIXME: This should be shadow-including.
         node.for_each_in_inclusive_subtree([&](auto& inclusive_descendant) {
+            // 1. Set inclusiveDescendant’s node document to document.
             inclusive_descendant.set_document({}, *this);
-            // FIXME: If inclusiveDescendant is an element, then set the node document of each attribute in inclusiveDescendant’s attribute list to document.
+
+            // FIXME: 2. If inclusiveDescendant is an element, then set the node document of each attribute in inclusiveDescendant’s attribute list to document.
+
             return IterationDecision::Continue;
         });
 
-        // FIXME: For each inclusiveDescendant in node’s shadow-including inclusive descendants that is custom,
-        //        enqueue a custom element callback reaction with inclusiveDescendant, callback name "adoptedCallback",
-        //        and an argument list containing oldDocument and document.
+        // FIXME: 2. For each inclusiveDescendant in node’s shadow-including inclusive descendants that is custom,
+        //           enqueue a custom element callback reaction with inclusiveDescendant, callback name "adoptedCallback",
+        //           and an argument list containing oldDocument and document.
 
+        // 3. For each inclusiveDescendant in node’s shadow-including inclusive descendants, in shadow-including tree order,
+        //    run the adopting steps with inclusiveDescendant and oldDocument.
         // FIXME: This should be shadow-including.
         node.for_each_in_inclusive_subtree([&](auto& inclusive_descendant) {
             inclusive_descendant.adopted_from(old_document);

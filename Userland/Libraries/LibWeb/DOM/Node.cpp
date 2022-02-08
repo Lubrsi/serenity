@@ -213,34 +213,48 @@ const Element* Node::parent_element() const
 // https://dom.spec.whatwg.org/#concept-node-ensure-pre-insertion-validity
 ExceptionOr<void> Node::ensure_pre_insertion_validity(NonnullRefPtr<Node> node, RefPtr<Node> child) const
 {
+    // 1. If parent is not a Document, DocumentFragment, or Element node, then throw a "HierarchyRequestError" DOMException.
     if (!is<Document>(this) && !is<DocumentFragment>(this) && !is<Element>(this))
         return DOM::HierarchyRequestError::create("Can only insert into a document, document fragment or element");
 
+    // 2. If node is a host-including inclusive ancestor of parent, then throw a "HierarchyRequestError" DOMException.
     if (node->is_host_including_inclusive_ancestor_of(*this))
         return DOM::HierarchyRequestError::create("New node is an ancestor of this node");
 
+    // 3. If child is non-null and its parent is not parent, then throw a "NotFoundError" DOMException.
     if (child && child->parent() != this)
         return DOM::NotFoundError::create("This node is not the parent of the given child");
 
     // FIXME: All the following "Invalid node type for insertion" messages could be more descriptive.
 
-    if (!is<DocumentFragment>(*node) && !is<DocumentType>(*node) && !is<Element>(*node) && !is<Text>(*node) && !is<Comment>(*node) && !is<ProcessingInstruction>(*node))
+    // 4. If node is not a DocumentFragment, DocumentType, Element, or CharacterData node, then throw a "HierarchyRequestError" DOMException.
+    if (!is<DocumentFragment>(*node) && !is<DocumentType>(*node) && !is<Element>(*node) && !is<CharacterData>(*node))
         return DOM::HierarchyRequestError::create("Invalid node type for insertion");
 
+    // 5. If either node is a Text node and parent is a document, or node is a doctype and parent is not a document, then throw a "HierarchyRequestError" DOMException.
     if ((is<Text>(*node) && is<Document>(this)) || (is<DocumentType>(*node) && !is<Document>(this)))
         return DOM::HierarchyRequestError::create("Invalid node type for insertion");
 
+    // 6. If parent is a document, and any of the statements below, switched on the interface node implements, are true, then throw a "HierarchyRequestError" DOMException.
     if (is<Document>(this)) {
         if (is<DocumentFragment>(*node)) {
+            // -> DocumentFragment
             auto node_element_child_count = verify_cast<DocumentFragment>(*node).child_element_count();
+
+            // If node has more than one element child or has a Text node child.
+            // Otherwise, if node has one element child and either parent has an element child, child is a doctype, or child is non-null and a doctype is following child.
             if ((node_element_child_count > 1 || node->has_child_of_type<Text>())
                 || (node_element_child_count == 1 && (has_child_of_type<Element>() || is<DocumentType>(child.ptr()) || (child && child->has_following_node_of_type_in_tree_order<DocumentType>())))) {
                 return DOM::HierarchyRequestError::create("Invalid node type for insertion");
             }
         } else if (is<Element>(*node)) {
+            // -> Element
+            //    parent has an element child, child is a doctype, or child is non-null and a doctype is following child.
             if (has_child_of_type<Element>() || is<DocumentType>(child.ptr()) || (child && child->has_following_node_of_type_in_tree_order<DocumentType>()))
                 return DOM::HierarchyRequestError::create("Invalid node type for insertion");
         } else if (is<DocumentType>(*node)) {
+            // -> DocumentType
+            //    parent has a doctype child, child is non-null and an element is preceding child, or child is null and parent has an element child.
             if (has_child_of_type<DocumentType>() || (child && child->has_preceding_node_of_type_in_tree_order<Element>()) || (!child && has_child_of_type<Element>()))
                 return DOM::HierarchyRequestError::create("Invalid node type for insertion");
         }
@@ -252,142 +266,176 @@ ExceptionOr<void> Node::ensure_pre_insertion_validity(NonnullRefPtr<Node> node, 
 // https://dom.spec.whatwg.org/#concept-node-insert
 void Node::insert_before(NonnullRefPtr<Node> node, RefPtr<Node> child, bool suppress_observers)
 {
+    // 1. Let nodes be node’s children, if node is a DocumentFragment node; otherwise « node ».
     NonnullRefPtrVector<Node> nodes;
     if (is<DocumentFragment>(*node))
         nodes = verify_cast<DocumentFragment>(*node).children_as_vector();
     else
         nodes.append(node);
 
+    // 2. Let count be nodes’s size.
     auto count = nodes.size();
+
+    // 3. If count is 0, then return.
     if (count == 0)
         return;
 
+    // 4. If node is a DocumentFragment node, then:
     if (is<DocumentFragment>(*node)) {
+        // 1. Remove its children with the suppress observers flag set.
         node->remove_all_children(true);
-        // FIXME: Queue a tree mutation record for node with « », nodes, null, and null.
+
+        // FIXME: 2. Queue a tree mutation record for node with « », nodes, null, and null.
     }
 
+    // 5. If child is non-null, then:
     if (child) {
-        // FIXME: For each live range whose start node is parent and start offset is greater than child’s index, increase its start offset by count.
-        // FIXME: For each live range whose end node is parent and end offset is greater than child’s index, increase its end offset by count.
+        // FIXME: 1. For each live range whose start node is parent and start offset is greater than child’s index, increase its start offset by count.
+        // FIXME: 2. For each live range whose end node is parent and end offset is greater than child’s index, increase its end offset by count.
     }
 
-    // FIXME: Let previousSibling be child’s previous sibling or parent’s last child if child is null. (Currently unused so not included)
+    // FIXME: 6. Let previousSibling be child’s previous sibling or parent’s last child if child is null. (Currently unused so not included)
 
-    for (auto& node_to_insert : nodes) { // FIXME: In tree order
+    // 7. For each node in nodes, in tree order:
+    for (auto& node_to_insert : nodes) {
+        // 1. Adopt node into parent’s node document.
         document().adopt_node(node_to_insert);
 
+        // 2. If child is null, then append node to parent’s children.
         if (!child)
             TreeNode<Node>::append_child(node_to_insert);
+
+        // 3. Otherwise, insert node into parent’s children before child’s index.
         else
             TreeNode<Node>::insert_before(node_to_insert, child);
 
-        // FIXME: If parent is a shadow host and node is a slottable, then assign a slot for node.
-        // FIXME: If parent’s root is a shadow root, and parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
-        // FIXME: Run assign slottables for a tree with node’s root.
+        // FIXME: 4. If parent is a shadow host whose shadow root’s slot assignment is "named" and node is a slottable, then assign a slot for node.
+        // FIXME: 5. If parent’s root is a shadow root, and parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
+        // FIXME: 6. Run assign slottables for a tree with node’s root.
 
+        // 7. For each shadow-including inclusive descendant inclusiveDescendant of node, in shadow-including tree order:
         // FIXME: This should be shadow-including.
         node_to_insert.for_each_in_inclusive_subtree([&](Node& inclusive_descendant) {
+            // 1. Run the insertion steps with inclusiveDescendant.
             inclusive_descendant.inserted();
-            if (inclusive_descendant.is_connected()) {
-                // FIXME: If inclusiveDescendant is custom, then enqueue a custom element callback reaction with inclusiveDescendant,
-                //        callback name "connectedCallback", and an empty argument list.
 
-                // FIXME: Otherwise, try to upgrade inclusiveDescendant.
-            }
+            // FIXME: 2. If inclusiveDescendant is connected, then:
+            // FIXME:    1. If inclusiveDescendant is custom, then enqueue a custom element callback reaction with inclusiveDescendant,
+            //              callback name "connectedCallback", and an empty argument list.
+            // FIXME:    2. Otherwise, try to upgrade inclusiveDescendant.
 
             return IterationDecision::Continue;
         });
     }
 
-    if (!suppress_observers) {
-        // FIXME: queue a tree mutation record for parent with nodes, « », previousSibling, and child.
-    }
+    // FIXME: 8. If suppress observers flag is unset, then queue a tree mutation record for parent with nodes, « », previousSibling, and child.
 
+    // 9. Run the children changed steps for parent.
     children_changed();
 }
 
 // https://dom.spec.whatwg.org/#concept-node-pre-insert
 ExceptionOr<NonnullRefPtr<Node>> Node::pre_insert(NonnullRefPtr<Node> node, RefPtr<Node> child)
 {
+    // 1. Ensure pre-insertion validity of node into parent before child.
     auto validity_result = ensure_pre_insertion_validity(node, child);
     if (validity_result.is_exception())
         return validity_result.exception();
 
+    // 2. Let referenceChild be child.
     auto reference_child = child;
+
+    // 3. If referenceChild is node, then set referenceChild to node’s next sibling.
     if (reference_child == node)
         reference_child = node->next_sibling();
 
+    // 4. Insert node into parent before referenceChild.
     insert_before(node, reference_child);
+
+    // 5. Return node.
     return node;
 }
 
 // https://dom.spec.whatwg.org/#concept-node-pre-remove
 ExceptionOr<NonnullRefPtr<Node>> Node::pre_remove(NonnullRefPtr<Node> child)
 {
+    // 1. If child’s parent is not parent, then throw a "NotFoundError" DOMException.
     if (child->parent() != this)
         return DOM::NotFoundError::create("Child does not belong to this node");
 
+    // 2. Remove child.
     child->remove();
 
+    // 3. Return child.
     return child;
 }
 
 // https://dom.spec.whatwg.org/#concept-node-append
 ExceptionOr<NonnullRefPtr<Node>> Node::append_child(NonnullRefPtr<Node> node)
 {
+    // To append a node to a parent, pre-insert node into parent before null.
     return pre_insert(node, nullptr);
 }
 
 // https://dom.spec.whatwg.org/#concept-node-remove
-void Node::remove(bool suppress_observers)
+void Node::remove(bool)
 {
+    // 1. Let parent be node’s parent
     auto* parent = TreeNode<Node>::parent();
+
+    // 2. Assert: parent is non-null.
     VERIFY(parent);
 
-    // FIXME: Let index be node’s index. (Currently unused so not included)
+    // FIXME: 3. Let index be node’s index. (Currently unused so not included)
 
-    // FIXME: For each live range whose start node is an inclusive descendant of node, set its start to (parent, index).
-    // FIXME: For each live range whose end node is an inclusive descendant of node, set its end to (parent, index).
-    // FIXME: For each live range whose start node is parent and start offset is greater than index, decrease its start offset by 1.
-    // FIXME: For each live range whose end node is parent and end offset is greater than index, decrease its end offset by 1.
+    // FIXME: 4. For each live range whose start node is an inclusive descendant of node, set its start to (parent, index).
+    // FIXME: 5. For each live range whose end node is an inclusive descendant of node, set its end to (parent, index).
+    // FIXME: 6. For each live range whose start node is parent and start offset is greater than index, decrease its start offset by 1.
+    // FIXME: 7. For each live range whose end node is parent and end offset is greater than index, decrease its end offset by 1.
 
-    // FIXME: For each NodeIterator object iterator whose root’s node document is node’s node document, run the NodeIterator pre-removing steps given node and iterator.
+    // FIXME: 8. For each NodeIterator object iterator whose root’s node document is node’s node document, run the NodeIterator pre-removing steps given node and iterator.
 
-    // FIXME: Let oldPreviousSibling be node’s previous sibling. (Currently unused so not included)
-    // FIXME: Let oldNextSibling be node’s next sibling. (Currently unused so not included)
+    // FIXME: 9. Let oldPreviousSibling be node’s previous sibling. (Currently unused so not included)
+    // FIXME: 10. Let oldNextSibling be node’s next sibling. (Currently unused so not included)
 
+    // 11. Remove node from its parent’s children.
     parent->remove_child(*this);
 
-    // FIXME: If node is assigned, then run assign slottables for node’s assigned slot.
+    // FIXME: 12. If node is assigned, then run assign slottables for node’s assigned slot.
 
-    // FIXME: If parent’s root is a shadow root, and parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
+    // FIXME: 13. If parent’s root is a shadow root, and parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
 
-    // FIXME: If node has an inclusive descendant that is a slot, then:
-    //          Run assign slottables for a tree with parent’s root.
-    //          Run assign slottables for a tree with node.
+    // FIXME: 14. If node has an inclusive descendant that is a slot, then:
+    //              Run assign slottables for a tree with parent’s root.
+    //              Run assign slottables for a tree with node.
 
+    // 15. Run the removing steps with node and parent.
     removed_from(parent);
 
-    // FIXME: Let isParentConnected be parent’s connected. (Currently unused so not included)
+    // FIXME: 16. Let isParentConnected be parent’s connected. (Currently unused so not included)
 
-    // FIXME: If node is custom and isParentConnected is true, then enqueue a custom element callback reaction with node,
-    //        callback name "disconnectedCallback", and an empty argument list.
+    // FIXME: 17. If node is custom and isParentConnected is true, then enqueue a custom element callback reaction with node,
+    //            callback name "disconnectedCallback", and an empty argument list.
 
+    // For each shadow-including descendant descendant of node, in shadow-including tree order, then:
     // FIXME: This should be shadow-including.
     for_each_in_subtree([&](Node& descendant) {
+        // 1. Run the removing steps with descendant.
         descendant.removed_from(nullptr);
 
-        // FIXME: If descendant is custom and isParentConnected is true, then enqueue a custom element callback reaction with descendant,
-        //        callback name "disconnectedCallback", and an empty argument list.
+        // FIXME: 2. If descendant is custom and isParentConnected is true, then enqueue a custom element callback reaction with descendant,
+        //           callback name "disconnectedCallback", and an empty argument list.
 
         return IterationDecision::Continue;
     });
 
-    if (!suppress_observers) {
-        // FIXME: queue a tree mutation record for parent with « », « node », oldPreviousSibling, and oldNextSibling.
-    }
+    // FIXME: 19. For each inclusive ancestor inclusiveAncestor of parent, and then for each registered of inclusiveAncestor’s registered observer list,
+    //            if registered’s options["subtree"] is true, then append a new transient registered observer whose observer is registered’s observer,
+    //            options is registered’s options, and source is registered to node’s registered observer list.
 
+    // FIXME: 20. If suppress observers flag is unset, then queue a tree mutation record for parent with « », « node », oldPreviousSibling, and oldNextSibling.
+
+    // 21. Run the children changed steps for parent.
     parent->children_changed();
 }
 
@@ -395,57 +443,80 @@ void Node::remove(bool suppress_observers)
 ExceptionOr<NonnullRefPtr<Node>> Node::replace_child(NonnullRefPtr<Node> node, NonnullRefPtr<Node> child)
 {
     // NOTE: This differs slightly from ensure_pre_insertion_validity.
+
+    // 1. If parent is not a Document, DocumentFragment, or Element node, then throw a "HierarchyRequestError" DOMException.
     if (!is<Document>(this) && !is<DocumentFragment>(this) && !is<Element>(this))
         return DOM::HierarchyRequestError::create("Can only insert into a document, document fragment or element");
 
+    // 2. If node is a host-including inclusive ancestor of parent, then throw a "HierarchyRequestError" DOMException.
     if (node->is_host_including_inclusive_ancestor_of(*this))
         return DOM::HierarchyRequestError::create("New node is an ancestor of this node");
 
+    // 3. If child’s parent is not parent, then throw a "NotFoundError" DOMException.
     if (child->parent() != this)
         return DOM::NotFoundError::create("This node is not the parent of the given child");
 
     // FIXME: All the following "Invalid node type for insertion" messages could be more descriptive.
 
-    if (!is<DocumentFragment>(*node) && !is<DocumentType>(*node) && !is<Element>(*node) && !is<Text>(*node) && !is<Comment>(*node) && !is<ProcessingInstruction>(*node))
+    // 4. If node is not a DocumentFragment, DocumentType, Element, or CharacterData node, then throw a "HierarchyRequestError" DOMException.
+    if (!is<DocumentFragment>(*node) && !is<DocumentType>(*node) && !is<Element>(*node) && !is<CharacterData>(*node))
         return DOM::HierarchyRequestError::create("Invalid node type for insertion");
 
+    // 5. If either node is a Text node and parent is a document, or node is a doctype and parent is not a document, then throw a "HierarchyRequestError" DOMException.
     if ((is<Text>(*node) && is<Document>(this)) || (is<DocumentType>(*node) && !is<Document>(this)))
         return DOM::HierarchyRequestError::create("Invalid node type for insertion");
 
+    // 6. If parent is a document, and any of the statements below, switched on the interface node implements, are true, then throw a "HierarchyRequestError" DOMException.
     if (is<Document>(this)) {
         if (is<DocumentFragment>(*node)) {
+            // -> DocumentFragment
             auto node_element_child_count = verify_cast<DocumentFragment>(*node).child_element_count();
+
+            // If node has more than one element child or has a Text node child.
+            // Otherwise, if node has one element child and either parent has an element child that is not child or a doctype is following child.
             if ((node_element_child_count > 1 || node->has_child_of_type<Text>())
                 || (node_element_child_count == 1 && (first_child_of_type<Element>() != child || child->has_following_node_of_type_in_tree_order<DocumentType>()))) {
                 return DOM::HierarchyRequestError::create("Invalid node type for insertion");
             }
         } else if (is<Element>(*node)) {
+            // -> Element
+            //    parent has an element child that is not child or a doctype is following child.
             if (first_child_of_type<Element>() != child || child->has_following_node_of_type_in_tree_order<DocumentType>())
                 return DOM::HierarchyRequestError::create("Invalid node type for insertion");
         } else if (is<DocumentType>(*node)) {
+            // -> DocumentType
+            //    parent has a doctype child that is not child, or an element is preceding child.
             if (first_child_of_type<DocumentType>() != node || child->has_preceding_node_of_type_in_tree_order<Element>())
                 return DOM::HierarchyRequestError::create("Invalid node type for insertion");
         }
     }
 
+    // 7. Let referenceChild be child’s next sibling.
     auto reference_child = child->next_sibling();
+
+    // 8. If referenceChild is node, then set referenceChild to node’s next sibling.
     if (reference_child == node)
         reference_child = node->next_sibling();
 
-    // FIXME: Let previousSibling be child’s previous sibling. (Currently unused so not included)
-    // FIXME: Let removedNodes be the empty set. (Currently unused so not included)
+    // FIXME: 9. Let previousSibling be child’s previous sibling. (Currently unused so not included)
+    // FIXME: 10. Let removedNodes be the empty set. (Currently unused so not included)
 
+    // 11. If child’s parent is non-null, then:
     if (child->parent()) {
-        // FIXME: Set removedNodes to « child ».
+        // FIXME: 1. Set removedNodes to « child ».
+
+        // 2. Remove child with the suppress observers flag set.
         child->remove(true);
     }
 
-    // FIXME: Let nodes be node’s children if node is a DocumentFragment node; otherwise « node ». (Currently unused so not included)
+    // FIXME: 12. Let nodes be node’s children if node is a DocumentFragment node; otherwise « node ». (Currently unused so not included)
 
+    // 13. Insert node into parent before referenceChild with the suppress observers flag set.
     insert_before(node, reference_child, true);
 
-    // FIXME: Queue a tree mutation record for parent with nodes, removedNodes, previousSibling, and referenceChild.
+    // FIXME: 14. Queue a tree mutation record for parent with nodes, removedNodes, previousSibling, and referenceChild.
 
+    // 15. Return child.
     return child;
 }
 
@@ -784,27 +855,32 @@ bool Node::is_shadow_including_inclusive_ancestor_of(Node const& other) const
 // https://dom.spec.whatwg.org/#concept-node-replace-all
 void Node::replace_all(RefPtr<Node> node)
 {
-    // FIXME: Let removedNodes be parent’s children. (Current unused so not included)
-    // FIXME: Let addedNodes be the empty set. (Currently unused so not included)
-    // FIXME: If node is a DocumentFragment node, then set addedNodes to node’s children.
-    // FIXME: Otherwise, if node is non-null, set addedNodes to « node ».
+    // FIXME: 1. Let removedNodes be parent’s children. (Current unused so not included)
+    // FIXME: 2. Let addedNodes be the empty set. (Currently unused so not included)
+    // FIXME: 3. If node is a DocumentFragment node, then set addedNodes to node’s children.
+    // FIXME: 4. Otherwise, if node is non-null, set addedNodes to « node ».
 
+    // 5. Remove all parent’s children, in tree order, with the suppress observers flag set.
     remove_all_children(true);
 
+    // 6. If node is non-null, then insert node into parent before null with the suppress observers flag set.
     if (node)
         insert_before(*node, nullptr, true);
 
-    // FIXME: If either addedNodes or removedNodes is not empty, then queue a tree mutation record for parent with addedNodes, removedNodes, null, and null.
+    // FIXME: 7. If either addedNodes or removedNodes is not empty, then queue a tree mutation record for parent with addedNodes, removedNodes, null, and null.
 }
 
 // https://dom.spec.whatwg.org/#string-replace-all
 void Node::string_replace_all(String const& string)
 {
+    // 1. Let node be null.
     RefPtr<Node> node;
 
+    // 2. If string is not the empty string, then set node to a new Text node whose data is string and node document is parent’s node document.
     if (!string.is_empty())
         node = make_ref_counted<Text>(document(), string);
 
+    // 3. Replace all with node within parent.
     replace_all(node);
 }
 
