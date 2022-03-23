@@ -12,8 +12,8 @@
 
 namespace Web::DOM {
 
-Text::Text(Document& document, String const& data)
-    : CharacterData(document, NodeType::TEXT_NODE, data)
+Text::Text(Document& document, NodeType type, String const& data)
+    : CharacterData(document, type, data)
 {
 }
 
