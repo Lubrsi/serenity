@@ -770,6 +770,11 @@ Completion ECMAScriptFunctionObject::ordinary_call_evaluate_body()
 {
     auto& vm = this->vm();
     auto* bytecode_interpreter = Bytecode::Interpreter::current();
+    OwnPtr<Bytecode::Interpreter> temp_bc_interpreter;
+    if (!bytecode_interpreter) {
+        temp_bc_interpreter = make<Bytecode::Interpreter>(global_object(), *realm());
+        bytecode_interpreter = temp_bc_interpreter.ptr();
+    }
 
     if (m_kind == FunctionKind::AsyncGenerator)
         return vm.throw_completion<InternalError>(global_object(), ErrorType::NotImplemented, "Async Generator function execution");
@@ -783,14 +788,18 @@ Completion ECMAScriptFunctionObject::ordinary_call_evaluate_body()
 
                 auto bytecode_executable = executable_result.release_value();
                 bytecode_executable->name = name;
+//                dbgln("before opts:");
+//                bytecode_executable->dump();
+
                 auto& passes = Bytecode::Interpreter::optimization_pipeline();
                 passes.perform(*bytecode_executable);
                 if constexpr (JS_BYTECODE_DEBUG) {
                     dbgln("Optimisation passes took {}us", passes.elapsed());
                     dbgln("Compiled Bytecode::Block for function '{}':", m_name);
                 }
-                if (Bytecode::g_dump_bytecode)
-                    bytecode_executable->dump();
+//                if (Bytecode::g_dump_bytecode)
+//                dbgln("after opts:");
+//                    bytecode_executable->dump();
 
                 return bytecode_executable;
             };

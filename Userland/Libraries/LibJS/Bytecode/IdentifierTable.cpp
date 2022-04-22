@@ -25,9 +25,9 @@ FlyString const& IdentifierTable::get(IdentifierTableIndex index) const
 
 void IdentifierTable::dump() const
 {
-    outln("Identifier Table:");
+    dbgln("Identifier Table:");
     for (size_t i = 0; i < m_identifiers.size(); i++)
-        outln("{}: {}", i, m_identifiers[i]);
+        dbgln("{}: {}", i, m_identifiers[i]);
 }
 
 }

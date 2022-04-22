@@ -749,40 +749,28 @@ public:
     void replace_references_impl(BasicBlock const&, BasicBlock const&) { }
 };
 
-class FinishUnwind final : public Instruction {
+class ClearPendingException final : public Instruction {
 public:
-    FinishUnwind(Label next)
-        : Instruction(Type::FinishUnwind)
-        , m_next_target(move(next))
+    explicit ClearPendingException()
+        : Instruction(Type::ClearPendingException)
     {
     }
 
     ThrowCompletionOr<void> execute_impl(Bytecode::Interpreter&) const;
     String to_string_impl(Bytecode::Executable const&) const;
-    void replace_references_impl(BasicBlock const&, BasicBlock const&);
-
-private:
-    Label m_next_target;
+    void replace_references_impl(BasicBlock const&, BasicBlock const&) { };
 };
 
-class ContinuePendingUnwind final : public Instruction {
+class GetPendingException final : public Instruction {
 public:
-    constexpr static bool IsTerminator = true;
-
-    explicit ContinuePendingUnwind(Label resume_target)
-        : Instruction(Type::ContinuePendingUnwind)
-        , m_resume_target(resume_target)
+    explicit GetPendingException()
+        : Instruction(Type::GetPendingException)
     {
     }
 
     ThrowCompletionOr<void> execute_impl(Bytecode::Interpreter&) const;
     String to_string_impl(Bytecode::Executable const&) const;
-    void replace_references_impl(BasicBlock const&, BasicBlock const&);
-
-    auto& resume_target() const { return m_resume_target; }
-
-private:
-    Label m_resume_target;
+    void replace_references_impl(BasicBlock const&, BasicBlock const&) { };
 };
 
 class Yield final : public Instruction {
@@ -910,6 +898,22 @@ public:
     void replace_references_impl(BasicBlock const&, BasicBlock const&) { }
 };
 
+class TypeofVariable final : public Instruction {
+public:
+    explicit TypeofVariable(IdentifierTableIndex identifier)
+        : Instruction(Type::TypeofVariable)
+        , m_identifier(identifier)
+    {
+    }
+
+    ThrowCompletionOr<void> execute_impl(Bytecode::Interpreter&) const;
+    String to_string_impl(Bytecode::Executable const&) const;
+    void replace_references_impl(BasicBlock const&, BasicBlock const&) { }
+
+private:
+    IdentifierTableIndex m_identifier;
+};
+
 }
 
 namespace JS::Bytecode {
@@ -960,6 +964,7 @@ ALWAYS_INLINE size_t Instruction::length() const
     switch (type()) {
         ENUMERATE_BYTECODE_OPS(__BYTECODE_OP)
     default:
+        dbgln("length: unknown type: {} (0x{:x})", to_underlying(type()), to_underlying(type()));
         VERIFY_NOT_REACHED();
     }
 #undef __BYTECODE_OP

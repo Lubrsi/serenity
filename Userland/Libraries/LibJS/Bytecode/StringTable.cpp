@@ -25,9 +25,9 @@ String const& StringTable::get(StringTableIndex index) const
 
 void StringTable::dump() const
 {
-    outln("String Table:");
+    dbgln("String Table:");
     for (size_t i = 0; i < m_strings.size(); i++)
-        outln("{}: {}", i, m_strings[i]);
+        dbgln("{}: {}", i, m_strings[i]);
 }
 
 }

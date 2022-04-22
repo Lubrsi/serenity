@@ -36,6 +36,15 @@ public:
     Realm& realm() { return m_realm; }
     VM& vm() { return m_vm; }
 
+    void enter_script_or_module(ScriptOrModule script_or_module)
+    {
+        m_script_or_module = script_or_module;
+    }
+    void leave_script_or_module()
+    {
+        m_script_or_module = {};
+    }
+
     ThrowCompletionOr<Value> run(Bytecode::Executable const& executable, Bytecode::BasicBlock const* entry_point = nullptr)
     {
         auto value_and_frame = run_and_return_frame(executable, entry_point);
@@ -62,7 +71,8 @@ public:
 
     void enter_unwind_context(Optional<Label> handler_target, Optional<Label> finalizer_target);
     void leave_unwind_context();
-    ThrowCompletionOr<void> continue_pending_unwind(Label const& resume_label);
+    ThrowCompletionOr<void> get_pending_exception_for_finalizer();
+    void clear_pending_exception_for_finalizer();
 
     Executable const& current_executable() { return *m_current_executable; }
 
@@ -98,7 +108,9 @@ private:
     Executable const* m_current_executable { nullptr };
     Vector<UnwindInfo> m_unwind_contexts;
     Handle<Value> m_saved_exception;
+    Handle<Value> m_pending_exception_for_finalizer;
     OwnPtr<JS::Interpreter> m_ast_interpreter;
+    ScriptOrModule m_script_or_module {};
 };
 
 extern bool g_dump_bytecode;

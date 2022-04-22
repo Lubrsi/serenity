@@ -697,6 +697,7 @@ NonnullRefPtr<Node> Node::clone_node(Document* document, bool clone_children)
         // Attr
         // Set copy’s namespace, namespace prefix, local name, and value to those of node.
         dbgln("clone_node() not implemented for Attribute");
+        TODO();
     } else if (is<Text>(this)) {
         // Text
         auto text = verify_cast<Text>(this);
@@ -718,6 +719,11 @@ NonnullRefPtr<Node> Node::clone_node(Document* document, bool clone_children)
         // Set copy’s target and data to those of node.
         auto processing_instruction_copy = adopt_ref(*new ProcessingInstruction(*document, processing_instruction->data(), processing_instruction->target()));
         copy = move(processing_instruction_copy);
+    } else if (is<DocumentFragment>(this)) {
+        copy = adopt_ref(*new DocumentFragment(*document));
+    } else {
+        dbgln("clone_node(): Unknown node type: {}", to_underlying(m_type));
+        TODO();
     }
     // Otherwise, Do nothing.
 

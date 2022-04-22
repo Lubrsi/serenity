@@ -56,6 +56,7 @@ Interpreter::ValueAndFrame Interpreter::run_and_return_frame(Executable const& e
         execution_context.function_name = global_execution_context_name;
         execution_context.lexical_environment = &m_realm.global_environment();
         execution_context.variable_environment = &m_realm.global_environment();
+        execution_context.script_or_module = m_script_or_module;
         execution_context.realm = &m_realm;
         // FIXME: How do we know if we're in strict mode? Maybe the Bytecode::Block should know this?
         // execution_context.is_strict_mode = ???;
@@ -78,6 +79,7 @@ Interpreter::ValueAndFrame Interpreter::run_and_return_frame(Executable const& e
         bool will_return = false;
         while (!pc.at_end()) {
             auto& instruction = *pc;
+//            dbgln("instruction: {}", instruction.to_string(executable));
             auto ran_or_error = instruction.execute(*this);
             if (ran_or_error.is_error()) {
                 auto exception_value = *ran_or_error.throw_completion().value();
@@ -85,16 +87,12 @@ Interpreter::ValueAndFrame Interpreter::run_and_return_frame(Executable const& e
                 if (m_unwind_contexts.is_empty())
                     break;
                 auto& unwind_context = m_unwind_contexts.last();
-                if (unwind_context.executable != m_current_executable)
+                if (unwind_context.executable != m_current_executable) {
                     break;
+                }
                 if (unwind_context.handler) {
                     block = unwind_context.handler;
                     unwind_context.handler = nullptr;
-
-                    // If there's no finalizer, there's nowhere for the handler block to unwind to, so the unwind context is no longer needed.
-                    if (!unwind_context.finalizer)
-                        m_unwind_contexts.take_last();
-
                     accumulator() = exception_value;
                     m_saved_exception = {};
                     will_jump = true;
@@ -102,7 +100,7 @@ Interpreter::ValueAndFrame Interpreter::run_and_return_frame(Executable const& e
                 }
                 if (unwind_context.finalizer) {
                     block = unwind_context.finalizer;
-                    m_unwind_contexts.take_last();
+                    m_pending_exception_for_finalizer = move(m_saved_exception);
                     will_jump = true;
                     break;
                 }
@@ -188,16 +186,20 @@ void Interpreter::leave_unwind_context()
     m_unwind_contexts.take_last();
 }
 
-ThrowCompletionOr<void> Interpreter::continue_pending_unwind(Label const& resume_label)
+ThrowCompletionOr<void> Interpreter::get_pending_exception_for_finalizer()
 {
-    if (!m_saved_exception.is_null()) {
-        auto result = throw_completion(m_saved_exception.value());
-        m_saved_exception = {};
+    if (!m_pending_exception_for_finalizer.is_null()) {
+        auto result = throw_completion(m_pending_exception_for_finalizer.value());
+        m_pending_exception_for_finalizer = {};
         return result;
     }
 
-    jump(resume_label);
     return {};
+}
+
+void Interpreter::clear_pending_exception_for_finalizer()
+{
+    m_pending_exception_for_finalizer = {};
 }
 
 VM::InterpreterExecutionScope Interpreter::ast_interpreter_scope()
