@@ -17,8 +17,8 @@
     O(BitwiseOr)                     \
     O(BitwiseXor)                    \
     O(Call)                          \
+    O(ClearPendingException)         \
     O(ConcatString)                  \
-    O(ContinuePendingUnwind)         \
     O(CopyObjectExcludingProperties) \
     O(CreateEnvironment)             \
     O(CreateVariable)                \
@@ -30,12 +30,12 @@
     O(EnterUnwindContext)            \
     O(EnterObjectEnvironment)        \
     O(Exp)                           \
-    O(FinishUnwind)                  \
     O(GetById)                       \
     O(GetByValue)                    \
     O(GetIterator)                   \
     O(GetNewTarget)                  \
     O(GetObjectPropertyIterator)     \
+    O(GetPendingException)           \
     O(GetVariable)                   \
     O(GreaterThan)                   \
     O(GreaterThanEquals)             \
@@ -82,6 +82,7 @@
     O(Sub)                           \
     O(Throw)                         \
     O(Typeof)                        \
+    O(TypeofVariable)                \
     O(UnaryMinus)                    \
     O(UnaryPlus)                     \
     O(UnsignedRightShift)            \

@@ -14,11 +14,11 @@ void Executable::dump() const
     for (auto& block : basic_blocks)
         block.dump(*this);
     if (!string_table->is_empty()) {
-        outln();
+        dbgln();
         string_table->dump();
     }
     if (!identifier_table->is_empty()) {
-        outln();
+        dbgln();
         identifier_table->dump();
     }
 }

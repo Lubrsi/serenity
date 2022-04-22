@@ -548,19 +548,6 @@ void EnterUnwindContext::replace_references_impl(BasicBlock const& from, BasicBl
         m_finalizer_target = Label { to };
 }
 
-ThrowCompletionOr<void> FinishUnwind::execute_impl(Bytecode::Interpreter& interpreter) const
-{
-    interpreter.leave_unwind_context();
-    interpreter.jump(m_next_target);
-    return {};
-}
-
-void FinishUnwind::replace_references_impl(BasicBlock const& from, BasicBlock const& to)
-{
-    if (&m_next_target.block() == &from)
-        m_next_target = Label { to };
-}
-
 ThrowCompletionOr<void> LeaveEnvironment::execute_impl(Bytecode::Interpreter& interpreter) const
 {
     if (m_mode == EnvironmentMode::Lexical)
@@ -576,15 +563,15 @@ ThrowCompletionOr<void> LeaveUnwindContext::execute_impl(Bytecode::Interpreter& 
     return {};
 }
 
-ThrowCompletionOr<void> ContinuePendingUnwind::execute_impl(Bytecode::Interpreter& interpreter) const
+ThrowCompletionOr<void> GetPendingException::execute_impl(Bytecode::Interpreter& interpreter) const
 {
-    return interpreter.continue_pending_unwind(m_resume_target);
+    return interpreter.get_pending_exception_for_finalizer();
 }
 
-void ContinuePendingUnwind::replace_references_impl(BasicBlock const& from, BasicBlock const& to)
+ThrowCompletionOr<void> ClearPendingException::execute_impl(Bytecode::Interpreter& interpreter) const
 {
-    if (&m_resume_target.block() == &from)
-        m_resume_target = Label { to };
+    interpreter.clear_pending_exception_for_finalizer();
+    return {};
 }
 
 ThrowCompletionOr<void> PushDeclarativeEnvironment::execute_impl(Bytecode::Interpreter& interpreter) const
@@ -669,7 +656,7 @@ ThrowCompletionOr<void> GetObjectPropertyIterator::execute_impl(Bytecode::Interp
     auto* object = TRY(interpreter.accumulator().to_object(interpreter.global_object()));
     // Note: While the spec doesn't explicitly require these to be ordered, it says that the values should be retrieved via OwnPropertyKeys,
     //       so we just keep the order consistent anyway.
-    OrderedHashTable<PropertyKey> properties;
+    HashTable<PropertyKey> properties;
     HashTable<Object*> seen_objects;
     // Collect all keys immediately (invariant no. 5)
     for (auto* object_to_check = object; object_to_check && !seen_objects.contains(object_to_check); object_to_check = TRY(object_to_check->internal_get_prototype_of())) {
@@ -761,6 +748,29 @@ ThrowCompletionOr<void> NewClass::execute_impl(Bytecode::Interpreter& interprete
     auto& ast_interpreter = scope.interpreter();
     auto class_object = TRY(m_class_expression.class_definition_evaluation(ast_interpreter, interpreter.global_object(), name, name.is_null() ? "" : name));
     interpreter.accumulator() = class_object;
+    return {};
+}
+
+// 13.5.3.1 Runtime Semantics: Evaluation, https://tc39.es/ecma262/#sec-typeof-operator-runtime-semantics-evaluation
+ThrowCompletionOr<void> TypeofVariable::execute_impl(Bytecode::Interpreter& interpreter) const
+{
+    // 1. Let val be the result of evaluating UnaryExpression.
+    auto const& string = interpreter.current_executable().get_identifier(m_identifier);
+    auto reference = TRY(interpreter.vm().resolve_binding(string));
+
+    // 2. If val is a Reference Record, then
+    //    a. If IsUnresolvableReference(val) is true, return "undefined".
+    if (reference.is_unresolvable()) {
+        interpreter.accumulator() = js_string(interpreter.vm(), "undefined"sv);
+        return {};
+    }
+
+    // 3. Set val to ? GetValue(val).
+    auto value = TRY(reference.get_value(interpreter.global_object()));
+
+    // 4. NOTE: This step is replaced in section B.3.6.3.
+    // 5. Return a String according to Table 41.
+    interpreter.accumulator() = js_string(interpreter.vm(), value.typeof());
     return {};
 }
 
@@ -975,11 +985,6 @@ String EnterUnwindContext::to_string_impl(Bytecode::Executable const&) const
     return String::formatted("EnterUnwindContext handler:{} finalizer:{} entry:{}", handler_string, finalizer_string, m_entry_point);
 }
 
-String FinishUnwind::to_string_impl(Bytecode::Executable const&) const
-{
-    return String::formatted("FinishUnwind next:{}", m_next_target);
-}
-
 String LeaveEnvironment::to_string_impl(Bytecode::Executable const&) const
 {
     auto mode_string = m_mode == EnvironmentMode::Lexical
@@ -993,9 +998,14 @@ String LeaveUnwindContext::to_string_impl(Bytecode::Executable const&) const
     return "LeaveUnwindContext";
 }
 
-String ContinuePendingUnwind::to_string_impl(Bytecode::Executable const&) const
+String ClearPendingException::to_string_impl(Bytecode::Executable const&) const
 {
-    return String::formatted("ContinuePendingUnwind resume:{}", m_resume_target);
+    return "ClearPendingException";
+}
+
+String GetPendingException::to_string_impl(Bytecode::Executable const&) const
+{
+    return "GetPendingException";
 }
 
 String PushDeclarativeEnvironment::to_string_impl(Bytecode::Executable const& executable) const
@@ -1074,6 +1084,11 @@ String ResolveThisBinding::to_string_impl(Bytecode::Executable const&) const
 String GetNewTarget::to_string_impl(Bytecode::Executable const&) const
 {
     return "GetNewTarget"sv;
+}
+
+String TypeofVariable::to_string_impl(Bytecode::Executable const& executable) const
+{
+    return String::formatted("TypeofVariable {} ({})", m_identifier, executable.identifier_table->get(m_identifier));
 }
 
 }

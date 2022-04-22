@@ -25,6 +25,13 @@ BasicBlock::BasicBlock(String name, size_t size)
     m_buffer_capacity = size;
     m_buffer = (u8*)mmap(nullptr, m_buffer_capacity, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
     VERIFY(m_buffer != MAP_FAILED);
+#ifdef __serenity__
+    auto mmap_name = String::formatted("LibJS: Bytecode BasicBlock({}): {}", size, m_name);
+    if (set_mmap_name(m_buffer, size, mmap_name.characters()) < 0) {
+        perror("set_mmap_name");
+        VERIFY_NOT_REACHED();
+    }
+#endif
 }
 
 BasicBlock::~BasicBlock()
@@ -51,9 +58,9 @@ void BasicBlock::dump(Bytecode::Executable const& executable) const
 {
     Bytecode::InstructionStreamIterator it(instruction_stream());
     if (!m_name.is_empty())
-        warnln("{}:", m_name);
+        dbgln("{}:", m_name);
     while (!it.at_end()) {
-        warnln("[{:4x}] {}", it.offset(), (*it).to_string(executable));
+        dbgln("[{:4x}] {}", it.offset(), (*it).to_string(executable));
         ++it;
     }
 }

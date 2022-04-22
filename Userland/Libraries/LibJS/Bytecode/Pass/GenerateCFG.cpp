@@ -85,12 +85,6 @@ void GenerateCFG::perform(PassPipelineExecutable& executable)
             continue;
         }
 
-        if (instruction.type() == Instruction::Type::ContinuePendingUnwind) {
-            auto& resume_target = static_cast<Op::ContinuePendingUnwind const&>(instruction).resume_target();
-            enter_label(&resume_target, current_block);
-            continue;
-        }
-
         // Otherwise, pop the current block off, it doesn't jump anywhere.
         iterators.take_last();
         entered_blocks.take_last();

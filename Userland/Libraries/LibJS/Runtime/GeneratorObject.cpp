@@ -52,8 +52,12 @@ void GeneratorObject::visit_edges(Cell::Visitor& visitor)
 
 ThrowCompletionOr<Value> GeneratorObject::next_impl(VM& vm, GlobalObject& global_object, Optional<Value> next_argument, Optional<Value> value_to_throw)
 {
-    auto bytecode_interpreter = Bytecode::Interpreter::current();
-    VERIFY(bytecode_interpreter);
+    auto* bytecode_interpreter = Bytecode::Interpreter::current();
+    OwnPtr<Bytecode::Interpreter> temp_bc_interpreter;
+    if (!bytecode_interpreter) {
+        temp_bc_interpreter = make<Bytecode::Interpreter>(global_object, *global_object.associated_realm());
+        bytecode_interpreter = temp_bc_interpreter.ptr();
+    }
 
     auto generated_value = [](Value value) -> ThrowCompletionOr<Value> {
         if (value.is_object())
