@@ -4,7 +4,7 @@ version=7.83.0
 useconfigure=true
 files="https://curl.se/download/curl-${version}.tar.bz2 curl-${version}.tar.bz2 247c7ec7521c4258e65634e529270d214fe32969971cccb72845e7aa46831f96"
 auth_type=sha256
-depends=("ca-certificates" "openssl" "zlib" "zstd" "c-ares")
+depends=("ca-certificates" "openssl" "zlib" "zstd" "c-ares" "libssh2")
 configopts=("-DCMAKE_TOOLCHAIN_FILE=${SERENITY_BUILD_DIR}/CMakeToolchain.txt")
 
 configure() {
