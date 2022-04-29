@@ -1,0 +1,11 @@
+--- c-ares-1.18.1.orig/include/ares.h	2022-04-29 18:11:55.091420877 +0100
++++ c-ares-1.18.1/include/ares.h	2022-04-29 19:27:00.140017294 +0100
+@@ -39,7 +39,7 @@
+ #if defined(_AIX) || defined(__NOVELL_LIBC__) || defined(__NetBSD__) || \
+     defined(__minix) || defined(__SYMBIAN32__) || defined(__INTEGRITY) || \
+     defined(ANDROID) || defined(__ANDROID__) || defined(__OpenBSD__) || \
+-    defined(__QNXNTO__) || defined(__MVS__) || defined(__HAIKU__)
++    defined(__QNXNTO__) || defined(__MVS__) || defined(__HAIKU__) || defined(__serenity__)
+ #include <sys/select.h>
+ #endif
+ #if (defined(NETWARE) && !defined(__NOVELL_LIBC__))
