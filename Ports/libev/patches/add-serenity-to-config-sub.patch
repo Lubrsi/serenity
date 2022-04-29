@@ -1,0 +1,10 @@
+--- libev-4.33.orig/config.sub	2022-04-29 22:22:31.092905841 +0100
++++ libev-4.33/config.sub	2022-04-29 22:23:08.168602355 +0100
+@@ -1364,6 +1364,7 @@
+ 	# Each alternative MUST end in a * to match a version number.
+ 	# -sysv* is not here because it comes later, after sysvr4.
+ 	-gnu* | -bsd* | -mach* | -minix* | -genix* | -ultrix* | -irix* \
++	      | -serenity* \
+ 	      | -*vms* | -sco* | -esix* | -isc* | -aix* | -cnk* | -sunos | -sunos[34]*\
+ 	      | -hpux* | -unos* | -osf* | -luna* | -dgux* | -auroraux* | -solaris* \
+ 	      | -sym* | -kopensolaris* | -plan9* \
