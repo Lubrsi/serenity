@@ -190,7 +190,17 @@ bool EventHandler::handle_mouseup(Gfx::IntPoint const& position, unsigned button
                     return nested_browsing_context->event_handler().handle_mouseup(position.translated(compute_mouse_event_offset({}, paintable->layout_node())), button, modifiers);
                 return false;
             }
-            auto offset = compute_mouse_event_offset(position, paintable->layout_node());
+
+            // Search for the first parent of the hit target that's an element.
+            // "The click event type MUST be dispatched on the topmost event target indicated by the pointer." (https://www.w3.org/TR/uievents/#event-type-click)
+            // "The topmost event target MUST be the element highest in the rendering order which is capable of being an event target." (https://www.w3.org/TR/uievents/#topmost-event-target)
+            auto* layout_node = &paintable->layout_node();
+            while (!node->is_element() && layout_node->parent()) {
+                layout_node = layout_node->parent();
+                node = layout_node->dom_node();
+            }
+
+            auto offset = compute_mouse_event_offset(position, *layout_node);
             node->dispatch_event(UIEvents::MouseEvent::create_from_platform_event(UIEvents::EventNames::mouseup, offset.x(), offset.y(), position.x(), position.y(), button));
             handled_event = true;
 
@@ -306,8 +316,17 @@ bool EventHandler::handle_mousedown(Gfx::IntPoint const& position, unsigned butt
         if (auto* page = m_browsing_context.page())
             page->set_focused_browsing_context({}, m_browsing_context);
 
+        // Search for the first parent of the hit target that's an element.
+        // "The click event type MUST be dispatched on the topmost event target indicated by the pointer." (https://www.w3.org/TR/uievents/#event-type-click)
+        // "The topmost event target MUST be the element highest in the rendering order which is capable of being an event target." (https://www.w3.org/TR/uievents/#topmost-event-target)
+        auto* layout_node = &paintable->layout_node();
+        while (!node->is_element() && layout_node->parent()) {
+            layout_node = layout_node->parent();
+            node = layout_node->dom_node();
+        }
+
         m_mousedown_target = node;
-        auto offset = compute_mouse_event_offset(position, paintable->layout_node());
+        auto offset = compute_mouse_event_offset(position, *layout_node);
         node->dispatch_event(UIEvents::MouseEvent::create_from_platform_event(UIEvents::EventNames::mousedown, offset.x(), offset.y(), position.x(), position.y(), button));
     }
 
@@ -415,7 +434,16 @@ bool EventHandler::handle_mousemove(Gfx::IntPoint const& position, unsigned butt
                     hovered_node_cursor = cursor_css_to_gfx(cursor);
             }
 
-            auto offset = compute_mouse_event_offset(position, paintable->layout_node());
+            // Search for the first parent of the hit target that's an element.
+            // "The click event type MUST be dispatched on the topmost event target indicated by the pointer." (https://www.w3.org/TR/uievents/#event-type-click)
+            // "The topmost event target MUST be the element highest in the rendering order which is capable of being an event target." (https://www.w3.org/TR/uievents/#topmost-event-target)
+            auto* layout_node = &paintable->layout_node();
+            while (!node->is_element() && layout_node->parent()) {
+                layout_node = layout_node->parent();
+                node = layout_node->dom_node();
+            }
+
+            auto offset = compute_mouse_event_offset(position, *layout_node);
             node->dispatch_event(UIEvents::MouseEvent::create_from_platform_event(UIEvents::EventNames::mousemove, offset.x(), offset.y(), position.x(), position.y()));
             // NOTE: Dispatching an event may have disturbed the world.
             if (!paint_root() || paint_root() != node->document().paint_box())
