@@ -356,7 +356,7 @@ inline JSFileResult TestRunner::run_file_test(String const& test_path)
     auto test_script = result.release_value();
 
     if (g_run_bytecode) {
-        auto executable = MUST(JS::Bytecode::Generator::generate(test_script->parse_node()));
+        auto executable = MUST(JS::Bytecode::Generator::generate(test_script->parse_node(), test_script->parse_node().is_strict_mode()));
         executable->name = test_path;
         if (JS::Bytecode::g_dump_bytecode)
             executable->dump();
@@ -372,7 +372,7 @@ inline JSFileResult TestRunner::run_file_test(String const& test_path)
     if (file_script.is_error())
         return { test_path, file_script.error() };
     if (g_run_bytecode) {
-        auto executable_result = JS::Bytecode::Generator::generate(file_script.value()->parse_node());
+        auto executable_result = JS::Bytecode::Generator::generate(file_script.value()->parse_node(), file_script.value()->parse_node().is_strict_mode());
         if (!executable_result.is_error()) {
             auto executable = executable_result.release_value();
             executable->name = test_path;
@@ -396,13 +396,15 @@ inline JSFileResult TestRunner::run_file_test(String const& test_path)
     JSFileResult file_result { test_path.substring(m_test_root.length() + 1, test_path.length() - m_test_root.length() - 1) };
 
     // Collect logged messages
-    auto user_output = MUST(interpreter->global_object().get("__UserOutput__"));
-
-    auto& arr = user_output.as_array();
-    for (auto& entry : arr.indexed_properties()) {
-        auto message = MUST(arr.get(entry.index()));
-        file_result.logged_messages.append(message.to_string_without_side_effects());
-    }
+//    auto user_output = MUST(interpreter->global_object().get("__UserOutput__"));
+//    for (auto& property : interpreter->global_object().shape().property_table())
+//        dbgln("property: {}", property.key.is_string() ? String { property.key.as_string() } : property.key.as_symbol()->to_string());
+//
+//    auto& arr = user_output.as_array();
+//    for (auto& entry : arr.indexed_properties()) {
+//        auto message = MUST(arr.get(entry.index()));
+//        file_result.logged_messages.append(message.to_string_without_side_effects());
+//    }
 
     test_json.value().as_object().for_each_member([&](String const& suite_name, JsonValue const& suite_value) {
         Test::Suite suite { test_path, suite_name };

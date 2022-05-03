@@ -958,6 +958,7 @@ bool Object::storage_has(PropertyKey const& property_key) const
 void Object::storage_set(PropertyKey const& property_key, ValueAndAttributes const& value_and_attributes)
 {
     VERIFY(property_key.is_valid());
+//    dbgln("storage_set: {} {}", property_key.is_symbol() ? property_key.as_symbol()->to_string() : property_key.to_string(), value_and_attributes.value.to_string_without_side_effects());
 
     auto [value, attributes] = value_and_attributes;
 

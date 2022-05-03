@@ -409,7 +409,9 @@ ThrowCompletionOr<void> Jump::execute_impl(Bytecode::Interpreter& interpreter) c
 
 ThrowCompletionOr<void> ResolveThisBinding::execute_impl(Bytecode::Interpreter& interpreter) const
 {
-    interpreter.accumulator() = TRY(interpreter.vm().resolve_this_binding(interpreter.global_object()));
+    auto this_value = TRY(interpreter.vm().resolve_this_binding(interpreter.global_object()));
+//    dbgln("ResolveThisBinding resolved to: {}", this_value.to_string_without_side_effects());
+    interpreter.accumulator() = this_value;
     return {};
 }
 
@@ -528,6 +530,8 @@ ThrowCompletionOr<void> Decrement::execute_impl(Bytecode::Interpreter& interpret
 
 ThrowCompletionOr<void> Throw::execute_impl(Bytecode::Interpreter& interpreter) const
 {
+    dbgln("Throwing from Throw expression: {}", interpreter.accumulator().to_string_without_side_effects());
+    interpreter.set_throw_from_op();
     return throw_completion(interpreter.accumulator());
 }
 

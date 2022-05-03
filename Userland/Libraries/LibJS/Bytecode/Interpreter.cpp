@@ -58,8 +58,7 @@ Interpreter::ValueAndFrame Interpreter::run_and_return_frame(Executable const& e
         execution_context.variable_environment = &m_realm.global_environment();
         execution_context.script_or_module = m_script_or_module;
         execution_context.realm = &m_realm;
-        // FIXME: How do we know if we're in strict mode? Maybe the Bytecode::Block should know this?
-        // execution_context.is_strict_mode = ???;
+        execution_context.is_strict_mode = executable.strict_mode;
         vm().push_execution_context(execution_context);
         pushed_execution_context = true;
     }
@@ -82,6 +81,12 @@ Interpreter::ValueAndFrame Interpreter::run_and_return_frame(Executable const& e
 //            dbgln("instruction: {}", instruction.to_string(executable));
             auto ran_or_error = instruction.execute(*this);
             if (ran_or_error.is_error()) {
+                if (!m_throw_from_op) {
+//                    dbgln("Throwing instruction: {}", instruction.to_string(executable));
+//                    executable.dump();
+                }
+
+                m_throw_from_op = false;
                 auto exception_value = *ran_or_error.throw_completion().value();
                 m_saved_exception = make_handle(exception_value);
                 if (m_unwind_contexts.is_empty())
@@ -224,14 +229,16 @@ Bytecode::PassManager& Interpreter::optimization_pipeline(Interpreter::Optimizat
     auto pm = make<PassManager>();
     if (level == OptimizationLevel::Default) {
         pm->add<Passes::GenerateCFG>();
-        pm->add<Passes::UnifySameBlocks>();
-        pm->add<Passes::GenerateCFG>();
+//        pm->add<Passes::UnifySameBlocks>();
+//        pm->add<Passes::GenerateCFG>();
         pm->add<Passes::MergeBlocks>();
         pm->add<Passes::GenerateCFG>();
-        pm->add<Passes::UnifySameBlocks>();
-        pm->add<Passes::GenerateCFG>();
-        pm->add<Passes::MergeBlocks>();
-        pm->add<Passes::GenerateCFG>();
+//        pm->add<Passes::UnifySameBlocks>();
+//        pm->add<Passes::GenerateCFG>();
+//        pm->add<Passes::MergeBlocks>();
+//        pm->add<Passes::GenerateCFG>();
+//        pm->add<Passes::UnifySameBlocks>();
+//        pm->add<Passes::GenerateCFG>();
         pm->add<Passes::PlaceBlocks>();
     } else {
         VERIFY_NOT_REACHED();

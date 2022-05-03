@@ -22,6 +22,7 @@ ErrorOr<Bytes> TLSv12::read(Bytes bytes)
 {
     m_eof = false;
     auto size_to_read = min(bytes.size(), m_context.application_buffer.size());
+    dbgln("size_to_read: {} (lhs: {} rhs: {})", size_to_read, bytes.size(), m_context.application_buffer.size());
     if (size_to_read == 0) {
         m_eof = true;
         return Bytes {};

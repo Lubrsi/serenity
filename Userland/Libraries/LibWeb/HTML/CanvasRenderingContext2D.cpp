@@ -42,23 +42,41 @@ String CanvasRenderingContext2D::fill_style() const
     return m_drawing_state.fill_style.to_string();
 }
 
-void CanvasRenderingContext2D::fill_rect(float x, float y, float width, float height)
+// https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-fillrect
+void CanvasRenderingContext2D::fill_rect(double x, double y, double width, double height)
 {
     auto painter = this->painter();
     if (!painter)
         return;
 
+    // 1. If any of the arguments are infinite or NaN, then return.
+    if (!isfinite(x) || !isfinite(y) || !isfinite(width) || !isfinite(height))
+        return;
+
+    // 2. If either w or h are zero, then return.
+    if (width == 0.0 || height == 0.0)
+        return;
+
+    // 3. Paint the specified rectangular area using this's fill style.
     auto rect = m_drawing_state.transform.map(Gfx::FloatRect(x, y, width, height));
     painter->fill_rect(enclosing_int_rect(rect), m_drawing_state.fill_style);
     did_draw(rect);
 }
 
-void CanvasRenderingContext2D::clear_rect(float x, float y, float width, float height)
+// https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-clearrect
+void CanvasRenderingContext2D::clear_rect(double x, double y, double width, double height)
 {
     auto painter = this->painter();
     if (!painter)
         return;
 
+    // 1. If any of the arguments are infinite or NaN, then return.
+    if (!isfinite(x) || !isfinite(y) || !isfinite(width) || !isfinite(height))
+        return;
+
+    // FIXME: 2. Let pixels be the set of pixels in the specified rectangle that also intersect the current clipping region.
+
+    // 3. Clear the pixels in pixels to a transparent black, erasing any previous image.
     auto rect = m_drawing_state.transform.map(Gfx::FloatRect(x, y, width, height));
     painter->clear_rect(enclosing_int_rect(rect), Color());
     did_draw(rect);
@@ -75,12 +93,19 @@ String CanvasRenderingContext2D::stroke_style() const
     return m_drawing_state.stroke_style.to_string();
 }
 
-void CanvasRenderingContext2D::stroke_rect(float x, float y, float width, float height)
+// https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-strokerect
+void CanvasRenderingContext2D::stroke_rect(double x, double y, double width, double height)
 {
     auto painter = this->painter();
     if (!painter)
         return;
 
+    // 1. If any of the arguments are infinite or NaN, then return.
+    if (!isfinite(x) || !isfinite(y) || !isfinite(width) || !isfinite(height))
+        return;
+
+    // 2. Take the result of tracing the path described below, using the CanvasPathDrawingStyles interface's line styles, and fill it with this's stroke style.
+    // FIXME: This doesn't follow the spec's "tracing the path".
     auto rect = m_drawing_state.transform.map(Gfx::FloatRect(x, y, width, height));
 
     auto top_left = m_drawing_state.transform.map(Gfx::FloatPoint(x, y)).to_type<int>();

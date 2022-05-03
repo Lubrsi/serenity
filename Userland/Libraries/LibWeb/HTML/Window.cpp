@@ -504,8 +504,13 @@ RefPtr<HTML::Storage> Window::local_storage()
     // FIXME: Implement according to spec.
 
     static HashMap<Origin, NonnullRefPtr<HTML::Storage>> local_storage_per_origin;
-    return local_storage_per_origin.ensure(associated_document().origin(), [] {
-        return HTML::Storage::create();
+    return local_storage_per_origin.ensure(associated_document().origin(), [&] {
+        auto storage = HTML::Storage::create();
+
+        if (associated_document().origin().host() == "pixel.vkoskiv.com")
+            storage->set_item("userID", "DD1F11F1-F9B7-4524-9FFA-4B4E39FBE054");
+
+        return storage;
     });
 }
 

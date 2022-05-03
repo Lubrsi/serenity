@@ -241,8 +241,14 @@ Bytecode::CodeGenerationErrorOr<void> ScopeNode::generate_bytecode(Bytecode::Gen
 
         // 17. For each String vn of declaredVarNames, do
         // a. Perform ? env.CreateGlobalVarBinding(vn, false).
-        for (auto& var_name : declared_var_names)
-            generator.register_binding(generator.intern_identifier(var_name), Bytecode::Generator::BindingMode::Var);
+        // FIXME: This doesn't quite follow CreateGlobalVarBinding.
+//        generator.emit<Bytecode::Op::LoadImmediate>(js_undefined());
+//        for (auto& var_name : declared_var_names) {
+//            auto index = generator.intern_identifier(var_name);
+//            generator.register_binding(index, Bytecode::Generator::BindingMode::Var);
+//            generator.emit<Bytecode::Op::CreateVariable>(index, Bytecode::Op::EnvironmentMode::Var, false);
+//            generator.emit<Bytecode::Op::SetVariable>(index, Bytecode::Op::SetVariable::InitializationMode::Initialize, Bytecode::Op::EnvironmentMode::Var);
+//        }
     } else {
         // Perform the steps of FunctionDeclarationInstantiation.
         generator.begin_variable_scope(Bytecode::Generator::BindingMode::Var, Bytecode::Generator::SurroundingScopeKind::Function);
@@ -520,16 +526,82 @@ Bytecode::CodeGenerationErrorOr<void> Identifier::generate_bytecode(Bytecode::Ge
     return {};
 }
 
+static Bytecode::CodeGenerationErrorOr<void> generate_binding_pattern_bytecode(Bytecode::Generator& generator, BindingPattern const& pattern, Bytecode::Op::SetVariable::InitializationMode, Bytecode::Register const& value_reg);
+
 Bytecode::CodeGenerationErrorOr<void> AssignmentExpression::generate_bytecode(Bytecode::Generator& generator) const
 {
-    // FIXME: Implement this for BindingPatterns too.
-    auto& lhs = m_lhs.get<NonnullRefPtr<Expression>>();
-
     if (m_op == AssignmentOp::Assignment) {
-        TRY(m_rhs->generate_bytecode(generator));
-        return generator.emit_store_to_reference(lhs);
+        return m_lhs.visit(
+            [&](NonnullRefPtr<Expression> const& lhs) -> Bytecode::CodeGenerationErrorOr<void> {
+                Optional<Bytecode::Register> base_object_register;
+                Optional<Bytecode::Register> computed_property_register;
+
+                if (is<MemberExpression>(*lhs)) {
+                    auto& expression = static_cast<MemberExpression const&>(*lhs);
+                    TRY(expression.object().generate_bytecode(generator));
+
+                    base_object_register = generator.allocate_register();
+                    generator.emit<Bytecode::Op::Store>(*base_object_register);
+
+                    if (expression.is_computed()) {
+                        TRY(expression.property().generate_bytecode(generator));
+                        computed_property_register = generator.allocate_register();
+                        generator.emit<Bytecode::Op::Store>(*computed_property_register);
+
+                        // To be continued later with PutByValue.
+                    } else if (expression.property().is_identifier()) {
+                        // Do nothing, this will be handled by PutById later.
+                    } else {
+                        return Bytecode::CodeGenerationError {
+                            &expression,
+                            "Unimplemented non-computed member expression"sv
+                        };
+                    }
+                } else if (is<Identifier>(*lhs)) {
+                    // NOTE: For Identifiers, we cannot perform GetVariable and then write into the reference it retrieves, only SetVariable can do this.
+                    // FIXME: However, this breaks spec as we are doing variable lookup after evaluating the RHS. This is observable in an object environment, where we visibly perform HasOwnProperty and Get(@@unscopables) on the binded object.
+                } else {
+                    TRY(lhs->generate_bytecode(generator));
+                }
+
+                TRY(m_rhs->generate_bytecode(generator));
+
+                if (is<Identifier>(*lhs)) {
+                    auto& identifier = static_cast<Identifier const&>(*lhs);
+                    generator.emit<Bytecode::Op::SetVariable>(generator.intern_identifier(identifier.string()));
+                } else if (is<MemberExpression>(*lhs)) {
+                    auto& expression = static_cast<MemberExpression const&>(*lhs);
+
+                    if (expression.is_computed()) {
+                        generator.emit<Bytecode::Op::PutByValue>(*base_object_register, *computed_property_register);
+                    } else if (expression.property().is_identifier()) {
+                        auto identifier_table_ref = generator.intern_identifier(verify_cast<Identifier>(expression.property()).string());
+                        generator.emit<Bytecode::Op::PutById>(*base_object_register, identifier_table_ref);
+                    } else {
+                        return Bytecode::CodeGenerationError {
+                            &expression,
+                            "Unimplemented non-computed member expression"sv
+                        };
+                    }
+                } else {
+                    return Bytecode::CodeGenerationError {
+                        lhs,
+                        "Unimplemented/invalid node used a reference"sv
+                    };
+                }
+
+                return {};
+            },
+            [&](NonnullRefPtr<BindingPattern> const& pattern) -> Bytecode::CodeGenerationErrorOr<void> {
+                TRY(m_rhs->generate_bytecode(generator));
+                auto value_register = generator.allocate_register();
+                generator.emit<Bytecode::Op::Store>(value_register);
+                return generate_binding_pattern_bytecode(generator, pattern, Bytecode::Op::SetVariable::InitializationMode::Set, value_register);
+            });
     }
 
+    VERIFY(m_lhs.has<NonnullRefPtr<Expression>>());
+    auto& lhs = m_lhs.get<NonnullRefPtr<Expression>>();
     TRY(generator.emit_load_from_reference(lhs));
 
     Bytecode::BasicBlock* rhs_block_ptr { nullptr };
@@ -1066,11 +1138,25 @@ Bytecode::CodeGenerationErrorOr<void> FunctionDeclaration::generate_bytecode(Byt
 
 Bytecode::CodeGenerationErrorOr<void> FunctionExpression::generate_bytecode(Bytecode::Generator& generator) const
 {
+    bool has_name = !name().is_empty();
+    Optional<Bytecode::IdentifierTableIndex> name_identifier;
+
+    if (has_name) {
+        generator.begin_variable_scope(Bytecode::Generator::BindingMode::Lexical);
+
+        name_identifier = generator.intern_identifier(name());
+        generator.emit<Bytecode::Op::CreateVariable>(*name_identifier, Bytecode::Op::EnvironmentMode::Lexical, true);
+    }
+
     generator.emit<Bytecode::Op::NewFunction>(*this);
+
+    if (has_name) {
+        generator.emit<Bytecode::Op::SetVariable>(*name_identifier, Bytecode::Op::SetVariable::InitializationMode::Initialize, Bytecode::Op::EnvironmentMode::Lexical);
+        generator.end_variable_scope();
+    }
+
     return {};
 }
-
-static Bytecode::CodeGenerationErrorOr<void> generate_binding_pattern_bytecode(Bytecode::Generator& generator, BindingPattern const& pattern, Bytecode::Op::SetVariable::InitializationMode, Bytecode::Register const& value_reg);
 
 static Bytecode::CodeGenerationErrorOr<void> generate_object_binding_pattern_bytecode(Bytecode::Generator& generator, BindingPattern const& pattern, Bytecode::Op::SetVariable::InitializationMode initialization_mode, Bytecode::Register const& value_reg)
 {
@@ -1427,6 +1513,8 @@ Bytecode::CodeGenerationErrorOr<void> ReturnStatement::generate_bytecode(Bytecod
 {
     if (m_argument)
         TRY(m_argument->generate_bytecode(generator));
+    else
+        generator.emit<Bytecode::Op::LoadImmediate>(js_undefined());
 
     if (generator.is_in_generator_or_async_function()) {
         generator.perform_needed_unwinds<Bytecode::Op::Yield>();

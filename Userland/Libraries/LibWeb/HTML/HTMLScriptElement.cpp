@@ -71,12 +71,17 @@ void HTMLScriptElement::execute_script()
             node_document->set_current_script({}, nullptr);
 
         if (m_from_an_external_file)
-            dbgln_if(HTML_SCRIPT_DEBUG, "HTMLScriptElement: Running script {}", attribute(HTML::AttributeNames::src));
+            dbgln("HTMLScriptElement: Running script {}", attribute(HTML::AttributeNames::src));
         else
-            dbgln_if(HTML_SCRIPT_DEBUG, "HTMLScriptElement: Running inline script");
+            dbgln("HTMLScriptElement: Running inline script");
 
         // 3. Run the classic script given by the script's script for scriptElement.
         (void)verify_cast<ClassicScript>(*m_script).run();
+
+        if (m_from_an_external_file)
+            dbgln("HTMLScriptElement: Finished running script {}", attribute(HTML::AttributeNames::src));
+        else
+            dbgln("HTMLScriptElement: Finished running inline script");
 
         // 4. Set document's currentScript attribute to oldCurrentScript.
         node_document->set_current_script({}, old_current_script);

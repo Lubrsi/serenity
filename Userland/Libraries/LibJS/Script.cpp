@@ -36,9 +36,11 @@ Script::Script(Realm& realm, StringView filename, NonnullRefPtr<Program> parse_n
     , m_filename(filename)
     , m_host_defined(host_defined)
 {
-    if (auto result = JS::Bytecode::Generator::generate(m_parse_node); !result.is_error()) {
+    if (auto result = JS::Bytecode::Generator::generate(m_parse_node, m_parse_node->is_strict_mode()); !result.is_error()) {
         m_executable = result.release_value();
-        Bytecode::Interpreter::optimization_pipeline().perform(*m_executable);
+//        Bytecode::Interpreter::optimization_pipeline().perform(*m_executable);
+        if (Bytecode::g_dump_bytecode)
+            m_executable->dump();
     }
 }
 

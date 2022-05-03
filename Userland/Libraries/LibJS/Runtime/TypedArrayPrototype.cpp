@@ -787,6 +787,7 @@ static ThrowCompletionOr<void> set_typed_array_from_array_like(GlobalObject& glo
 // 23.2.3.24 %TypedArray%.prototype.set ( source [ , offset ] ), https://tc39.es/ecma262/#sec-%typedarray%.prototype.set
 JS_DEFINE_NATIVE_FUNCTION(TypedArrayPrototype::set)
 {
+    dbgln("SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET SET");
     auto source = vm.argument(0);
 
     // 1. Let target be the this value.

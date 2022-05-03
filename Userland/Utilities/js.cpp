@@ -1068,7 +1068,7 @@ static bool parse_and_run(JS::Interpreter& interpreter, StringView source, Strin
             script_or_module->parse_node().dump(0);
 
         if (JS::Bytecode::g_dump_bytecode || s_run_bytecode) {
-            auto executable_result = JS::Bytecode::Generator::generate(script_or_module->parse_node());
+            auto executable_result = JS::Bytecode::Generator::generate(script_or_module->parse_node(), script_or_module->parse_node().is_strict_mode());
             if (executable_result.is_error()) {
                 result = vm->throw_completion<JS::InternalError>(interpreter.global_object(), executable_result.error().to_string());
                 return ReturnEarly::No;

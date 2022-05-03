@@ -99,7 +99,11 @@ JS::Completion ClassicScript::run(RethrowErrors rethrow_errors)
             dbgln("\x1b[32;1mrunning in BC mode for\x1b[0m {}", m_settings_object.creation_url);
             JS::Bytecode::Interpreter bytecode_interpreter(global_object, m_script_record->realm());
             bytecode_interpreter.enter_script_or_module(m_script_record->make_weak_ptr());
-            evaluation_status = bytecode_interpreter.run(*m_script_record->executable());
+            auto result_or_error = bytecode_interpreter.run_and_return_frame(*m_script_record->executable(), nullptr);
+            if (result_or_error.value.is_error())
+                evaluation_status = result_or_error.value.release_error();
+            else
+                evaluation_status = result_or_error.frame->registers[0].value_or(JS::js_undefined());
             bytecode_interpreter.leave_script_or_module();
         } else {
             dbgln("\x1b[32;1mNot running in BC mode for {}\x1b[0m", m_settings_object.creation_url);

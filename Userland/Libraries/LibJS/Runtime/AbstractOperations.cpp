@@ -676,7 +676,7 @@ ThrowCompletionOr<Value> perform_eval(GlobalObject& global_object, Value x, Call
     // 29. If result.[[Type]] is normal, then
     //     a. Set result to the result of evaluating body.
     if (auto* bytecode_interpreter = Bytecode::Interpreter::current()) {
-        auto executable_result = Bytecode::Generator::generate(program);
+        auto executable_result = Bytecode::Generator::generate(program, strict_eval);
         if (executable_result.is_error())
             return vm.throw_completion<InternalError>(bytecode_interpreter->global_object(), ErrorType::NotImplemented, executable_result.error().to_string());
 

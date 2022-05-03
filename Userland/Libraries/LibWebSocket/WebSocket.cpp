@@ -369,6 +369,8 @@ void WebSocket::read_frame()
     auto head_bytes = head_bytes_result.release_value();
     VERIFY(head_bytes.size() == 2);
 
+    dbgln("=== start of frame 0x{:02x} 0x{:02x}", head_bytes[0], head_bytes[1]);
+
     bool is_final_frame = head_bytes[0] & 0x80;
     if (!is_final_frame) {
         // FIXME: Support fragmented frames
@@ -432,10 +434,14 @@ void WebSocket::read_frame()
             return;
         }
         auto payload_part = payload_part_result.release_value();
+        dbgln("WebSocket: read in {} bytes", payload_part.size());
+        dbgln("{}", StringView { payload_part.data(), payload_part.size() });
         // We read at most "actual_length - read" bytes, so this is safe to do.
         payload.overwrite(read_length, payload_part.data(), payload_part.size());
         read_length += payload_part.size();
     }
+
+    dbgln("=== read in frame");
 
     if (is_masked) {
         // Unmask the payload
@@ -480,6 +486,9 @@ void WebSocket::send_frame(WebSocket::OpCode op_code, ReadonlyBytes payload, boo
 {
     VERIFY(m_impl);
     VERIFY(m_state == WebSocket::InternalState::Open);
+
+    dbgln("WebSocket: Sending payload: {}", StringView { payload });
+
     u8 frame_head[1] = { (u8)((is_final ? 0x80 : 0x00) | ((u8)(op_code)&0xf)) };
     m_impl->send(ReadonlyBytes(frame_head, 1));
     // Section 5.1 : a client MUST mask all frames that it sends to the server

@@ -45,9 +45,9 @@ public:
     void set_stroke_style(String);
     String stroke_style() const;
 
-    void fill_rect(float x, float y, float width, float height);
-    void stroke_rect(float x, float y, float width, float height);
-    void clear_rect(float x, float y, float width, float height);
+    void fill_rect(double x, double y, double width, double height);
+    void stroke_rect(double x, double y, double width, double height);
+    void clear_rect(double x, double y, double width, double height);
 
     DOM::ExceptionOr<void> draw_image(CanvasImageSource const&, float destination_x, float destination_y);
     DOM::ExceptionOr<void> draw_image(CanvasImageSource const&, float destination_x, float destination_y, float destination_width, float destination_height);

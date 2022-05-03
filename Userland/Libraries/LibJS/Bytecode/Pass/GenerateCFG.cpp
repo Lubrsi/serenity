@@ -10,6 +10,7 @@ namespace JS::Bytecode::Passes {
 
 void GenerateCFG::perform(PassPipelineExecutable& executable)
 {
+    dbgln("GenerateCFG");
     started();
 
     executable.cfg = HashMap<BasicBlock const*, HashTable<BasicBlock const*>> {};
@@ -20,6 +21,7 @@ void GenerateCFG::perform(PassPipelineExecutable& executable)
     HashTable<BasicBlock const*> seen_blocks;
 
     auto enter_label = [&](auto const& label, auto& entering_block, bool exported = false) {
+        dbgln("Enter label @{} ({:p}) from block @{} ({:p})", label->block().name(), &label->block(), entering_block.name(), &entering_block);
         auto& entry = executable.cfg->ensure(&entering_block);
         entry.set(&label->block());
         auto& inverse_entry = executable.inverted_cfg->ensure(&label->block());
@@ -34,6 +36,8 @@ void GenerateCFG::perform(PassPipelineExecutable& executable)
             iterators.empend(label->block().instruction_stream());
         }
     };
+
+    dbgln("First block is: {:p}", &executable.executable.basic_blocks.first());
 
     seen_blocks.set(&executable.executable.basic_blocks.first());
     entered_blocks.append(executable.executable.basic_blocks.first());

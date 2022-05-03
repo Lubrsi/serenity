@@ -84,6 +84,8 @@ public:
 
     VM::InterpreterExecutionScope ast_interpreter_scope();
 
+    void set_throw_from_op() { m_throw_from_op = true; }
+
 private:
     RegisterWindow& window()
     {
@@ -111,6 +113,7 @@ private:
     Handle<Value> m_pending_exception_for_finalizer;
     OwnPtr<JS::Interpreter> m_ast_interpreter;
     ScriptOrModule m_script_or_module {};
+    bool m_throw_from_op { false };
 };
 
 extern bool g_dump_bytecode;

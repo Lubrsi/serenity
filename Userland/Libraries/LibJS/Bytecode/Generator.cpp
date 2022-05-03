@@ -19,7 +19,7 @@ Generator::Generator()
 {
 }
 
-CodeGenerationErrorOr<NonnullOwnPtr<Executable>> Generator::generate(ASTNode const& node, FunctionKind enclosing_function_kind)
+CodeGenerationErrorOr<NonnullOwnPtr<Executable>> Generator::generate(ASTNode const& node, bool strict_mode, FunctionKind enclosing_function_kind)
 {
     Generator generator;
     generator.switch_to_basic_block(generator.make_block());
@@ -46,7 +46,8 @@ CodeGenerationErrorOr<NonnullOwnPtr<Executable>> Generator::generate(ASTNode con
         .basic_blocks = move(generator.m_root_basic_blocks),
         .string_table = move(generator.m_string_table),
         .identifier_table = move(generator.m_identifier_table),
-        .number_of_registers = generator.m_next_register });
+        .number_of_registers = generator.m_next_register,
+        .strict_mode = strict_mode });
 }
 
 void Generator::grow(size_t additional_size)

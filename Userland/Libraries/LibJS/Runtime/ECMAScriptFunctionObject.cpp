@@ -791,7 +791,7 @@ Completion ECMAScriptFunctionObject::ordinary_call_evaluate_body()
     if (bytecode_interpreter) {
         if (!m_bytecode_executable) {
             auto compile = [&](auto& node, auto kind, auto name) -> ThrowCompletionOr<NonnullOwnPtr<Bytecode::Executable>> {
-                auto executable_result = Bytecode::Generator::generate(node, kind);
+                auto executable_result = Bytecode::Generator::generate(node, m_strict, kind);
                 if (executable_result.is_error())
                     return vm.throw_completion<InternalError>(bytecode_interpreter->global_object(), ErrorType::NotImplemented, executable_result.error().to_string());
 
@@ -799,16 +799,15 @@ Completion ECMAScriptFunctionObject::ordinary_call_evaluate_body()
                 bytecode_executable->name = name;
 //                dbgln("before opts:");
 //                bytecode_executable->dump();
-
-                auto& passes = Bytecode::Interpreter::optimization_pipeline();
-                passes.perform(*bytecode_executable);
-                if constexpr (JS_BYTECODE_DEBUG) {
-                    dbgln("Optimisation passes took {}us", passes.elapsed());
-                    dbgln("Compiled Bytecode::Block for function '{}':", m_name);
-                }
-//                if (Bytecode::g_dump_bytecode)
-//                dbgln("after opts:");
-//                    bytecode_executable->dump();
+//
+//                auto& passes = Bytecode::Interpreter::optimization_pipeline();
+//                passes.perform(*bytecode_executable);
+//                if constexpr (JS_BYTECODE_DEBUG) {
+//                    dbgln("Optimisation passes took {}us", passes.elapsed());
+//                    dbgln("Compiled Bytecode::Block for function '{}':", m_name);
+//                }
+                if (Bytecode::g_dump_bytecode)
+                    bytecode_executable->dump();
 
                 return bytecode_executable;
             };
