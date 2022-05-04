@@ -38,9 +38,4 @@ private:
     Bindings::CallbackType m_callback;
 };
 
-inline JS::Object* wrap(JS::GlobalObject&, Web::DOM::NodeFilter& filter)
-{
-    return filter.callback().callback.cell();
-}
-
 }

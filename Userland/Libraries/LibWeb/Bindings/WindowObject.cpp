@@ -33,6 +33,7 @@
 #include <LibWeb/Bindings/ScreenWrapper.h>
 #include <LibWeb/Bindings/SelectionWrapper.h>
 #include <LibWeb/Bindings/StorageWrapper.h>
+#include <LibWeb/Bindings/WindowConstructor.h>
 #include <LibWeb/Bindings/WindowObject.h>
 #include <LibWeb/Bindings/WindowObjectHelper.h>
 #include <LibWeb/Bindings/WindowPrototype.h>

@@ -1117,7 +1117,7 @@ void FlexFormattingContext::determine_flex_container_used_cross_size(float const
             }
             cross_size = sum_of_flex_lines_cross_sizes;
 
-            if (cross_size_value->is_percentage()) {
+            if (cross_size_value.has_value() && cross_size_value->is_percentage()) {
                 // FIXME: Handle percentage values here! Right now we're just treating them as "auto"
             }
         } else {

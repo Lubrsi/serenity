@@ -189,6 +189,7 @@ void WebSocket::send_client_handshake()
     builder.append("\r\n");
 
     m_state = WebSocket::InternalState::WaitingForServerHandshake;
+    dbgln("raw request:\n{}", builder.to_string());
     auto success = m_impl->send(builder.to_string().bytes());
     VERIFY(success);
 }
@@ -230,6 +231,7 @@ void WebSocket::read_server_handshake()
     // Read the rest of the reply until we find an empty line
     while (m_impl->can_read_line()) {
         auto line = m_impl->read_line(PAGE_SIZE).release_value_but_fixme_should_propagate_errors();
+        dbgln("line: {}", line);
         if (line.is_whitespace()) {
             // We're done with the HTTP headers.
             // Fail the connection if we're missing any of the following:

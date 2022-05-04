@@ -49,6 +49,8 @@ public:
     // https://html.spec.whatwg.org/multipage/forms.html#category-label
     virtual bool is_labelable() const { return false; }
 
+    void blur();
+
 protected:
     virtual void parse_attribute(FlyString const& name, String const& value) override;
 

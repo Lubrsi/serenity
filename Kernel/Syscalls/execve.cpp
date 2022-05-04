@@ -392,7 +392,7 @@ static ErrorOr<LoadResult> load_elf_object(NonnullOwnPtr<Memory::AddressSpace> n
         return ENOEXEC;
     }
 
-    auto* stack_region = TRY(new_space->allocate_region(Memory::RandomizeVirtualAddress::Yes, {}, Thread::default_userspace_stack_size, PAGE_SIZE, "Stack (Main thread)", PROT_READ | PROT_WRITE, AllocationStrategy::Reserve));
+    auto* stack_region = TRY(new_space->allocate_region(Memory::RandomizeVirtualAddress::Yes, {}, Thread::default_userspace_stack_size * 4, PAGE_SIZE, "Stack (Main thread)", PROT_READ | PROT_WRITE, AllocationStrategy::Reserve));
     stack_region->set_stack(true);
 
     return LoadResult {

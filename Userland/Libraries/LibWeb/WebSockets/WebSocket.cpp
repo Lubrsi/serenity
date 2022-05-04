@@ -23,6 +23,7 @@
 #include <LibWeb/HTML/Window.h>
 #include <LibWeb/Origin.h>
 #include <LibWeb/WebSockets/WebSocket.h>
+#include <LibWeb/Loader/ResourceLoader.h>
 
 namespace Web::WebSockets {
 
@@ -42,6 +43,12 @@ WebSocketClientManager& WebSocketClientManager::the()
     return *s_websocket_client_manager;
 }
 
+RefPtr<Protocol::WebSocket> WebSocketClientManager::connect(const AK::URL& url, String const& origin)
+{
+    HashMap<String, String> additional_headers;
+    additional_headers.set("User-Agent", ResourceLoader::the().user_agent());
+    return m_websocket_client->connect(url, origin, {}, {}, additional_headers);
+}
 WebSocketClientSocket::WebSocketClientSocket() = default;
 
 WebSocketClientSocket::~WebSocketClientSocket() = default;
@@ -68,7 +75,7 @@ WebSocket::WebSocket(HTML::Window& window, AK::URL& url)
     , m_window(window)
 {
     // FIXME: Integrate properly with FETCH as per https://fetch.spec.whatwg.org/#websocket-opening-handshake
-    auto origin_string = m_window->associated_document().origin().serialize();
+    auto origin_string = m_window->associated_document().origin().serialize(false);
     m_websocket = WebSocketClientManager::the().connect(url, origin_string);
     m_websocket->on_open = [weak_this = make_weak_ptr()] {
         if (!weak_this)

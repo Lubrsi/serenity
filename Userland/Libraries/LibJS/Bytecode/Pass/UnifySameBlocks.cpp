@@ -11,7 +11,7 @@ namespace JS::Bytecode::Passes {
 
 void UnifySameBlocks::perform(PassPipelineExecutable& executable)
 {
-    dbgln("UnifySameBlocks");
+//    dbgln("UnifySameBlocks");
     started();
 
     VERIFY(executable.cfg.has_value());
@@ -39,8 +39,8 @@ void UnifySameBlocks::perform(PassPipelineExecutable& executable)
         Optional<size_t> first_successor_position;
         auto it = executable.executable.basic_blocks.find_if([match](auto& block) { return match == block; });
         VERIFY(!it.is_end());
-        dbgln("(1. POINTERS) Removing block {:p} and replacing with {:p}", match, &replacement);
-        dbgln("(2. NAMES   ) Removing block @{} replacing with @{}", match->name(), replacement.name());
+//        dbgln("(1. POINTERS) Removing block {:p} and replacing with {:p}", match, &replacement);
+//        dbgln("(2. NAMES   ) Removing block @{} replacing with @{}", match->name(), replacement.name());
         executable.executable.basic_blocks.remove(it.index());
         if (!first_successor_position.has_value())
             first_successor_position = it.index();

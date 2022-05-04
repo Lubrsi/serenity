@@ -674,6 +674,41 @@ static void generate_to_cpp(SourceGenerator& generator, ParameterType& parameter
         // 3. If method is undefined, throw a TypeError.
         // 4. Return the result of creating a sequence from V and method.
 
+        if (optional) {
+            auto sequence_cpp_type = idl_type_name_to_cpp_type(parameterized_type.parameters.first(), interface);
+            sequence_generator.set("sequence.type", sequence_cpp_type.name);
+            sequence_generator.set("sequence.storage_type", sequence_storage_type_to_cpp_storage_type_name(sequence_cpp_type.sequence_storage_type));
+
+            if (!optional_default_value.has_value()) {
+                if (sequence_cpp_type.sequence_storage_type == IDL::SequenceStorageType::Vector) {
+                    sequence_generator.append(R"~~~(
+    Optional<@sequence.storage_type@<@sequence.type@>> @cpp_name@;
+)~~~");
+                } else {
+                    sequence_generator.append(R"~~~(
+    Optional<@sequence.storage_type@> @cpp_name@;
+)~~~");
+                }
+            } else {
+                if (optional_default_value != "[]")
+                    TODO();
+
+                if (sequence_cpp_type.sequence_storage_type == IDL::SequenceStorageType::Vector) {
+                    sequence_generator.append(R"~~~(
+    @sequence.storage_type@<@sequence.type@> @cpp_name@;
+)~~~");
+                } else {
+                    sequence_generator.append(R"~~~(
+    @sequence.storage_type@ @cpp_name@ { global_object.heap() };
+)~~~");
+                }
+            }
+
+            sequence_generator.append(R"~~~(
+    if (!@js_name@@js_suffix@.is_undefined()) {
+)~~~");
+        }
+
         sequence_generator.append(R"~~~(
     if (!@js_name@@js_suffix@.is_object())
         return vm.throw_completion<JS::TypeError>(global_object, JS::ErrorType::NotAnObject, @js_name@@js_suffix@.to_string_without_side_effects());
@@ -683,7 +718,14 @@ static void generate_to_cpp(SourceGenerator& generator, ParameterType& parameter
         return vm.throw_completion<JS::TypeError>(global_object, JS::ErrorType::NotIterable, @js_name@@js_suffix@.to_string_without_side_effects());
 )~~~");
 
-        parameterized_type.generate_sequence_from_iterable(sequence_generator, acceptable_cpp_name, String::formatted("{}{}", js_name, js_suffix), String::formatted("iterator_method{}", recursion_depth), interface, recursion_depth + 1);
+        parameterized_type.generate_sequence_from_iterable(sequence_generator, String::formatted("{}{}", acceptable_cpp_name, optional ? "_non_optional" : ""), String::formatted("{}{}", js_name, js_suffix), String::formatted("iterator_method{}", recursion_depth), interface, recursion_depth + 1);
+
+        if (optional) {
+            sequence_generator.append(R"~~~(
+        @cpp_name@ = move(@cpp_name@_non_optional);
+    }
+)~~~");
+        }
     } else if (parameter.type->name == "record") {
         // https://webidl.spec.whatwg.org/#es-record
 
@@ -1402,9 +1444,9 @@ enum class StaticFunction {
     Yes,
 };
 
-static void generate_return_statement(SourceGenerator& generator, IDL::Type const& return_type, IDL::Interface const& interface)
+static void generate_return_statement(SourceGenerator& generator, IDL::Type const& return_type, IDL::Interface const& interface, WrappingReference wrapping_reference = WrappingReference::No)
 {
-    return generate_wrap_statement(generator, "retval", return_type, interface, "return"sv);
+    return generate_wrap_statement(generator, "retval", return_type, interface, "return"sv, wrapping_reference);
 }
 
 static void generate_variable_statement(SourceGenerator& generator, String const& variable_name, IDL::Type const& value_type, String const& value_name, IDL::Interface const& interface)
@@ -3168,6 +3210,8 @@ JS_DEFINE_NATIVE_FUNCTION(@prototype_class@::@attribute.getter_callback@)
     auto* impl = TRY(impl_from(vm, global_object));
 )~~~");
 
+        auto wrapping_reference = WrappingReference::No;
+
         if (attribute.extended_attributes.contains("Reflect")) {
             if (attribute.type->name != "boolean") {
                 attribute_generator.append(R"~~~(
@@ -3179,12 +3223,19 @@ JS_DEFINE_NATIVE_FUNCTION(@prototype_class@::@attribute.getter_callback@)
 )~~~");
             }
         } else {
-            attribute_generator.append(R"~~~(
+            if (!attribute.extended_attributes.contains("ReturningReference")) {
+                attribute_generator.append(R"~~~(
     auto retval = TRY(throw_dom_exception_if_needed(global_object, [&] { return impl->@attribute.cpp_name@(); }));
 )~~~");
+            } else {
+                attribute_generator.append(R"~~~(
+    auto& retval = impl->@attribute.cpp_name@();
+)~~~");
+                wrapping_reference = WrappingReference::Yes;
+            }
         }
 
-        generate_return_statement(generator, *attribute.type, interface);
+        generate_return_statement(generator, *attribute.type, interface, wrapping_reference);
 
         attribute_generator.append(R"~~~(
 }

@@ -10,7 +10,7 @@ namespace JS::Bytecode::Passes {
 
 void MergeBlocks::perform(PassPipelineExecutable& executable)
 {
-    dbgln("MergeBlocks");
+//    dbgln("MergeBlocks");
     started();
 
     VERIFY(executable.cfg.has_value());

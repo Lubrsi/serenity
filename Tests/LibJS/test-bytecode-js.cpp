@@ -23,7 +23,7 @@
     JS::Bytecode::Interpreter bytecode_interpreter(ast_interpreter->global_object(), ast_interpreter->realm());
 
 #define EXPECT_NO_EXCEPTION(executable)                                 \
-    auto executable = MUST(JS::Bytecode::Generator::generate(program)); \
+    auto executable = MUST(JS::Bytecode::Generator::generate(program, program.is_strict_mode())); \
     auto result = bytecode_interpreter.run(*executable);                \
     EXPECT(!result.is_error());                                         \
     if (result.is_error())                                              \
@@ -58,7 +58,7 @@ TEST_CASE(if_statement_fail)
 {
     SETUP_AND_PARSE("if (true) throw new Exception('failed');");
 
-    auto executable = MUST(JS::Bytecode::Generator::generate(program));
+    auto executable = MUST(JS::Bytecode::Generator::generate(program, program.is_strict_mode()));
     auto result = bytecode_interpreter.run(*executable);
     EXPECT(result.is_error());
 }
@@ -116,7 +116,7 @@ TEST_CASE(loading_multiple_files)
         auto test_file_script = test_file_script_or_error.release_value();
         auto const& test_file_program = test_file_script->parse_node();
 
-        auto executable = MUST(JS::Bytecode::Generator::generate(test_file_program));
+        auto executable = MUST(JS::Bytecode::Generator::generate(test_file_program, test_file_program.is_strict_mode()));
         auto result = bytecode_interpreter.run(*executable);
         EXPECT(!result.is_error());
     }

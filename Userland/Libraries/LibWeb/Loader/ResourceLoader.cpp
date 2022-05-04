@@ -135,7 +135,7 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, Has
     auto id = resource_id++;
     auto url_for_logging = sanitized_url_for_logging(url);
     emit_signpost(String::formatted("Starting load: {}", url_for_logging), id);
-    dbgln("ResourceLoader: Starting load of: \"{}\"", url_for_logging);
+    dbgln("ResourceLoader: Starting load of: \"{}\" ({})", url_for_logging, request.method());
 
     auto const log_success = [url_for_logging, id](auto const& request) {
         auto load_time_ms = request.load_time().to_milliseconds();
@@ -244,6 +244,7 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, Has
             --m_pending_loads;
             if (on_load_counter_change)
                 on_load_counter_change();
+//            dbgln("payload:\n{}", StringView { payload });
             if (!success || (status_code.has_value() && *status_code >= 400 && *status_code <= 599)) {
                 StringBuilder error_builder;
                 if (status_code.has_value())

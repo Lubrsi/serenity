@@ -129,7 +129,7 @@ String HTMLElement::inner_text()
 // // https://drafts.csswg.org/cssom-view/#dom-htmlelement-offsettop
 int HTMLElement::offset_top() const
 {
-    if (is<HTML::HTMLBodyElement>(this) || !layout_node() || !parent_element() || !parent_element()->layout_node())
+    if (is<HTML::HTMLBodyElement>(this) || !layout_node() || !layout_node()->paintable() || !parent_element() || !parent_element()->layout_node() || !parent_element()->layout_node()->paintable())
         return 0;
     auto position = layout_node()->box_type_agnostic_position();
     auto parent_position = parent_element()->layout_node()->box_type_agnostic_position();
@@ -139,7 +139,7 @@ int HTMLElement::offset_top() const
 // https://drafts.csswg.org/cssom-view/#dom-htmlelement-offsetleft
 int HTMLElement::offset_left() const
 {
-    if (is<HTML::HTMLBodyElement>(this) || !layout_node() || !parent_element() || !parent_element()->layout_node())
+    if (is<HTML::HTMLBodyElement>(this) || !layout_node() || !layout_node()->paintable() || !parent_element() || !parent_element()->layout_node() || !parent_element()->layout_node()->paintable())
         return 0;
     auto position = layout_node()->box_type_agnostic_position();
     auto parent_position = parent_element()->layout_node()->box_type_agnostic_position();
@@ -453,6 +453,10 @@ void HTMLElement::click()
 
     // 5. Unset this element's click in progress flag.
     m_click_in_progress = false;
+}
+
+void HTMLElement::blur()
+{
 }
 
 }

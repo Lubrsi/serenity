@@ -10,7 +10,7 @@ namespace JS::Bytecode::Passes {
 
 void PlaceBlocks::perform(PassPipelineExecutable& executable)
 {
-    dbgln("PlaceBlocks");
+//    dbgln("PlaceBlocks");
     started();
 
     VERIFY(executable.cfg.has_value());

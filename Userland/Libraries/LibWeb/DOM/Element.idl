@@ -2,8 +2,10 @@
 #import <DOM/NamedNodeMap.idl>
 #import <DOM/Node.idl>
 #import <DOM/NodeList.idl>
+#import <DOM/Slottable.idl>
 #import <Geometry/DOMRect.idl>
 #import <Geometry/DOMRectList.idl>
+#import <HTML/HTMLSlotElement.idl>
 #import <CSS/CSSStyleDeclaration.idl>
 
 interface Element : Node {

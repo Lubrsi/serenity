@@ -6,6 +6,7 @@
 
 #include <LibWeb/Layout/SVGGeometryBox.h>
 #include <LibWeb/SVG/SVGGeometryElement.h>
+#include <LibWeb/Geometry/DOMRect.h>
 
 namespace Web::SVG {
 
@@ -17,6 +18,11 @@ SVGGeometryElement::SVGGeometryElement(DOM::Document& document, DOM::QualifiedNa
 RefPtr<Layout::Node> SVGGeometryElement::create_layout_node(NonnullRefPtr<CSS::StyleProperties> style)
 {
     return adopt_ref(*new Layout::SVGGeometryBox(document(), *this, move(style)));
+}
+
+NonnullRefPtr<Geometry::DOMRect> SVGGeometryElement::get_point_at_length(float)
+{
+    return Geometry::DOMRect::create();
 }
 
 }

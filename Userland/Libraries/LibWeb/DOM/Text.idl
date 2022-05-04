@@ -1,4 +1,6 @@
 #import <DOM/CharacterData.idl>
+#import <DOM/Slottable.idl>
+#import <HTML/HTMLSlotElement.idl>
 
 interface Text : CharacterData {
     constructor(optional DOMString data = "");

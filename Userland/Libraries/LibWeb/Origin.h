@@ -67,7 +67,7 @@ public:
     }
 
     // https://html.spec.whatwg.org/multipage/origin.html#ascii-serialisation-of-an-origin
-    String serialize()
+    String serialize(bool with_port = true)
     {
         // 1. If origin is an opaque origin, then return "null"
         if (is_opaque())
@@ -84,7 +84,7 @@ public:
         result.append(host());
 
         // 5. If origin's port is non-null, append a U+003A COLON character (:), and origin's port, serialized, to result.
-        if (port() != 0) {
+        if (port() != 0 && with_port) {
             result.append(":");
             result.append(String::number(port()));
         }

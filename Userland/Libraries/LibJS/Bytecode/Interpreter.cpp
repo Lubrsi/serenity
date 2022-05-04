@@ -82,8 +82,8 @@ Interpreter::ValueAndFrame Interpreter::run_and_return_frame(Executable const& e
             auto ran_or_error = instruction.execute(*this);
             if (ran_or_error.is_error()) {
                 if (!m_throw_from_op) {
-//                    dbgln("Throwing instruction: {}", instruction.to_string(executable));
-//                    executable.dump();
+                    dbgln("Throwing instruction: {}", instruction.to_string(executable));
+                    executable.dump();
                 }
 
                 m_throw_from_op = false;
@@ -229,16 +229,16 @@ Bytecode::PassManager& Interpreter::optimization_pipeline(Interpreter::Optimizat
     auto pm = make<PassManager>();
     if (level == OptimizationLevel::Default) {
         pm->add<Passes::GenerateCFG>();
-//        pm->add<Passes::UnifySameBlocks>();
-//        pm->add<Passes::GenerateCFG>();
+        pm->add<Passes::UnifySameBlocks>();
+        pm->add<Passes::GenerateCFG>();
         pm->add<Passes::MergeBlocks>();
         pm->add<Passes::GenerateCFG>();
-//        pm->add<Passes::UnifySameBlocks>();
-//        pm->add<Passes::GenerateCFG>();
-//        pm->add<Passes::MergeBlocks>();
-//        pm->add<Passes::GenerateCFG>();
-//        pm->add<Passes::UnifySameBlocks>();
-//        pm->add<Passes::GenerateCFG>();
+        pm->add<Passes::UnifySameBlocks>();
+        pm->add<Passes::GenerateCFG>();
+        pm->add<Passes::MergeBlocks>();
+        pm->add<Passes::GenerateCFG>();
+        pm->add<Passes::UnifySameBlocks>();
+        pm->add<Passes::GenerateCFG>();
         pm->add<Passes::PlaceBlocks>();
     } else {
         VERIFY_NOT_REACHED();

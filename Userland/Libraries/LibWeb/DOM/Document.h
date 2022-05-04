@@ -345,6 +345,8 @@ public:
     bool has_active_favicon() const { return m_active_favicon; }
     void check_favicon_after_loading_link_resource();
 
+    String all() { return "no"; }
+
 private:
     explicit Document(const AK::URL&);
 

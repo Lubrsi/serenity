@@ -1,5 +1,7 @@
 #import <SVG/SVGGraphicsElement.idl>
+#import <Geometry/DOMRect.idl>
 
 interface SVGGeometryElement : SVGGraphicsElement {
-
+    double getTotalLength();
+    DOMRect getPointAtLength(double distance);
 };

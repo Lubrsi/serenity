@@ -52,6 +52,8 @@ interface Document : Node {
 
     readonly attribute Element? activeElement;
 
+    readonly attribute DOMString all;
+
     Element? getElementById(DOMString id);
     HTMLCollection getElementsByName(DOMString name);
     HTMLCollection getElementsByTagName(DOMString tagName);

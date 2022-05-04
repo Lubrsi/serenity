@@ -214,7 +214,7 @@ void Job::on_socket_connected()
 {
     auto raw_request = m_request.to_raw_request();
 
-    if constexpr (JOB_DEBUG) {
+    if constexpr (1) {
         dbgln("Job: raw_request:");
         dbgln("{}", String::copy(raw_request));
     }
@@ -397,7 +397,7 @@ void Job::on_socket_connected()
                 if (length.has_value())
                     m_content_length = length.value();
             }
-            dbgln_if(JOB_DEBUG, "Job: [{}] = '{}'", name, value);
+            dbgln_if(1, "Job: [{}] = '{}'", name, value);
 
             auto can_read_without_blocking = m_socket->can_read_without_blocking();
             if (can_read_without_blocking.is_error())

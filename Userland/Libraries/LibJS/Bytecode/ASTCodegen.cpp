@@ -242,13 +242,13 @@ Bytecode::CodeGenerationErrorOr<void> ScopeNode::generate_bytecode(Bytecode::Gen
         // 17. For each String vn of declaredVarNames, do
         // a. Perform ? env.CreateGlobalVarBinding(vn, false).
         // FIXME: This doesn't quite follow CreateGlobalVarBinding.
-//        generator.emit<Bytecode::Op::LoadImmediate>(js_undefined());
-//        for (auto& var_name : declared_var_names) {
-//            auto index = generator.intern_identifier(var_name);
-//            generator.register_binding(index, Bytecode::Generator::BindingMode::Var);
-//            generator.emit<Bytecode::Op::CreateVariable>(index, Bytecode::Op::EnvironmentMode::Var, false);
-//            generator.emit<Bytecode::Op::SetVariable>(index, Bytecode::Op::SetVariable::InitializationMode::Initialize, Bytecode::Op::EnvironmentMode::Var);
-//        }
+        generator.emit<Bytecode::Op::LoadImmediate>(js_undefined());
+        for (auto& var_name : declared_var_names) {
+            auto index = generator.intern_identifier(var_name);
+            generator.register_binding(index, Bytecode::Generator::BindingMode::Var);
+            generator.emit<Bytecode::Op::CreateVariable>(index, Bytecode::Op::EnvironmentMode::Var, false);
+            generator.emit<Bytecode::Op::SetVariable>(index, Bytecode::Op::SetVariable::InitializationMode::Initialize, Bytecode::Op::EnvironmentMode::Var);
+        }
     } else {
         // Perform the steps of FunctionDeclarationInstantiation.
         generator.begin_variable_scope(Bytecode::Generator::BindingMode::Var, Bytecode::Generator::SurroundingScopeKind::Function);

@@ -25,6 +25,6 @@ interface NodeFilter {
     const unsigned long SHOW_DOCUMENT_FRAGMENT = 0x400;
     const unsigned long SHOW_NOTATION = 0x800; // legacy
 
-    unsigned short acceptNode(Node node);
+    //unsigned short acceptNode(Node node);
 
 };
