@@ -358,6 +358,8 @@ static void get_ttglyph_offsets(ReadonlyBytes slice, u32 num_points, u32 flags_o
     u32 x_size = 0;
     u32 repeat_count;
     while (num_points > 0) {
+        dbgln("slice size: {}, flags_offset: {}, flags_size: {}", slice.size(), flags_offset, flags_size);
+
         u8 flag = slice[flags_offset + flags_size];
         if (flag & (u8)SimpleGlyfFlags::RepeatFlag) {
             flags_size++;
@@ -498,6 +500,8 @@ Glyf::Glyph Glyf::glyph(u32 offset) const
     i16 xmax = be_i16(m_slice.offset_pointer(offset + (u32)Offsets::XMax));
     i16 ymax = be_i16(m_slice.offset_pointer(offset + (u32)Offsets::YMax));
     auto slice = ReadonlyBytes(m_slice.offset_pointer(offset + (u32)Sizes::GlyphHeader), m_slice.size() - offset - (u32)Sizes::GlyphHeader);
+    dbgln("offset: {}, slice size: {}", offset, slice.size());
+
     return Glyph(slice, xmin, ymin, xmax, ymax, num_contours);
 }
 

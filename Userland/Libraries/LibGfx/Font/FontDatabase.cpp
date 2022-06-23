@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <LibGfx/Font/WOFF2/Font.h>
 #include <AK/FlyString.h>
 #include <AK/NonnullRefPtrVector.h>
 #include <AK/QuickSort.h>
@@ -117,7 +118,15 @@ FontDatabase::FontDatabase()
                 typeface->set_vector_font(move(font));
             }
         } else if (path.ends_with(".woff"sv)) {
+            dbgln("hello woff");
             if (auto font_or_error = WOFF::Font::try_load_from_file(path); !font_or_error.is_error()) {
+                auto font = font_or_error.release_value();
+                auto typeface = get_or_create_typeface(font->family(), font->variant());
+                typeface->set_vector_font(move(font));
+            }
+        } else if (path.ends_with(".woff2"sv)) {
+            dbgln("hello woff2");
+            if (auto font_or_error = WOFF2::Font::try_load_from_file(path); !font_or_error.is_error()) {
                 auto font = font_or_error.release_value();
                 auto typeface = get_or_create_typeface(font->family(), font->variant());
                 typeface->set_vector_font(move(font));

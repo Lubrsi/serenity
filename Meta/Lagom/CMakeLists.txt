@@ -333,8 +333,9 @@ if (BUILD_LAGOM)
     file(GLOB LIBGFX_FONT_SOURCES CONFIGURE_DEPENDS "../../Userland/Libraries/LibGfx/Font/*.cpp")
     file(GLOB LIBGFX_TTF_SOURCES CONFIGURE_DEPENDS "../../Userland/Libraries/LibGfx/Font/TrueType/*.cpp")
     file(GLOB LIBGFX_WOFF_SOURCES CONFIGURE_DEPENDS "../../Userland/Libraries/LibGfx/Font/WOFF/*.cpp")
+    file(GLOB LIBGFX_WOFF2_SOURCES CONFIGURE_DEPENDS "../../Userland/Libraries/LibGfx/Font/WOFF2/*.cpp")
     lagom_lib(Gfx gfx
-            SOURCES ${LIBGFX_SOURCES} ${LIBGFX_FILTER_SOURCES} ${LIBGFX_FONT_SOURCES} ${LIBGFX_TTF_SOURCES} ${LIBGFX_WOFF_SOURCES}
+            SOURCES ${LIBGFX_SOURCES} ${LIBGFX_FILTER_SOURCES} ${LIBGFX_FONT_SOURCES} ${LIBGFX_TTF_SOURCES} ${LIBGFX_WOFF_SOURCES} ${LIBGFX_WOFF2_SOURCES}
             LIBS m LagomCompress LagomTextCodec LagomIPC
             )
 

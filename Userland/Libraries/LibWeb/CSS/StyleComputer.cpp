@@ -16,6 +16,7 @@
 #include <LibGfx/Font/TrueType/Font.h>
 #include <LibGfx/Font/VectorFont.h>
 #include <LibGfx/Font/WOFF/Font.h>
+#include <LibGfx/Font/WOFF2/Font.h>
 #include <LibWeb/CSS/CSSFontFaceRule.h>
 #include <LibWeb/CSS/CSSStyleRule.h>
 #include <LibWeb/CSS/Parser/Parser.h>
@@ -28,6 +29,7 @@
 #include <LibWeb/HTML/HTMLHtmlElement.h>
 #include <LibWeb/Loader/ResourceLoader.h>
 #include <stdio.h>
+#include <LibCore/MemoryStream.h>
 
 namespace Web::CSS {
 
@@ -92,12 +94,27 @@ private:
             return TRY(TTF::Font::try_load_from_externally_owned_memory(resource()->encoded_data()));
         if (mime_type == "font/woff"sv)
             return TRY(WOFF::Font::try_load_from_externally_owned_memory(resource()->encoded_data()));
+        if (mime_type == "font/woff2"sv) {
+            auto woff2_memory_stream = TRY(Core::Stream::ReadonlyMemoryStream::construct(resource()->encoded_data().bytes()));
+            auto woff2_or_error = WOFF2::Font::try_load_from_externally_owned_memory(*woff2_memory_stream);
+            if (woff2_or_error.is_error()) {
+                dbgln("woff2 error (from mime): {}", woff2_or_error);
+                return woff2_or_error.release_error();
+            }
+            return woff2_or_error.release_value();
+        }
         auto ttf = TTF::Font::try_load_from_externally_owned_memory(resource()->encoded_data());
         if (!ttf.is_error())
             return ttf.release_value();
         auto woff = WOFF::Font::try_load_from_externally_owned_memory(resource()->encoded_data());
         if (!woff.is_error())
             return woff.release_value();
+        auto woff2_memory_stream = TRY(Core::Stream::ReadonlyMemoryStream::construct(resource()->encoded_data().bytes()));
+        auto woff2 = WOFF2::Font::try_load_from_externally_owned_memory(*woff2_memory_stream);
+        if (!woff2.is_error())
+            return woff2.release_value();
+        else
+            dbgln("woff2 error: {}", woff2.release_error());
         return ttf.release_error();
     }
 

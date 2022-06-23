@@ -15,6 +15,73 @@
 
 namespace Core::Stream {
 
+class ReadonlyMemoryStream final : public SeekableStream {
+public:
+    static ErrorOr<NonnullOwnPtr<ReadonlyMemoryStream>> construct(ReadonlyBytes bytes)
+    {
+        return adopt_nonnull_own_or_enomem<ReadonlyMemoryStream>(new (nothrow) ReadonlyMemoryStream(bytes));
+    }
+
+    virtual bool is_eof() const override { return m_offset >= m_bytes.size(); }
+    virtual bool is_open() const override { return true; }
+    // FIXME: It doesn't make sense to close an memory stream. Therefore, we don't do anything here. Is that fine?
+    virtual void close() override { }
+    virtual ErrorOr<void> truncate(off_t) override { return Error::from_errno(ENOTSUP); }
+
+    virtual ErrorOr<Bytes> read(Bytes bytes) override
+    {
+        auto to_read = min(remaining(), bytes.size());
+        if (to_read == 0)
+            return Bytes {};
+
+        m_bytes.slice(m_offset, to_read).copy_to(bytes);
+        m_offset += to_read;
+        return bytes.trim(to_read);
+    }
+
+    virtual ErrorOr<off_t> seek(i64 offset, SeekMode seek_mode = SeekMode::SetPosition) override
+    {
+        switch (seek_mode) {
+        case SeekMode::SetPosition:
+            if (offset >= static_cast<i64>(m_bytes.size()))
+                return Error::from_string_literal("Offset past the end of the stream memory"sv);
+
+            m_offset = offset;
+            break;
+        case SeekMode::FromCurrentPosition:
+            if (offset + static_cast<i64>(m_offset) >= static_cast<i64>(m_bytes.size()))
+                return Error::from_string_literal("Offset past the end of the stream memory"sv);
+
+            m_offset += offset;
+            break;
+        case SeekMode::FromEndPosition:
+            if (offset >= static_cast<i64>(m_bytes.size()))
+                return Error::from_string_literal("Offset past the start of the stream memory"sv);
+
+            m_offset = m_bytes.size() - offset;
+            break;
+        }
+        return static_cast<off_t>(m_offset);
+    }
+
+    virtual ErrorOr<size_t> write(ReadonlyBytes) override { return Error::from_errno(ENOTSUP); }
+    virtual bool write_or_error(ReadonlyBytes) override { return false; }
+
+    ReadonlyBytes bytes() const { return m_bytes; }
+    size_t offset() const { return m_offset; }
+    size_t remaining() const { return m_bytes.size() - m_offset; }
+
+protected:
+    explicit ReadonlyMemoryStream(ReadonlyBytes bytes)
+        : m_bytes(bytes)
+    {
+    }
+
+private:
+    ReadonlyBytes m_bytes;
+    size_t m_offset { 0 };
+};
+
 class MemoryStream final : public SeekableStream {
 public:
     static ErrorOr<NonnullOwnPtr<MemoryStream>> construct(Bytes bytes)
