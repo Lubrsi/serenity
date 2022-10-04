@@ -1242,8 +1242,33 @@ JS_DEFINE_NATIVE_FUNCTION(Window::get_computed_style)
 
 JS_DEFINE_NATIVE_FUNCTION(Window::get_selection)
 {
-    auto* impl = TRY(impl_from(vm));
-    return impl->get_selection_impl();
+    [[maybe_unused]] auto* impl = TRY(impl_from(vm));
+    //    auto* selection = impl->get_selection();
+    //    if (!selection)
+    //        return JS::js_null();
+    //    return wrap(global_object, *selection);
+    auto* blah = JS::Object::create(impl->realm(), impl->realm().intrinsics().object_prototype());
+    auto stub1 = []([[maybe_unused]] JS::VM& vm) -> JS::ThrowCompletionOr<JS::Value> {
+        return JS::js_undefined();
+    };
+    auto stub2 = []([[maybe_unused]] JS::VM& vm) -> JS::ThrowCompletionOr<JS::Value> {
+        return JS::js_undefined();
+    };
+    auto stub3 = []([[maybe_unused]] JS::VM& vm) -> JS::ThrowCompletionOr<JS::Value> {
+        return JS::js_undefined();
+    };
+    auto stub4 = []([[maybe_unused]] JS::VM& vm) -> JS::ThrowCompletionOr<JS::Value> {
+        return JS::Value(false);
+    };
+    auto* add_range = JS::NativeFunction::create(impl->realm(), move(stub1), 1, JS::PropertyKey { "addRange" });
+    blah->define_direct_property(JS::PropertyKey { "addRange" }, add_range, JS::default_attributes);
+    auto* set_base_and_extent = JS::NativeFunction::create(impl->realm(), move(stub2), 1, JS::PropertyKey { "setBaseAndExtent" });
+    blah->define_direct_property(JS::PropertyKey { "setBaseAndExtent" }, set_base_and_extent, JS::default_attributes);
+    auto* remove_all_ranges = JS::NativeFunction::create(impl->realm(), move(stub3), 1, JS::PropertyKey { "removeAllRanges" });
+    blah->define_direct_property(JS::PropertyKey { "removeAllRanges" }, remove_all_ranges, JS::default_attributes);
+    auto* contains_node = JS::NativeFunction::create(impl->realm(), move(stub4), 1, JS::PropertyKey { "containsNode" });
+    blah->define_direct_property(JS::PropertyKey { "containsNode" }, contains_node, JS::default_attributes);
+    return blah;
 }
 
 JS_DEFINE_NATIVE_FUNCTION(Window::match_media)

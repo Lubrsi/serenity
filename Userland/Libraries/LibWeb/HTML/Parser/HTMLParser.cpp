@@ -184,6 +184,12 @@ void HTMLParser::run()
             process_using_the_rules_for_foreign_content(token);
         }
 
+        if (m_parser_pause_flag) {
+            //            dbgln_if(HTML_PARSER_DEBUG, "Returning from nested invocation of HTML parser.");
+            dbgln("Returning from nested invocation of HTML parser.");
+            break;
+        }
+
         if (m_stop_parsing) {
             dbgln_if(HTML_PARSER_DEBUG, "Stop parsing{}! :^)", m_parsing_fragment ? " fragment" : "");
             break;
@@ -800,7 +806,9 @@ void HTMLParser::handle_in_head(HTMLToken& token)
         }
 
         if (m_invoked_via_document_write) {
-            TODO();
+            // If the parser was invoked via the document.write() or document.writeln() methods, then optionally set the script element's already started to true.
+            // (For example, the user agent might use this clause to prevent execution of cross-origin scripts inserted via document.write() under slow network conditions, or when the page has already taken a long time to load.)
+            dbgln("WARNING: Running a script that was inserted by document.write(ln)! Element debug description: {}", script_element.debug_description());
         }
 
         adjusted_insertion_location.parent->insert_before(*element, adjusted_insertion_location.insert_before_sibling, false);
@@ -2253,10 +2261,11 @@ void HTMLParser::handle_text(HTMLToken& token)
         while (document().pending_parsing_blocking_script()) {
             if (script_nesting_level() != 0) {
                 m_parser_pause_flag = true;
-                // FIXME: Abort the processing of any nested invocations of the tokenizer,
-                //        yielding control back to the caller. (Tokenization will resume when
-                //        the caller returns to the "outer" tree construction stage.)
-                TODO();
+                // Abort the processing of any nested invocations of the tokenizer,
+                // yielding control back to the caller. (Tokenization will resume when
+                // the caller returns to the "outer" tree construction stage.)
+                // FIXME: explanation
+                return;
             } else {
                 auto the_script = document().take_pending_parsing_blocking_script({});
                 m_tokenizer.set_blocked(true);

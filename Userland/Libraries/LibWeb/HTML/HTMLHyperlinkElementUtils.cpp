@@ -36,7 +36,11 @@ void HTMLHyperlinkElementUtils::set_the_url()
 
     // 2. Otherwise, parse this element's href content attribute value relative to this element's node document.
     //    If parsing is successful, set this element's url to the result; otherwise, set this element's url to null.
-    m_url = hyperlink_element_utils_document().parse_url(href_content_attribute);
+    auto url = hyperlink_element_utils_document().parse_url(href_content_attribute);
+    if (url.is_valid())
+        m_url = move(url);
+    else
+        m_url = {};
 }
 
 // https://html.spec.whatwg.org/multipage/links.html#dom-hyperlink-origin
@@ -430,7 +434,7 @@ String HTMLHyperlinkElementUtils::href() const
         return String::empty();
 
     // 4. Otherwise, if url is null, return this element's href content attribute's value.
-    if (!url->is_valid())
+    if (!url.has_value())
         return href_content_attribute;
 
     // 5. Return url, serialized.

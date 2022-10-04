@@ -16,6 +16,7 @@ namespace Web::FileAPI {
 
 JS::NonnullGCPtr<Blob> Blob::create(JS::Realm& realm, ByteBuffer byte_buffer, String type)
 {
+    dbgln("create blob with type: {}", type);
     return JS::NonnullGCPtr(*realm.heap().allocate<Blob>(realm, realm, move(byte_buffer), move(type)));
 }
 

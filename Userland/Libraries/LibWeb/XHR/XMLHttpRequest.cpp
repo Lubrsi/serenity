@@ -133,8 +133,7 @@ WebIDL::ExceptionOr<JS::Value> XMLHttpRequest::response()
     }
     // 6. Otherwise, if this’s response type is "blob", set this’s response object to a new Blob object representing this’s received bytes with type set to the result of get a final MIME type for this.
     else if (m_response_type == Bindings::XMLHttpRequestResponseType::Blob) {
-        auto blob_part = FileAPI::Blob::create(realm(), m_received_bytes, get_final_mime_type().type());
-        auto blob = TRY(FileAPI::Blob::create(realm(), Vector<FileAPI::BlobPart> { JS::make_handle(*blob_part) }));
+        auto blob = FileAPI::Blob::create(realm(), m_received_bytes, get_final_mime_type().to_string());
         m_response_object = JS::Value(blob.ptr());
     }
     // 7. Otherwise, if this’s response type is "document", set a document response for this.
@@ -434,9 +433,11 @@ WebIDL::ExceptionOr<void> XMLHttpRequest::send(Optional<Fetch::XMLHttpRequestBod
     request.set_method(m_method);
     if (body_with_type.has_value()) {
         TRY_OR_RETURN_OOM(realm, body_with_type->body.source().visit([&](ByteBuffer const& buffer) -> ErrorOr<void> {
+                dbgln("XHR body: {}", StringView { buffer });
                 request.set_body(buffer);
                 return {}; }, [&](JS::Handle<FileAPI::Blob> const& blob) -> ErrorOr<void> {
                 auto byte_buffer = TRY(ByteBuffer::copy(blob->bytes()));
+                dbgln("XHR body: {}", StringView { byte_buffer });
                 request.set_body(byte_buffer);
                 return {}; }, [](auto&) -> ErrorOr<void> { return {}; }));
         if (body_with_type->type.has_value()) {

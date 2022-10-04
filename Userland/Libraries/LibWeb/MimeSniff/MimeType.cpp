@@ -221,4 +221,53 @@ void MimeType::set_parameter(String const& name, String const& value)
     m_parameters.set(name, value);
 }
 
+// https://mimesniff.spec.whatwg.org/#serialize-a-mime-type
+String MimeType::to_string() const
+{
+    // 1. Let serialization be the concatenation of mimeType’s type, U+002F (/), and mimeType’s subtype.
+    StringBuilder serialization;
+    serialization.appendff("{}/{}", m_type, m_subtype);
+
+    // 2. For each name → value of mimeType’s parameters:
+    for (auto const& parameter_entry : m_parameters) {
+        // 1. Append U+003B (;) to serialization.
+        serialization.append(';');
+
+        // 2. Append name to serialization.
+        serialization.append(parameter_entry.key);
+
+        // 3. Append U+003D (=) to serialization.
+        serialization.append('=');
+
+        // 4. If value does not solely contain HTTP token code points or value is the empty string, then:
+        if (parameter_entry.value.is_empty() || !contains_only_http_token_code_points(parameter_entry.value)) {
+            StringBuilder value;
+
+            // 2. Prepend U+0022 (") to value.
+            // NOTE: This has to be done out of order since StringBuilder does not have prepend.
+            value.append('"');
+
+            // 1. Precede each occurence of U+0022 (") or U+005C (\) in value with U+005C (\).
+            auto escaped_value = parameter_entry.value.replace("\\"sv, "\\\\"sv, ReplaceMode::All);
+            escaped_value = escaped_value.replace("\""sv, "\\\""sv, ReplaceMode::All);
+
+            value.append(escaped_value);
+
+            // 3. Append U+0022 (") to value.
+            value.append("\""sv);
+
+            // 2.5. Append value to serialization.
+            // NOTE: This is done here to prevent copying a well-formed value to a declared `value` variable above the if statement.
+            serialization.append(value.to_string());
+        } else {
+            // 2.5. Append value to serialization.
+            // NOTE: This is done here to prevent copying a well-formed value to a declared `value` variable above the if statement.
+            serialization.append(parameter_entry.value);
+        }
+    }
+
+    // 3. Return serialization.
+    return serialization.to_string();
+}
+
 }

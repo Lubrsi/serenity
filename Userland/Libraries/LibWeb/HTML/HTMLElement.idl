@@ -21,6 +21,8 @@ interface HTMLElement : Element {
     readonly attribute long offsetLeft;
     readonly attribute long offsetWidth;
     readonly attribute long offsetHeight;
+
+    [ImplementedAs=has_children] boolean blur();
 };
 
 HTMLElement includes GlobalEventHandlers;

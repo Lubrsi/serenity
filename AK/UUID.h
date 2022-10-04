@@ -21,6 +21,8 @@ namespace AK {
 
 class UUID {
 public:
+    static UUID generate_version_four_uuid();
+
     enum class Endianness {
         Mixed,
         Little

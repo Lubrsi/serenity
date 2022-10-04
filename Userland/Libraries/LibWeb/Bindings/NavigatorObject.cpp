@@ -33,6 +33,7 @@ void NavigatorObject::initialize(JS::Realm& realm)
     define_direct_property("languages", languages, attr);
     define_direct_property("platform", js_string(heap, "SerenityOS"), attr);
     define_direct_property("product", js_string(heap, "Gecko"), attr);
+    define_direct_property("vendor", js_string(heap, ""), attr);
 
     define_native_accessor(realm, "userAgent", user_agent_getter, {}, JS::Attribute::Configurable | JS::Attribute::Enumerable);
     define_native_accessor(realm, "cookieEnabled", cookie_enabled_getter, {}, JS::Attribute::Configurable | JS::Attribute::Enumerable);

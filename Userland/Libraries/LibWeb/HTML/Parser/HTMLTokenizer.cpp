@@ -34,6 +34,8 @@ namespace Web::HTML {
         will_switch_to(State::new_state);         \
         m_state = State::new_state;               \
         CONSUME_NEXT_INPUT_CHARACTER;             \
+        if (m_parser && m_parser->m_parser_pause_flag) \
+            return {}; \
         goto new_state;                           \
     } while (0)
 
@@ -41,6 +43,8 @@ namespace Web::HTML {
     do {                                     \
         will_reconsume_in(State::new_state); \
         m_state = State::new_state;          \
+        if (m_parser && m_parser->m_parser_pause_flag) \
+            return {}; \
         goto new_state;                      \
     } while (0)
 
@@ -75,6 +79,8 @@ namespace Web::HTML {
         m_queued_tokens.enqueue(HTMLToken::make_character(code_point)); \
         will_reconsume_in(State::new_state);                            \
         m_state = State::new_state;                                     \
+        if (m_parser && m_parser->m_parser_pause_flag) \
+            return {}; \
         goto new_state;                                                 \
     } while (0)
 
@@ -254,6 +260,9 @@ Optional<HTMLToken> HTMLTokenizer::next_token()
         m_source_positions.append(move(last_position));
     }
 _StartOfFunction:
+    if (m_parser && m_parser->m_parser_pause_flag)
+        return {};
+
     if (!m_queued_tokens.is_empty())
         return m_queued_tokens.dequeue();
 

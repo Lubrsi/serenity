@@ -983,7 +983,7 @@ float FormattingContext::calculate_min_content_width(Layout::Box const& box) con
 
     if (!isfinite(*cache.min_content_width)) {
         // HACK: If layout calculates a non-finite result, something went wrong. Force it to zero and log a little whine.
-        dbgln("FIXME: Calculated non-finite min-content width for {}", box.debug_description());
+//        dbgln("FIXME: Calculated non-finite min-content width for {}", box.debug_description());
         cache.min_content_width = 0;
     }
 
@@ -1021,7 +1021,7 @@ float FormattingContext::calculate_max_content_width(Layout::Box const& box) con
 
     if (!isfinite(*cache.max_content_width)) {
         // HACK: If layout calculates a non-finite result, something went wrong. Force it to zero and log a little whine.
-        dbgln("FIXME: Calculated non-finite max-content width for {}", box.debug_description());
+//        dbgln("FIXME: Calculated non-finite max-content width for {}", box.debug_description());
         cache.max_content_width = 0;
     }
 
@@ -1053,7 +1053,7 @@ float FormattingContext::calculate_min_content_height(Layout::Box const& box, Av
 
     if (!isfinite(*cache.min_content_height)) {
         // HACK: If layout calculates a non-finite result, something went wrong. Force it to zero and log a little whine.
-        dbgln("FIXME: Calculated non-finite min-content height for {}", box.debug_description());
+//        dbgln("FIXME: Calculated non-finite min-content height for {}", box.debug_description());
         cache.min_content_height = 0;
     }
 
@@ -1085,7 +1085,7 @@ float FormattingContext::calculate_max_content_height(Layout::Box const& box, Av
 
     if (!isfinite(*cache.max_content_height)) {
         // HACK: If layout calculates a non-finite result, something went wrong. Force it to zero and log a little whine.
-        dbgln("FIXME: Calculated non-finite max-content height for {}", box.debug_description());
+//        dbgln("FIXME: Calculated non-finite max-content height for {}", box.debug_description());
         cache.max_content_height = 0;
     }
 

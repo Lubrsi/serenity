@@ -15,6 +15,7 @@
 #include <LibCore/Proxy.h>
 #include <LibWeb/Loader/Resource.h>
 #include <LibWeb/Page/Page.h>
+#include <LibJS/Forward.h>
 
 namespace Web {
 
@@ -108,6 +109,9 @@ public:
     void clear_cache();
     void evict_from_cache(LoadRequest const&);
 
+    void add_blob_url(AK::URL const& blob_url, JS::Handle<FileAPI::Blob> blob);
+    void remove_blob_url(AK::URL const& blob_url);
+
 private:
     ResourceLoader(NonnullRefPtr<ResourceLoaderConnector>);
     static ErrorOr<NonnullRefPtr<ResourceLoader>> try_create(NonnullRefPtr<ResourceLoaderConnector>);
@@ -120,6 +124,7 @@ private:
     NonnullRefPtr<ResourceLoaderConnector> m_connector;
     String m_user_agent;
     Optional<Page&> m_page {};
+    HashMap<AK::URL, JS::Handle<FileAPI::Blob>> m_blob_urls;
 };
 
 }

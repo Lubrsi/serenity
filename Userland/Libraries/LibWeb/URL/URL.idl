@@ -1,4 +1,5 @@
 #import <URL/URLSearchParams.idl>
+#import <FileAPI/Blob.idl>
 
 interface URL {
     constructor(USVString url, optional USVString base);
@@ -17,4 +18,8 @@ interface URL {
     attribute USVString hash;
 
     USVString toJSON();
+
+    // FIXME: obj's type should be (Blob or MediaSource)
+    static DOMString createObjectURL(Blob obj);
+    static undefined revokeObjectURL(DOMString url);
 };

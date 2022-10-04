@@ -238,6 +238,9 @@ bool FrameLoader::load(LoadRequest& request, Type type)
     if (type == Type::IFrame)
         return true;
 
+    if (!browsing_context().is_top_level())
+        return true;
+
     auto* document = browsing_context().active_document();
     if (document && document->has_active_favicon())
         return true;

@@ -62,6 +62,9 @@ public:
 
     void set_query(Badge<URLSearchParams>, String query) { m_url.set_query(move(query)); }
 
+    static String create_object_url(JS::NonnullGCPtr<FileAPI::Blob> object);
+    static void revoke_object_url(String const& url);
+
 private:
     URL(JS::Realm&, AK::URL, JS::NonnullGCPtr<URLSearchParams> query);
 

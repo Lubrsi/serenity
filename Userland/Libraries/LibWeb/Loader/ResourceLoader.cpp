@@ -10,6 +10,7 @@
 #include <AK/JsonObject.h>
 #include <LibCore/ElapsedTimer.h>
 #include <LibCore/File.h>
+#include <LibJS/Heap/Handle.h>
 #include <LibWeb/Loader/ContentFilter.h>
 #include <LibWeb/Loader/LoadRequest.h>
 #include <LibWeb/Loader/ProxyMappings.h>
@@ -17,6 +18,7 @@
 #include <LibWeb/Loader/ResourceLoader.h>
 #include <LibWeb/Platform/EventLoopPlugin.h>
 #include <LibWeb/Platform/Timer.h>
+#include <LibWeb/FileAPI/Blob.h>
 
 #ifdef __serenity__
 #    include <serenity.h>
@@ -143,6 +145,12 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, Has
     auto& url = request.url();
     request.start_timer();
 
+    static Vector<String> unique_hosts;
+    if (!unique_hosts.contains_slow(url.host())) {
+        dbgln("ResourceLoader: New unique host: {} (full URL: {})", url.host(), url);
+        unique_hosts.append(url.host());
+    }
+
     auto id = resource_id++;
     auto url_for_logging = sanitized_url_for_logging(url);
     emit_signpost(String::formatted("Starting load: {}", url_for_logging), id);
@@ -263,6 +271,36 @@ void ResourceLoader::load(LoadRequest& request, Function<void(ReadonlyBytes, Has
         return;
     }
 
+    if (url.scheme() == "blob") {
+        if (!request.method().equals_ignoring_case("GET"sv)) {
+            dbgln("Can only GET blob URLs {}", url);
+            auto method_not_allowed_message = "Can only GET blob URLs"sv;
+            log_failure(request, method_not_allowed_message);
+            error_callback(method_not_allowed_message, {});
+            return;
+        }
+
+        auto blob_iterator = m_blob_urls.find(url);
+
+        if (blob_iterator == m_blob_urls.end()) {
+            dbgln("Unknown blob URL {}", url);
+            auto not_found_message = "Unknown blob URL"sv;
+            log_failure(request, not_found_message);
+            error_callback(not_found_message, {});
+            return;
+        }
+
+        log_success(request);
+        Platform::EventLoopPlugin::the().deferred_invoke([blob_handle = JS::make_handle(blob_iterator->value.ptr()), success_callback = move(success_callback)]() {
+            HashMap<String, String, CaseInsensitiveStringTraits> response_headers;
+            dbgln("size={}, type={}", blob_handle->size(), blob_handle->type());
+            response_headers.set("Content-Length", String::number(blob_handle->size()));
+            response_headers.set("Content-Type", blob_handle->type());
+            success_callback(blob_handle->bytes(), response_headers, 200);
+        });
+        return;
+    }
+
     if (url.scheme() == "http" || url.scheme() == "https" || url.scheme() == "gemini") {
         auto proxy = ProxyMappings::the().proxy_for_url(url);
 
@@ -362,6 +400,17 @@ void ResourceLoader::evict_from_cache(LoadRequest const& request)
 {
     dbgln_if(CACHE_DEBUG, "Removing resource {} from cache", request.url());
     s_resource_cache.remove(request);
+}
+
+void ResourceLoader::add_blob_url(AK::URL const& blob_url, JS::Handle<FileAPI::Blob> blob)
+{
+    m_blob_urls.set(blob_url, move(blob));
+}
+
+void ResourceLoader::remove_blob_url(AK::URL const& blob_url)
+{
+    // NOTE: This does not assert that something was removed in case someone passes a non-existent blob URL into revokeObjectURL.
+    m_blob_urls.remove(blob_url);
 }
 
 }

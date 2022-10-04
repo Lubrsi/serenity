@@ -9,6 +9,12 @@
 #include <AK/StringBuilder.h>
 #include <AK/UUID.h>
 
+#ifndef KERNEL
+#   include <AK/Random.h>
+#else
+#   include <Kernel/Random.h>
+#endif
+
 namespace AK {
 
 UUID::UUID(Array<u8, 16> uuid_buffer)
@@ -125,6 +131,43 @@ bool UUID::operator==(const UUID& other) const
 bool UUID::is_zero() const
 {
     return all_of(m_uuid_buffer, [](auto const octet) { return octet == 0; });
+}
+
+// RFC 4122 4.4 Algorithms for Creating a UUID from Truly Random or Pseudo-Random Numbers, https://datatracker.ietf.org/doc/html/rfc4122#section-4.4
+UUID UUID::generate_version_four_uuid()
+{
+    // The version 4 UUID is meant for generating UUIDs from truly-random or pseudo-random numbers.
+    // The algorithm is as follows:
+    // - Set the two most significant bits (bits 6 and 7) of the
+    //   clock_seq_hi_and_reserved to zero and one, respectively.
+    // - Set the four most significant bits (bits 12 through 15) of the
+    //   time_hi_and_version field to the 4-bit version number from
+    //   Section 4.1.3.
+    // - Set all the other bits to randomly (or pseudo-randomly) chosen
+    //   values.
+    UUID version_four_uuid;
+
+    // NOTE: We do the random fill first as to not overwrite the set bits below.
+#ifndef KERNEL
+    fill_with_random(version_four_uuid.m_uuid_buffer.data(), version_four_uuid.m_uuid_buffer.size());
+#else
+    Kernel::get_fast_random_bytes({ version_four_uuid.m_uuid_buffer.data(), version_four_uuid.m_uuid_buffer.size() });
+#endif
+
+    version_four_uuid.m_uuid_buffer[8] |= 1 << 7;
+    version_four_uuid.m_uuid_buffer[8] &= ~(1 << 6);
+
+    // 4.1.3 Version
+    // Msb0  Msb1  Msb2  Msb3   Version
+    //  0     1     0     0        4    The randomly or pseudo-
+    //                                  randomly generated version
+    //                                  specified in this document.
+    version_four_uuid.m_uuid_buffer[6] &= ~(1 << 7);
+    version_four_uuid.m_uuid_buffer[6] |= 1 << 6;
+    version_four_uuid.m_uuid_buffer[6] &= ~(1 << 5);
+    version_four_uuid.m_uuid_buffer[6] &= ~(1 << 4);
+
+    return version_four_uuid;
 }
 
 }

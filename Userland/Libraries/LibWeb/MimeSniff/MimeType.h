@@ -29,6 +29,8 @@ public:
     String essence() const;
     String serialized() const;
 
+    String to_string() const;
+
 private:
     // https://mimesniff.spec.whatwg.org/#type
     // A MIME type’s type is a non-empty ASCII string.

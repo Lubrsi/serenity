@@ -8,6 +8,10 @@
 #include <AK/URLParser.h>
 #include <LibWeb/Bindings/Intrinsics.h>
 #include <LibWeb/URL/URL.h>
+#include <LibWeb/HTML/Scripting/Environments.h>
+#include <AK/UUID.h>
+#include <LibWeb/Loader/ResourceLoader.h>
+#include <LibWeb/FileAPI/Blob.h>
 
 namespace Web::URL {
 
@@ -305,6 +309,41 @@ void URL::set_hash(String const& hash)
     auto result_url = URLParser::parse(input, nullptr, move(url), URLParser::State::Fragment);
     if (result_url.is_valid())
         m_url = move(result_url);
+}
+
+String URL::create_object_url(JS::NonnullGCPtr<FileAPI::Blob> object)
+{
+    dbgln("creating object url for blob: {}", StringView { object->bytes() });
+    HTML::main_thread_event_loop().vm().dump_backtrace();
+
+    StringBuilder blob_url;
+    blob_url.append("blob:"sv);
+
+    auto& settings = HTML::current_settings_object();
+    auto origin = settings.origin();
+    auto serialized_origin = origin.serialize();
+
+    if (serialized_origin == "null"sv)
+        TODO();
+
+    blob_url.append(serialized_origin);
+    blob_url.append('/');
+
+    auto uuid = UUID::generate_version_four_uuid();
+    auto uuid_string = uuid.to_string();
+    blob_url.append(uuid_string);
+
+    auto serialized_blob_url = blob_url.to_string();
+
+    ResourceLoader::the().add_blob_url(serialized_blob_url, JS::make_handle(object.ptr()));
+
+    dbgln("URL::create_object_url returning '{}'", serialized_blob_url);
+    return serialized_blob_url;
+}
+
+void URL::revoke_object_url(AK::String const& url)
+{
+    dbgln("(STUBBED) URL::revoke_object_url(url='{}')", url);
 }
 
 }

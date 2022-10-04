@@ -179,6 +179,8 @@ public:
     template<typename T, typename... Args>
     Completion throw_completion(ErrorType type, Args&&... args)
     {
+        dbgln("Throwing JavaScript exception: {}", String::formatted(type.message(), forward<Args>(args)...));
+        dump_backtrace();
         return throw_completion<T>(String::formatted(type.message(), forward<Args>(args)...));
     }
 

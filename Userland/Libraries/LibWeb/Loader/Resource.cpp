@@ -98,7 +98,6 @@ void Resource::did_load(Badge<ResourceLoader>, ReadonlyBytes data, HashMap<Strin
     auto content_type = headers.get("Content-Type");
 
     if (content_type.has_value()) {
-        dbgln_if(RESOURCE_DEBUG, "Content-Type header: '{}'", content_type.value());
         m_mime_type = mime_type_from_content_type(content_type.value());
         // FIXME: "The Quite OK Image Format" doesn't have an official mime type yet,
         //        and servers like nginx will send a generic octet-stream mime type instead.

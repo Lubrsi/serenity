@@ -24,6 +24,7 @@
 #include <LibWeb/Layout/InitialContainingBlock.h>
 #include <LibWeb/Layout/TextNode.h>
 #include <LibWeb/Page/Page.h>
+#include <AK/UUID.h>
 
 namespace Web::HTML {
 
@@ -36,30 +37,6 @@ static bool url_matches_about_blank(AK::URL const& url)
         && url.username().is_empty()
         && url.password().is_empty()
         && url.host().is_null();
-}
-
-// https://url.spec.whatwg.org/#concept-url-origin
-static HTML::Origin url_origin(AK::URL const& url)
-{
-    // FIXME: Move this whole function somewhere better.
-
-    if (url.scheme() == "blob"sv) {
-        // FIXME: Implement
-        return HTML::Origin {};
-    }
-
-    if (url.scheme().is_one_of("ftp"sv, "http"sv, "https"sv, "ws"sv, "wss"sv)) {
-        // Return the tuple origin (url’s scheme, url’s host, url’s port, null).
-        return HTML::Origin(url.scheme(), url.host(), url.port().value_or(0));
-    }
-
-    if (url.scheme() == "file"sv) {
-        // Unfortunate as it is, this is left as an exercise to the reader. When in doubt, return a new opaque origin.
-        // Note: We must return an origin with the `file://' protocol for `file://' iframes to work from `file://' pages.
-        return HTML::Origin(url.scheme(), String(), 0);
-    }
-
-    return HTML::Origin {};
 }
 
 // https://html.spec.whatwg.org/multipage/browsers.html#determining-the-origin
@@ -87,7 +64,7 @@ HTML::Origin determine_the_origin(BrowsingContext const& browsing_context, Optio
     }
 
     // 5. Return url's origin.
-    return url_origin(*url);
+    return Origin::from_url(*url);
 }
 
 // https://html.spec.whatwg.org/multipage/browsers.html#creating-a-new-top-level-browsing-context
@@ -902,8 +879,7 @@ WebIDL::ExceptionOr<void> BrowsingContext::navigate(
             navigation_id = active_document()->navigation_id();
         } else {
             // Otherwise let navigation id be the result of generating a random UUID. [UUID]
-            // FIXME: Generate a UUID.
-            navigation_id = "FIXME";
+            navigation_id = UUID::generate_version_four_uuid().to_string();
         }
     }
 
