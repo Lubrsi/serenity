@@ -1,0 +1,76 @@
+name: Pull request labeler
+
+# FIXME: Consider adding the `issue_comment` event to change labels based on generic, non-review pull request comments.
+#        Consider the trade off of how spammy it can be (one CI run per comment) and how useful it would be to have.
+#        Consider alternatives to `issue_comment`.
+on:
+  pull_request:
+    types: [opened, reopened, converted_to_draft, ready_for_review, synchronize, edited, review_requested]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+jobs:
+  label_pull_request:
+    runs-on: ubuntu-22.04
+    if: always() && github.repository == 'SerenityOS/serenity'
+    
+    steps:
+      - name: Label pull request
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.BUGGIEBOT }}
+          script: |
+            const prApprovedButAwaitingCiLabel = "✅ pr-approved-but-awaiting-ci";
+            const prNeedsReviewLabel = "👀 pr-needs-review";
+            const prWaitingForAuthorLabel = "⏳ pr-waiting-for-author";
+
+            function labelsForGenericPullRequestChange() {
+                return [prNeedsReviewLabel];
+            }
+
+            function labelsForPullRequestReviewSubmitted({ pull_request, review }) {
+                if (review.state.toLowerCase() === "approved") return [prApprovedButAwaitingCiLabel];
+
+                if (review.user.login === pull_request.user.login) return [prNeedsReviewLabel];
+
+                return [prWaitingForAuthorLabel];
+            }
+
+            function labelsForPullRequestConvertedToDraft() {
+                return [];
+            }
+
+            const eventHandlers = {
+                opened: labelsForGenericPullRequestChange,
+                reopened: labelsForGenericPullRequestChange,
+                submitted: labelsForPullRequestReviewSubmitted,
+                dismissed: labelsForGenericPullRequestChange,
+                converted_to_draft: labelsForPullRequestConvertedToDraft,
+                ready_for_review: labelsForGenericPullRequestChange,
+                synchronize: labelsForGenericPullRequestChange, // synchronize is triggered when the branch is changed
+                edited: labelsForGenericPullRequestChange,
+                review_requested: labelsForGenericPullRequestChange,
+            };
+
+            const eventName = context.payload.action;
+            const handlerForCurrentEvent = eventHandlers[eventName];
+
+            if (handlerForCurrentEvent) {
+                const isDraft = context.payload.pull_request.draft;
+                const labels = !isDraft ? handlerForCurrentEvent(context.payload) : [];
+
+                console.log(
+                    `Received '${eventName}' event for ${
+                        isDraft ? "draft" : "non-draft"
+                    } pull request, applying labels: ${labels}`
+                );
+
+                github.rest.issues.setLabels({
+                    issue_number: context.payload.pull_request.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    labels,
+                });
+            } else {
+                console.log(`::warning::No handler for the '${eventName}' event, not updating labels.`);
+            }
