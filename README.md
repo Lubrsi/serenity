@@ -68,6 +68,7 @@ A general guide for contributing can be found in [`CONTRIBUTING.md`](CONTRIBUTIN
 
 ## Authors
 
+* **the yak** - [the yak](https://www.youtube.com/shorts/lAavv4M_3TI)
 * **Andreas Kling** - [awesomekling](https://twitter.com/awesomekling) [![GitHub Sponsors](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub)](https://github.com/sponsors/awesomekling)
 * **Robin Burchell** - [rburchell](https://github.com/rburchell)
 * **Conrad Pankoff** - [deoxxa](https://github.com/deoxxa)
