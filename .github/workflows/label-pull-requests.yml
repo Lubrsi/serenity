@@ -31,8 +31,7 @@ jobs:
             function removeExistingPrLabels(currentLabels, keepSubjectiveLabels) {
                 return currentLabels.filter(
                     label =>
-                        !label.name.includes("pr-") ||
-                        (keepSubjectiveLabels && subjectiveLabels.includes(label.name))
+                        !label.includes("pr-") || (keepSubjectiveLabels && subjectiveLabels.includes(label))
                 );
             }
 
@@ -44,13 +43,15 @@ jobs:
 
             async function labelsForPullRequestReviewSubmitted(currentLabels, { pull_request, review }) {
                 let newLabels = currentLabels;
-                const isBlocked = currentLabels.some(label => label.name === prIsBlockedLabel);
+                const isBlocked = currentLabels.some(label => label === prIsBlockedLabel);
 
                 if (review.state.toLowerCase() === "approved") {
-                    const maintainers = await github.rest.teams.listMembersInOrg({
-                        org: "SerenityOS",
-                        team_slug: "maintainers",
-                    });
+                    const maintainers = (
+                        await github.rest.teams.listMembersInOrg({
+                            org: "SerenityOS",
+                            team_slug: "maintainers",
+                        })
+                    ).data;
 
                     const maintainer = maintainers.some(
                         maintainerInArray => maintainerInArray.login === review.user.login
@@ -58,8 +59,7 @@ jobs:
 
                     if (maintainer) {
                         newLabels = newLabels.filter(
-                            label =>
-                                !(label.name === prNeedsReviewLabel || label.name === prWaitingForAuthorLabel)
+                            label => !(label === prNeedsReviewLabel || label === prWaitingForAuthorLabel)
                         );
 
                         if (!newLabels.includes(prMaintainerApprovedButAwaitingCiLabel))
@@ -72,8 +72,8 @@ jobs:
                     newLabels = newLabels.filter(
                         label =>
                             !(
-                                label.name === prCommunityApprovedLabel ||
-                                label.name === prMaintainerApprovedButAwaitingCiLabel
+                                label === prCommunityApprovedLabel ||
+                                label === prMaintainerApprovedButAwaitingCiLabel
                             )
                     );
 
@@ -105,28 +105,36 @@ jobs:
             const handlerForCurrentEvent = eventHandlers[eventName];
 
             function apiErrorHandler(error) {
-                console.log("::warning::Encountered GitHub API error, not updating labels. Error:", error);
+                console.log(
+                    "::warning::Encountered error during event handling, not updating labels. Error:",
+                    error
+                );
             }
 
-            async function updateLabels(currentLabels) {
+            async function updateLabels(currentLabelsAsObjects) {
+                const currentLabels = [];
+                currentLabelsAsObjects.forEach(labelObject => currentLabels.push(labelObject.name));
+                console.log("currentLabels", currentLabels);
+
                 const isEffectivelyClosed =
                     context.payload.pull_request.draft ||
                     context.payload.pull_request.state.toLowerCase() === "closed";
-                const labels = await (!isEffectivelyClosed
+
+                const newLabels = await (!isEffectivelyClosed
                     ? handlerForCurrentEvent(currentLabels, context.payload)
                     : labelsForPullRequestEffectivelyClosed(currentLabels, context.payload));
 
                 console.log(
                     `Received '${eventName}' event for ${
                         isEffectivelyClosed ? "draft/closed" : "open"
-                    } pull request, changing labels from '${currentLabels}' to '${labels}'`
+                    } pull request, changing labels from '${currentLabels}' to '${newLabels}'`
                 );
 
                 return github.rest.issues.setLabels({
                     issue_number: context.payload.pull_request.number,
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    labels,
+                    labels: newLabels,
                 });
             }
 
@@ -137,7 +145,7 @@ jobs:
                         owner: context.repo.owner,
                         repo: context.repo.repo,
                     })
-                    .then(updateLabels)
+                    .then(result => updateLabels(result.data))
                     .catch(apiErrorHandler);
             } else {
                 console.log(`::warning::No handler for the '${eventName}' event, not updating labels.`);
