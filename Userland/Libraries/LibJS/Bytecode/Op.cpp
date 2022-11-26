@@ -728,6 +728,13 @@ ThrowCompletionOr<void> Throw::execute_impl(Bytecode::Interpreter& interpreter) 
     return throw_completion(interpreter.accumulator());
 }
 
+ThrowCompletionOr<void> ThrowIfNotObject::execute_impl(Bytecode::Interpreter& interpreter) const
+{
+    if (!interpreter.accumulator().is_object())
+        return interpreter.vm().throw_completion<TypeError>(ErrorType::NotAnObject, interpreter.accumulator().to_string_without_side_effects());
+    return {};
+}
+
 ThrowCompletionOr<void> EnterUnwindContext::execute_impl(Bytecode::Interpreter& interpreter) const
 {
     interpreter.enter_unwind_context(m_handler_target, m_finalizer_target);
@@ -847,6 +854,14 @@ ThrowCompletionOr<void> GetIterator::execute_impl(Bytecode::Interpreter& interpr
     auto& vm = interpreter.vm();
     auto iterator = TRY(get_iterator(vm, interpreter.accumulator()));
     interpreter.accumulator() = iterator_to_object(vm, iterator);
+    return {};
+}
+
+ThrowCompletionOr<void> GetMethod::execute_impl(Bytecode::Interpreter& interpreter) const
+{
+    auto& vm = interpreter.vm();
+    auto identifier = interpreter.current_executable().get_identifier(m_property);
+    interpreter.accumulator() = TRY(interpreter.accumulator().get_method(vm, identifier));
     return {};
 }
 
@@ -1203,6 +1218,11 @@ String Throw::to_string_impl(Bytecode::Executable const&) const
     return "Throw";
 }
 
+String ThrowIfNotObject::to_string_impl(Bytecode::Executable const&) const
+{
+    return "ThrowIfNotObject";
+}
+
 String EnterUnwindContext::to_string_impl(Bytecode::Executable const&) const
 {
     auto handler_string = m_handler_target.has_value() ? String::formatted("{}", *m_handler_target) : "<empty>";
@@ -1279,6 +1299,11 @@ String DeleteByValue::to_string_impl(Bytecode::Executable const&) const
 String GetIterator::to_string_impl(Executable const&) const
 {
     return "GetIterator";
+}
+
+String GetMethod::to_string_impl(Bytecode::Executable const& executable) const
+{
+    return String::formatted("GetMethod {} ({})", m_property, executable.identifier_table->get(m_property));
 }
 
 String GetObjectPropertyIterator::to_string_impl(Bytecode::Executable const&) const

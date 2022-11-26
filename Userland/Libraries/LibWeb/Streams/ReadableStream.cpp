@@ -8,6 +8,7 @@
 #include <LibWeb/Streams/AbstractOperations.h>
 #include <LibWeb/Streams/ReadableStream.h>
 #include <LibWeb/WebIDL/ExceptionOr.h>
+#include <LibWeb/Bindings/ReadableStreamPrototype.h>
 
 namespace Web::Streams {
 
@@ -22,7 +23,7 @@ WebIDL::ExceptionOr<JS::NonnullGCPtr<ReadableStream>> ReadableStream::construct_
 ReadableStream::ReadableStream(JS::Realm& realm)
     : PlatformObject(realm)
 {
-    set_prototype(&Bindings::cached_web_prototype(realm, "ReadableStream"));
+    set_prototype(&Bindings::ensure_web_prototype<Bindings::ReadableStreamPrototype>(realm, "ReadableStream"));
 }
 
 ReadableStream::~ReadableStream() = default;

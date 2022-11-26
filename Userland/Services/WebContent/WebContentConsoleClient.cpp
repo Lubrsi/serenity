@@ -14,6 +14,7 @@
 #include <LibWeb/HTML/Scripting/Environments.h>
 #include <LibWeb/HTML/Window.h>
 #include <WebContent/ConsoleGlobalObject.h>
+#include <LibJS/Print.h>
 
 namespace WebContent {
 
@@ -189,7 +190,32 @@ JS::ThrowCompletionOr<JS::Value> WebContentConsoleClient::printer(JS::Console::L
         return JS::js_undefined();
     }
 
-    auto output = String::join(' ', arguments.get<JS::MarkedVector<JS::Value>>());
+    Vector<String> output_strings;
+
+    for (auto& value : arguments.get<JS::MarkedVector<JS::Value>>()) {
+        if (value.is_object()) {
+            auto& object = value.as_object();
+            if (is<JS::Error>(value.as_object())) {
+                auto& error = verify_cast<JS::Error>(value.as_object());
+                auto name = object.get_without_side_effects(JS::PropertyKey { "name" }).value_or(JS::js_undefined());
+                auto message = object.get_without_side_effects(JS::PropertyKey { "message" }).value_or(JS::js_undefined());
+                if (name.is_accessor() || message.is_accessor()) {
+                    output_strings.append(String::formatted("{}(accessors!)", value.to_string_without_side_effects()));
+                } else {
+                    StringBuilder builder;
+                    auto name_string = name.to_string_without_side_effects();
+                    auto message_string = message.to_string_without_side_effects();
+                    builder.appendff("[{}] {}", name_string, message_string);
+                    builder.appendff("\n{}", error.stack_string());
+                    output_strings.append(builder.to_string());
+                }
+            }
+        } else {
+            output_strings.append(value.to_string_without_side_effects());
+        }
+    }
+
+    auto output = String::join(' ', output_strings);
     m_console.output_debug_message(log_level, output);
 
     StringBuilder html;

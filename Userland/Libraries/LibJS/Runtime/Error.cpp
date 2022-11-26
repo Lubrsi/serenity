@@ -108,6 +108,8 @@ String Error::stack_string() const
     {                                                                                                 \
         auto& vm = realm.vm();                                                                        \
         auto* error = ClassName::create(realm);                                                       \
+        dbgln("Creating {}: {}", #ClassName, message);                                                \
+        vm.dump_backtrace();                                                                          \
         u8 attr = Attribute::Writable | Attribute::Configurable;                                      \
         error->define_direct_property(vm.names.message, js_string(vm, message), attr);                \
         return error;                                                                                 \

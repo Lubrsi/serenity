@@ -16,6 +16,7 @@
 #include <LibWeb/DOM/Range.h>
 #include <LibWeb/DOM/Text.h>
 #include <LibWeb/HTML/Window.h>
+#include <LibWeb/Geometry/DOMRect.h>
 
 namespace Web::DOM {
 
@@ -1100,6 +1101,12 @@ WebIDL::ExceptionOr<void> Range::delete_contents()
     TRY(set_start(*new_node, new_offset));
     TRY(set_end(*new_node, new_offset));
     return {};
+}
+
+JS::NonnullGCPtr<Geometry::DOMRect> Range::get_bounding_client_rect() const
+{
+    dbgln("(STUBBED) Range::get_bounding_client_rect()");
+    return Geometry::DOMRect::construct_impl(realm(), 0, 0, 0, 0);
 }
 
 }

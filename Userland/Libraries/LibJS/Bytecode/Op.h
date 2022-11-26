@@ -727,6 +727,18 @@ public:
     void replace_references_impl(BasicBlock const&, BasicBlock const&) { }
 };
 
+class ThrowIfNotObject final : public Instruction {
+public:
+    ThrowIfNotObject()
+        : Instruction(Type::ThrowIfNotObject)
+    {
+    }
+
+    ThrowCompletionOr<void> execute_impl(Bytecode::Interpreter&) const;
+    String to_string_impl(Bytecode::Executable const&) const;
+    void replace_references_impl(BasicBlock const&, BasicBlock const&) { }
+};
+
 class EnterUnwindContext final : public Instruction {
 public:
     constexpr static bool IsTerminator = true;
@@ -868,6 +880,22 @@ public:
     ThrowCompletionOr<void> execute_impl(Bytecode::Interpreter&) const;
     String to_string_impl(Bytecode::Executable const&) const;
     void replace_references_impl(BasicBlock const&, BasicBlock const&) { }
+};
+
+class GetMethod final : public Instruction {
+public:
+    GetMethod(IdentifierTableIndex property)
+        : Instruction(Type::GetMethod)
+        , m_property(property)
+    {
+    }
+
+    ThrowCompletionOr<void> execute_impl(Bytecode::Interpreter&) const;
+    String to_string_impl(Bytecode::Executable const&) const;
+    void replace_references_impl(BasicBlock const&, BasicBlock const&) { }
+
+private:
+    IdentifierTableIndex m_property;
 };
 
 class GetObjectPropertyIterator final : public Instruction {

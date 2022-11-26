@@ -35,6 +35,7 @@
     O(GetById)                       \
     O(GetByValue)                    \
     O(GetIterator)                   \
+    O(GetMethod)                     \
     O(GetNewTarget)                  \
     O(GetObjectPropertyIterator)     \
     O(GetVariable)                   \
@@ -83,6 +84,7 @@
     O(Sub)                           \
     O(SuperCall)                     \
     O(Throw)                         \
+    O(ThrowIfNotObject)              \
     O(Typeof)                        \
     O(TypeofVariable)                \
     O(UnaryMinus)                    \
