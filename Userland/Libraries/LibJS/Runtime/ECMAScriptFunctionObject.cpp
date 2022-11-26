@@ -787,6 +787,11 @@ Completion ECMAScriptFunctionObject::ordinary_call_evaluate_body()
     auto& vm = this->vm();
     auto& realm = *vm.current_realm();
     auto* bytecode_interpreter = Bytecode::Interpreter::current();
+    OwnPtr<Bytecode::Interpreter> temp_bc_interpreter;
+    if (m_kind == FunctionKind::Generator && !bytecode_interpreter) {
+        temp_bc_interpreter = make<Bytecode::Interpreter>(realm);
+        bytecode_interpreter = temp_bc_interpreter.ptr();
+    }
 
     if (m_kind == FunctionKind::AsyncGenerator)
         return vm.throw_completion<InternalError>(ErrorType::NotImplemented, "Async Generator function execution");
