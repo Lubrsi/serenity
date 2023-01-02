@@ -18,24 +18,25 @@
 namespace VirtGPU {
 
 static constexpr auto frag_shader = "FRAG\n"
-                                    "PROPERTY FS_COLOR0_WRITES_ALL_CBUFS 1\n"
-                                    "DCL IN[0], COLOR, COLOR\n"
+                                    "DCL IN[1], TEXCOORD\n"
+                                    "DCL SAMP[0]\n"
+                                    "DCL SVIEW[0], 2D, UNORM\n"
                                     "DCL OUT[0], COLOR\n"
-                                    "  0: MOV OUT[0], IN[0]\n"
+                                    "  0: TEX OUT[0], IN[1], SAMP[0], 2D\n"
                                     "  1: END\n"sv;
 
 static constexpr auto vert_shader = "VERT\n"
                                     "DCL IN[0]\n"
                                     "DCL IN[1]\n"
                                     "DCL OUT[0], POSITION\n"
-                                    "DCL OUT[1], COLOR\n"
+                                    "DCL OUT[1], TEXCOORD\n"
                                     "DCL CONST[0..3]\n"
                                     "DCL TEMP[0..1]\n"
                                     "  0: MUL TEMP[0], IN[0].xxxx, CONST[0]\n"
                                     "  1: MAD TEMP[1], IN[0].yyyy, CONST[1], TEMP[0]\n"
                                     "  2: MAD TEMP[0], IN[0].zzzz, CONST[2], TEMP[1]\n"
                                     "  3: MAD OUT[0], IN[0].wwww, CONST[3], TEMP[0]\n"
-                                    "  4: MOV_SAT OUT[1], IN[1]\n"
+                                    "  4: MOV OUT[1], IN[1]\n"
                                     "  5: END\n"sv;
 
 Device::Device(NonnullRefPtr<Core::File> gpu_file)
@@ -226,10 +227,10 @@ void Device::draw_primitives(GPU::PrimitiveType primitive_type, FloatMatrix4x4 c
         .num_bytes = sizeof(VertexData) * m_vertices.size(),
         .direction = VIRGL_DATA_DIR_GUEST_TO_HOST,
     };
-    MUST(Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_TRANSFER_DATA, &descriptor));
+    MUST(copy_data_to_transfer_region(descriptor));
 
     // Transfer data from kernel virgl transfer region to host resource
-    builder.append_transfer3d(m_vbo_resource_id, sizeof(VertexData) * m_vertices.size(), 1, 1, VIRGL_DATA_DIR_GUEST_TO_HOST);
+    builder.append_transfer3d(m_vbo_resource_id, /* level= */ 0, sizeof(VertexData) * m_vertices.size(), 1, 1, VIRGL_DATA_DIR_GUEST_TO_HOST);
     builder.append_end_transfers_3d();
 
     // Set the constant buffer to the identity matrix
@@ -267,7 +268,7 @@ void Device::draw_primitives(GPU::PrimitiveType primitive_type, FloatMatrix4x4 c
 
 void Device::resize(Gfx::IntSize)
 {
-    dbgln("VirtGPU::Device::resize(): unimplemented");
+//    dbgln("VirtGPU::Device::resize(): unimplemented");
 }
 
 void Device::clear_color(FloatVector4 const& color)
@@ -286,14 +287,14 @@ void Device::clear_depth(GPU::DepthType depth)
 
 void Device::clear_stencil(GPU::StencilType)
 {
-    dbgln("VirtGPU::Device::clear_stencil(): unimplemented");
+//    dbgln("VirtGPU::Device::clear_stencil(): unimplemented");
 }
 
 void Device::blit_from_color_buffer(Gfx::Bitmap& front_buffer)
 {
     // Transfer data back from hypervisor to kernel transfer region
     CommandBufferBuilder builder;
-    builder.append_transfer3d(m_drawtarget, front_buffer.size().width(), front_buffer.size().height(), 1, VIRGL_DATA_DIR_HOST_TO_GUEST);
+    builder.append_transfer3d(m_drawtarget, /* level= */ 0, front_buffer.size().width(), front_buffer.size().height(), 1, VIRGL_DATA_DIR_HOST_TO_GUEST);
     builder.append_end_transfers_3d();
     MUST(upload_command_buffer(builder.build()));
 
@@ -304,122 +305,151 @@ void Device::blit_from_color_buffer(Gfx::Bitmap& front_buffer)
         .num_bytes = front_buffer.size().width() * front_buffer.size().height() * sizeof(u32),
         .direction = VIRGL_DATA_DIR_HOST_TO_GUEST,
     };
-    MUST(Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_TRANSFER_DATA, &descriptor));
+    MUST(copy_data_to_transfer_region(descriptor));
 }
 
 void Device::blit_from_color_buffer(NonnullRefPtr<GPU::Image>, u32, Vector2<u32>, Vector2<i32>, Vector3<i32>)
 {
-    dbgln("VirtGPU::Device::blit_from_color_buffer(): unimplemented");
+//    dbgln("VirtGPU::Device::blit_from_color_buffer(): unimplemented");
 }
 
 void Device::blit_from_color_buffer(void*, Vector2<i32>, GPU::ImageDataLayout const&)
 {
-    dbgln("VirtGPU::Device::blit_from_color_buffer(): unimplemented");
+//    dbgln("VirtGPU::Device::blit_from_color_buffer(): unimplemented");
 }
 
 void Device::blit_from_depth_buffer(void*, Vector2<i32>, GPU::ImageDataLayout const&)
 {
-    dbgln("VirtGPU::Device::blit_from_depth_buffer(): unimplemented");
+//    dbgln("VirtGPU::Device::blit_from_depth_buffer(): unimplemented");
 }
 
 void Device::blit_from_depth_buffer(NonnullRefPtr<GPU::Image>, u32, Vector2<u32>, Vector2<i32>, Vector3<i32>)
 {
-    dbgln("VirtGPU::Device::blit_from_depth_buffer(): unimplemented");
+//    dbgln("VirtGPU::Device::blit_from_depth_buffer(): unimplemented");
 }
 
 void Device::blit_to_color_buffer_at_raster_position(void const*, GPU::ImageDataLayout const&)
 {
-    dbgln("VirtGPU::Device::blit_to_color_buffer_at_raster_position(): unimplemented");
+//    dbgln("VirtGPU::Device::blit_to_color_buffer_at_raster_position(): unimplemented");
 }
 
 void Device::blit_to_depth_buffer_at_raster_position(void const*, GPU::ImageDataLayout const&)
 {
-    dbgln("VirtGPU::Device::blit_to_depth_buffer_at_raster_position(): unimplemented");
+//    dbgln("VirtGPU::Device::blit_to_depth_buffer_at_raster_position(): unimplemented");
 }
 
 void Device::set_options(GPU::RasterizerOptions const&)
 {
-    dbgln("VirtGPU::Device::set_options(): unimplemented");
+//    dbgln("VirtGPU::Device::set_options(): unimplemented");
 }
 
 void Device::set_light_model_params(GPU::LightModelParameters const&)
 {
-    dbgln("VirtGPU::Device::set_light_model_params(): unimplemented");
+//    dbgln("VirtGPU::Device::set_light_model_params(): unimplemented");
 }
 
 GPU::RasterizerOptions Device::options() const
 {
-    dbgln("VirtGPU::Device::options(): unimplemented");
+//    dbgln("VirtGPU::Device::options(): unimplemented");
     return {};
 }
 
 GPU::LightModelParameters Device::light_model() const
 {
-    dbgln("VirtGPU::Device::light_model(): unimplemented");
+//    dbgln("VirtGPU::Device::light_model(): unimplemented");
     return {};
 }
 
 NonnullRefPtr<GPU::Image> Device::create_image(GPU::PixelFormat const& pixel_format, u32 width, u32 height, u32 depth, u32 max_levels)
 {
-    dbgln("VirtGPU::Device::create_image(): unimplemented");
-    return adopt_ref(*new Image(this, pixel_format, width, height, depth, max_levels));
+//    dbgln("VirtGPU::Device::create_image(): unimplemented");
+    return adopt_ref(*new Image(*this, this, pixel_format, width, height, depth, max_levels));
 }
 
 ErrorOr<NonnullRefPtr<GPU::Shader>> Device::create_shader(GPU::IR::Shader const&)
 {
-    dbgln("VirtGPU::Device::create_shader(): unimplemented");
+//    dbgln("VirtGPU::Device::create_shader(): unimplemented");
     return adopt_ref(*new Shader(this));
 }
 
-void Device::set_sampler_config(unsigned, GPU::SamplerConfig const&)
+void Device::set_sampler_config(unsigned slot, GPU::SamplerConfig const& config)
 {
-    dbgln("VirtGPU::Device::set_sampler_config(): unimplemented");
+    VERIFY(config.bound_image.is_null() || config.bound_image->ownership_token() == this);
+
+//    dbgln("VirtGPU::Device::set_sampler_config(): unimplemented");
+    CommandBufferBuilder builder;
+
+    if (config.bound_image) {
+        auto& virtgpu_image = verify_cast<VirtGPU::Image>(*config.bound_image);
+//        dbgln("config has bound image with slot id {} and resource id {}", slot, virtgpu_image.resource_id());
+
+        // FIXME: Might run out of handles
+        auto sampler_view_handle = allocate_handle();
+
+        // FIXME: We currently only support Texture2D.
+        builder.append_create_sampler_view(virtgpu_image.resource_id(), sampler_view_handle, Protocol::PipeTextureTarget::TEXTURE_2D, virtgpu_image.texture_format());
+
+        // FIXME: Is this the correct shader type?
+        builder.append_set_sampler_view(Gallium::ShaderType::SHADER_FRAGMENT, slot, sampler_view_handle);
+    } else {
+        // FIXME: What do we do if bound image is initially null or switches to null?
+//        dbgln("null bound image on slot {}", slot);
+    }
+
+    // FIXME: Might run out of handles
+    auto sampler_state_handle = allocate_handle();
+    builder.append_create_sampler_state(sampler_state_handle, config);
+
+    // FIXME: Is this the correct shader type?
+    builder.append_bind_sampler_state(Gallium::ShaderType::SHADER_FRAGMENT, slot, sampler_state_handle);
+
+    MUST(upload_command_buffer(builder.build()));
 }
 
 void Device::set_light_state(unsigned, GPU::Light const&)
 {
-    dbgln("VirtGPU::Device::set_light_state(): unimplemented");
+//    dbgln("VirtGPU::Device::set_light_state(): unimplemented");
 }
 
 void Device::set_material_state(GPU::Face, GPU::Material const&)
 {
-    dbgln("VirtGPU::Device::set_material_state(): unimplemented");
+//    dbgln("VirtGPU::Device::set_material_state(): unimplemented");
 }
 
 void Device::set_stencil_configuration(GPU::Face, GPU::StencilConfiguration const&)
 {
-    dbgln("VirtGPU::Device::set_stencil_configuration(): unimplemented");
+//    dbgln("VirtGPU::Device::set_stencil_configuration(): unimplemented");
 }
 
 void Device::set_texture_unit_configuration(GPU::TextureUnitIndex, GPU::TextureUnitConfiguration const&)
 {
-    dbgln("VirtGPU::Device::set_texture_unit_configuration(): unimplemented");
+//    dbgln("VirtGPU::Device::set_texture_unit_configuration(): unimplemented");
 }
 
 void Device::set_clip_planes(Vector<FloatVector4> const&)
 {
-    dbgln("VirtGPU::Device::set_clip_planes(): unimplemented");
+//    dbgln("VirtGPU::Device::set_clip_planes(): unimplemented");
 }
 
 GPU::RasterPosition Device::raster_position() const
 {
-    dbgln("VirtGPU::Device::raster_position(): unimplemented");
+//    dbgln("VirtGPU::Device::raster_position(): unimplemented");
     return {};
 }
 
 void Device::set_raster_position(GPU::RasterPosition const&)
 {
-    dbgln("VirtGPU::Device::set_raster_position(): unimplemented");
+//    dbgln("VirtGPU::Device::set_raster_position(): unimplemented");
 }
 
 void Device::set_raster_position(FloatVector4 const&, FloatMatrix4x4 const&, FloatMatrix4x4 const&)
 {
-    dbgln("VirtGPU::Device::set_raster_position(): unimplemented");
+//    dbgln("VirtGPU::Device::set_raster_position(): unimplemented");
 }
 
 void Device::bind_fragment_shader(RefPtr<GPU::Shader>)
 {
-    dbgln("VirtGPU::Device::bind_fragment_shader(): unimplemented");
+//    dbgln("VirtGPU::Device::bind_fragment_shader(): unimplemented");
 }
 
 Protocol::ObjectHandle Device::allocate_handle()
@@ -443,6 +473,11 @@ ErrorOr<Protocol::ResourceID> Device::create_virgl_resource(VirGL3DResourceSpec&
 {
     TRY(Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_CREATE_RESOURCE, &spec));
     return Protocol::ResourceID { spec.created_resource_id };
+}
+
+ErrorOr<void> Device::copy_data_to_transfer_region(VirGLTransferDescriptor const& descriptor)
+{
+    return Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_TRANSFER_DATA, &descriptor);
 }
 
 }

@@ -1466,7 +1466,7 @@ void Device::blit_from_color_buffer(Gfx::Bitmap& target)
 {
     m_frame_buffer->color_buffer()->blit_flipped_to_bitmap(target, m_frame_buffer->rect());
 
-    if constexpr (ENABLE_STATISTICS_OVERLAY)
+    if constexpr (1)
         draw_statistics_overlay(target);
 }
 

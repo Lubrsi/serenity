@@ -19,17 +19,17 @@ enum class TextureFilter {
 };
 
 enum class MipMapFilter {
-    None,
     Nearest,
     Linear,
+    None,
 };
 
 enum class TextureWrapMode {
     Repeat,
-    MirroredRepeat,
     Clamp,
-    ClampToBorder,
     ClampToEdge,
+    ClampToBorder,
+    MirroredRepeat,
 };
 
 enum class TextureEnvMode {

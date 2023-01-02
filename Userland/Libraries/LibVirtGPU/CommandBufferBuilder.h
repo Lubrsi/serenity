@@ -11,6 +11,7 @@
 #include <AK/StringView.h>
 #include <AK/Vector.h>
 #include <LibGfx/Size.h>
+#include <LibGPU/SamplerConfig.h>
 #include <LibVirtGPU/Commands.h>
 #include <LibVirtGPU/VirGLProtocol.h>
 #include <sys/ioctl_numbers.h>
@@ -20,7 +21,7 @@ namespace VirtGPU {
 class CommandBufferBuilder {
 public:
     void append_set_tweaks(u32 id, u32 value);
-    void append_transfer3d(Protocol::ResourceID resource, size_t width, size_t height = 1, size_t depth = 1, size_t direction = VIRGL_DATA_DIR_GUEST_TO_HOST);
+    void append_transfer3d(Protocol::ResourceID resource, u32 level, size_t width, size_t height = 1, size_t depth = 1, size_t direction = VIRGL_DATA_DIR_GUEST_TO_HOST);
     void append_end_transfers_3d();
     void append_draw_vbo(Protocol::PipePrimitiveTypes, u32 count);
     void append_clear(float r, float g, float b, float a);
@@ -41,6 +42,11 @@ public:
     void append_bind_rasterizer(Protocol::ObjectHandle handle);
     void append_create_dsa(Protocol::ObjectHandle handle);
     void append_bind_dsa(Protocol::ObjectHandle handle);
+    void append_blit_to_resource_of_same_dimensions(Protocol::ResourceID source_resource, Protocol::TextureFormat source_format, u32 source_level, Protocol::ResourceID destination_resource, Protocol::TextureFormat destination_format, u32 destination_level, size_t width, size_t height, size_t depth);
+    void append_create_sampler_state(Protocol::ObjectHandle handle, GPU::SamplerConfig const& sampler_config);
+    void append_bind_sampler_state(Gallium::ShaderType shader_type, u32 slot, Protocol::ObjectHandle handle);
+    void append_create_sampler_view(Protocol::ResourceID sampler_view_resource, Protocol::ObjectHandle sampler_view_handle, Protocol::PipeTextureTarget texture_target, Protocol::TextureFormat texture_format);
+    void append_set_sampler_view(Gallium::ShaderType shader_type, u32 slot, Protocol::ObjectHandle handle);
     Vector<u32> const& build() { return m_buffer; }
 
 private:

@@ -42,6 +42,13 @@ enum class TextureFormat : u32 {
     VIRTIO_GPU_FORMAT_A8R8G8B8_UNORM = 3,
     VIRTIO_GPU_FORMAT_X8R8G8B8_UNORM = 4,
 
+    VIRTIO_GPU_FORMAT_L8_UNORM = 9,
+    VIRTIO_GPU_FORMAT_A8_UNORM = 10,
+    VIRTIO_GPU_FORMAT_L8A8_UNORM = 12,
+
+    VIRTIO_GPU_FORMAT_R8_UNORM = 64,
+    VIRTIO_GPU_FORMAT_R8G8_UNORM = 65,
+    VIRTIO_GPU_FORMAT_R8G8B8_UNORM = 66,
     VIRTIO_GPU_FORMAT_R8G8B8A8_UNORM = 67,
     VIRTIO_GPU_FORMAT_X8B8G8R8_UNORM = 68,
 
@@ -214,6 +221,15 @@ enum class ShaderType : u32 {
 
 enum class PipeFormat : u32 {
     R32G32B32_FLOAT = 30
+};
+
+enum class PipeTextureSwizzle : u32 {
+    RED = 0,
+    GREEN,
+    BLUE,
+    ALPHA,
+    ZERO,
+    ONE,
 };
 
 }

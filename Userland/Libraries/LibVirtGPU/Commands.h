@@ -129,4 +129,53 @@ struct CreateDSACommand {
     };
 };
 
+struct BlitCommand {
+    union S0Flags {
+        struct {
+            u32 mask : 8;
+            u32 filter : 3;
+            u32 scissor_enabled : 1;
+            u32 render_condition_enabled : 1;
+            u32 alpha_blend : 1;
+            u32 unused : 18;
+        };
+        u32 u32_value;
+    };
+
+    union ScissorMinimumXAndY {
+        struct {
+            u16 x;
+            u16 y;
+        };
+        u32 u32_value;
+    };
+
+    union ScissorMaximumXAndY {
+        struct {
+            u16 x;
+            u16 y;
+        };
+        u32 u32_value;
+    };
+};
+
+struct CreateSamplerStateCommand {
+    union S0Flags {
+        struct {
+            u32 wrap_s : 3;
+            u32 wrap_t : 3;
+            u32 wrap_r : 3;
+            u32 min_image_filter : 2;
+            u32 mipmap_filter : 2;
+            u32 mag_image_filter : 2;
+            u32 texture_compare_mode : 1;
+            u32 texture_compare_func : 3;
+            u32 seamless_cube_map : 1;
+            u32 max_anisotropy : 6;
+            u32 unused : 6;
+        };
+        u32 u32_value;
+    };
+};
+
 }

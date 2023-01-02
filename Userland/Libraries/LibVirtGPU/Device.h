@@ -60,11 +60,13 @@ public:
 
     virtual void bind_fragment_shader(RefPtr<GPU::Shader>) override;
 
-private:
-    void encode_constant_buffer(Gfx::FloatMatrix4x4 const&, Vector<float>&);
     Protocol::ObjectHandle allocate_handle();
     ErrorOr<Protocol::ResourceID> create_virgl_resource(VirGL3DResourceSpec&);
     ErrorOr<void> upload_command_buffer(Vector<u32> const&);
+    ErrorOr<void> copy_data_to_transfer_region(VirGLTransferDescriptor const& descriptor);
+
+private:
+    void encode_constant_buffer(Gfx::FloatMatrix4x4 const&, Vector<float>&);
 
     NonnullRefPtr<Core::File> m_gpu_file;
 
