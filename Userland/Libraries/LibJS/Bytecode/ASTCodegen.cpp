@@ -2798,4 +2798,65 @@ Bytecode::CodeGenerationErrorOr<void> MetaProperty::generate_bytecode(Bytecode::
 
     VERIFY_NOT_REACHED();
 }
+
+Bytecode::CodeGenerationErrorOr<void> OptionalChain::generate_bytecode(Bytecode::Generator& generator) const
+{
+    TRY(m_base->generate_bytecode(generator));
+
+    auto& load_undefined_and_jump_to_end_block = generator.make_block();
+    auto& end_block = generator.make_block();
+
+    Optional<Bytecode::Register> current_base_register;
+    Optional<Bytecode::Register> current_value_register;
+
+    for (auto& reference : m_references) {
+        auto is_optional = reference.visit([](auto& ref) { return ref.mode; }) == Mode::Optional;
+        if (is_optional) {
+            auto& not_nullish_block = generator.make_block();
+            generator.emit<Bytecode::Op::JumpNullish>(
+                Bytecode::Label { load_undefined_and_jump_to_end_block },
+                Bytecode::Label { not_nullish_block });
+            generator.switch_to_basic_block(not_nullish_block);
+        }
+
+        TRY(reference.visit(
+            [&](Call const& call) -> Bytecode::CodeGenerationErrorOr<void> {
+                dbgln("call");
+                TRY(arguments_to_array_for_call(generator, call.arguments));
+                generator.emit<Bytecode::Op::Call>(Bytecode::Op::Call::CallType::Call, current_value_register, current_value_register);
+                return {};
+            },
+            [&](ComputedReference const& ref) -> Bytecode::CodeGenerationErrorOr<void> {
+                if (!current_value_register.has_value())
+                    current_value_register = generator.allocate_register();
+
+                dbgln("computed");
+                generator.emit<Bytecode::Op::Store>(current_value_register.value());
+                TRY(ref.expression->generate_bytecode(generator));
+                generator.emit<Bytecode::Op::GetByValue>(current_value_register.value());
+                return {};
+            },
+            [&](MemberReference const& ref) -> Bytecode::CodeGenerationErrorOr<void> {
+                dbgln("member");
+                generator.emit<Bytecode::Op::GetById>(generator.intern_identifier(ref.identifier->string()));
+                return {};
+            },
+            [&](PrivateMemberReference const&) -> Bytecode::CodeGenerationErrorOr<void> {
+                return Bytecode::CodeGenerationError {
+                    this,
+                    "Unimplemented reference: PrivateMemberReference"sv,
+                };
+            }));
+    }
+
+    generator.emit<Bytecode::Op::Jump>(Bytecode::Label { end_block });
+
+    generator.switch_to_basic_block(load_undefined_and_jump_to_end_block);
+    generator.emit<Bytecode::Op::LoadImmediate>(js_undefined());
+    generator.emit<Bytecode::Op::Jump>(Bytecode::Label { end_block });
+
+    generator.switch_to_basic_block(end_block);
+    return {};
+}
+
 }

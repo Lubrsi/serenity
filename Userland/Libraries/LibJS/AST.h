@@ -1933,6 +1933,7 @@ public:
     virtual Completion execute(Interpreter&) const override;
     virtual ThrowCompletionOr<JS::Reference> to_reference(Interpreter&) const override;
     virtual void dump(int indent) const override;
+    virtual Bytecode::CodeGenerationErrorOr<void> generate_bytecode(Bytecode::Generator&) const override;
 
 private:
     struct ReferenceAndValue {
