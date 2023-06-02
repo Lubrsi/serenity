@@ -54,6 +54,11 @@ public:
 
     ErrorOr<Vector<JS::Handle<PerformanceTimeline::PerformanceEntry>>> filter_buffer_map_by_name_and_type(Optional<String> name, Optional<String> type) const;
 
+    ErrorOr<void> register_performance_observer(JS::NonnullGCPtr<PerformanceTimeline::PerformanceObserver>);
+    bool has_registered_performance_observer(JS::NonnullGCPtr<PerformanceTimeline::PerformanceObserver>);
+
+    void queue_the_performance_observer_task();
+
 protected:
     JS::ThrowCompletionOr<void> initialize(JS::Realm&);
     void visit_edges(JS::Cell::Visitor&);
@@ -70,8 +75,11 @@ private:
 
     // https://www.w3.org/TR/performance-timeline/#performance-timeline
     // Each global object has:
-    // FIXME: - a performance observer task queued flag
-    // FIXME: - a list of registered performance observer objects that is initially empty
+    // - a performance observer task queued flag
+    bool m_performance_observer_task_queued { false };
+
+    // - a list of registered performance observer objects that is initially empty
+    OrderedHashTable<JS::NonnullGCPtr<PerformanceTimeline::PerformanceObserver>> m_registered_performance_observer_objects;
 
     // https://www.w3.org/TR/performance-timeline/#dfn-performance-entry-buffer-map
     // a performance entry buffer map map, keyed on a DOMString, representing the entry type to which the buffer belongs. The map's value is the following tuple:

@@ -41,6 +41,12 @@ public:
 
         // https://w3c.github.io/FileAPI/#fileReadingTaskSource
         FileReading,
+
+        // https://www.w3.org/TR/intersection-observer/#intersectionobserver-task-source
+        IntersectionObserver,
+
+        // https://w3c.github.io/performance-timeline/#dfn-performance-timeline-task-source
+        PerformanceTimeline,
     };
 
     static NonnullOwnPtr<Task> create(Source source, DOM::Document const* document, JS::SafeFunction<void()> steps)

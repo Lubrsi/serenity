@@ -105,6 +105,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
 static ErrorOr<void> load_content_filters()
 {
+    return {};
     auto file_or_error = Core::File::open(DeprecatedString::formatted("{}/home/anon/.config/BrowserContentFilters.txt", s_serenity_resource_root), Core::File::OpenMode::Read);
     if (file_or_error.is_error())
         file_or_error = Core::File::open(DeprecatedString::formatted("{}/res/ladybird/BrowserContentFilters.txt", s_serenity_resource_root), Core::File::OpenMode::Read);

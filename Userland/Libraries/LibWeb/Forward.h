@@ -443,6 +443,8 @@ class Performance;
 
 namespace Web::IntersectionObserver {
 class IntersectionObserver;
+class IntersectionObserverEntry;
+struct IntersectionObserverRegistration;
 }
 
 namespace Web::Layout {
@@ -507,6 +509,9 @@ struct LinearGradientData;
 
 namespace Web::PerformanceTimeline {
 class PerformanceEntry;
+class PerformanceObserver;
+class PerformanceObserverEntryList;
+struct PerformanceObserverInit;
 }
 
 namespace Web::PermissionsPolicy {

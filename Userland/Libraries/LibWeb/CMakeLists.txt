@@ -390,6 +390,7 @@ set(SOURCES
     Infra/JSON.cpp
     Infra/Strings.cpp
     IntersectionObserver/IntersectionObserver.cpp
+    IntersectionObserver/IntersectionObserverEntry.cpp
     Layout/AudioBox.cpp
     Layout/AvailableSpace.cpp
     Layout/BlockContainer.cpp
@@ -477,6 +478,8 @@ set(SOURCES
     Painting/VideoPaintable.cpp
     PerformanceTimeline/EntryTypes.cpp
     PerformanceTimeline/PerformanceEntry.cpp
+    PerformanceTimeline/PerformanceObserver.cpp
+    PerformanceTimeline/PerformanceObserverEntryList.cpp
     PermissionsPolicy/AutoplayAllowlist.cpp
     Platform/AudioCodecPlugin.cpp
     Platform/EventLoopPlugin.cpp

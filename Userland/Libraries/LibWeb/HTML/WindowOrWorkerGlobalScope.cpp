@@ -30,15 +30,13 @@
 #include <LibWeb/WebIDL/AbstractOperations.h>
 #include <LibWeb/WebIDL/DOMException.h>
 #include <LibWeb/WebIDL/ExceptionOr.h>
+#include <LibWeb/PerformanceTimeline/PerformanceObserverEntryList.h>
+#include <LibWeb/HighResolutionTime/SupportedPerformanceTypes.h>
+#include <LibWeb/PerformanceTimeline/PerformanceObserver.h>
 
 namespace Web::HTML {
 
 WindowOrWorkerGlobalScopeMixin::~WindowOrWorkerGlobalScopeMixin() = default;
-
-// Please keep these in alphabetical order based on the entry type :^)
-#define ENUMERATE_SUPPORTED_PERFORMANCE_ENTRY_TYPES                                                                   \
-    __ENUMERATE_SUPPORTED_PERFORMANCE_ENTRY_TYPES(PerformanceTimeline::EntryTypes::mark, UserTiming::PerformanceMark) \
-    __ENUMERATE_SUPPORTED_PERFORMANCE_ENTRY_TYPES(PerformanceTimeline::EntryTypes::measure, UserTiming::PerformanceMeasure)
 
 JS::ThrowCompletionOr<void> WindowOrWorkerGlobalScopeMixin::initialize(JS::Realm& realm)
 {
@@ -61,6 +59,8 @@ void WindowOrWorkerGlobalScopeMixin::visit_edges(JS::Cell::Visitor& visitor)
 {
     for (auto& it : m_timers)
         visitor.visit(it.value);
+    for (auto& observer : m_registered_performance_observer_objects)
+        visitor.visit(observer);
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#dom-origin
@@ -308,22 +308,42 @@ WebIDL::ExceptionOr<void> WindowOrWorkerGlobalScopeMixin::queue_performance_entr
 {
     auto& vm = new_entry->vm();
 
-    // FIXME: 1. Let interested observers be an initially empty set of PerformanceObserver objects.
+    // 1. Let interested observers be an initially empty set of PerformanceObserver objects.
+    Vector<JS::Handle<PerformanceTimeline::PerformanceObserver>> interested_observers;
 
     // 2. Let entryType be newEntry’s entryType value.
     auto const& entry_type = new_entry->entry_type();
 
+    dbgln("queue {} {}", new_entry->entry_type(), new_entry->name());
+
     // 3. Let relevantGlobal be newEntry's relevant global object.
     // NOTE: Already is `this`.
 
-    // FIXME: 4. For each registered performance observer regObs in relevantGlobal's list of registered performance observer
-    //           objects:
-    //           1. If regObs's options list contains a PerformanceObserverInit options whose entryTypes member includes entryType
-    //              or whose type member equals to entryType:
-    //              1. If should add entry with newEntry and options returns true, append regObs's observer to interested observers.
+    // 4. For each registered performance observer regObs in relevantGlobal's list of registered performance observer
+    //    objects:
+    for (auto const& registered_observer : m_registered_performance_observer_objects) {
+        // 1. If regObs's options list contains a PerformanceObserverInit options whose entryTypes member includes entryType
+        //    or whose type member equals to entryType:
+        auto iterator = registered_observer->options_list().find_if([&entry_type](PerformanceTimeline::PerformanceObserverInit const& entry) {
+            if (entry.entry_types.has_value())
+                return entry.entry_types->contains_slow(String::from_utf8(entry_type).release_value_but_fixme_should_propagate_errors());
 
-    // FIXME: 5. For each observer in interested observers:
-    //           1. Append newEntry to observer's observer buffer.
+            VERIFY(entry.type.has_value());
+            return entry.type.value() == entry_type;
+        });
+
+        if (!iterator.is_end()) {
+            // 1. If should add entry with newEntry and options returns true, append regObs's observer to interested observers.
+            if (new_entry->should_add_entry(*iterator) == PerformanceTimeline::ShouldAddEntry::Yes)
+                TRY_OR_THROW_OOM(vm, interested_observers.try_append(registered_observer));
+        }
+    }
+
+    // 5. For each observer in interested observers:
+    for (auto const& observer : interested_observers) {
+        // 1. Append newEntry to observer's observer buffer.
+        TRY_OR_THROW_OOM(vm, observer->append_to_observer_buffer({}, JS::make_handle(new_entry)));
+    }
 
     // 6. Let tuple be the relevant performance entry tuple of entryType and relevantGlobal.
     auto& tuple = relevant_performance_entry_tuple(entry_type);
@@ -339,7 +359,8 @@ WebIDL::ExceptionOr<void> WindowOrWorkerGlobalScopeMixin::queue_performance_entr
     if (!is_buffer_full && should_add == PerformanceTimeline::ShouldAddEntry::Yes)
         TRY_OR_THROW_OOM(vm, tuple.performance_entry_buffer.try_append(JS::make_handle(new_entry)));
 
-    // FIXME: 10. Queue the PerformanceObserver task with relevantGlobal as input.
+    // 10. Queue the PerformanceObserver task with relevantGlobal as input.
+    queue_the_performance_observer_task();
     return {};
 }
 
@@ -355,35 +376,6 @@ void WindowOrWorkerGlobalScopeMixin::remove_entries_from_performance_entry_buffe
     tuple.performance_entry_buffer.remove_all_matching([&entry_name](JS::Handle<PerformanceTimeline::PerformanceEntry> const& entry) {
         return entry->name() == entry_name;
     });
-}
-
-// https://www.w3.org/TR/performance-timeline/#dfn-filter-buffer-by-name-and-type
-static ErrorOr<Vector<JS::Handle<PerformanceTimeline::PerformanceEntry>>> filter_buffer_by_name_and_type(Vector<JS::Handle<PerformanceTimeline::PerformanceEntry>> const& buffer, Optional<String> name, Optional<String> type)
-{
-    // 1. Let result be an initially empty list.
-    Vector<JS::Handle<PerformanceTimeline::PerformanceEntry>> result;
-
-    // 2. For each PerformanceEntry entry in buffer, run the following steps:
-    for (auto const& entry : buffer) {
-        // 1. If type is not null and if type is not identical to entry's entryType attribute, continue to next entry.
-        if (type.has_value() && type.value() != entry->entry_type())
-            continue;
-
-        // 2. If name is not null and if name is not identical to entry's name attribute, continue to next entry.
-        if (name.has_value() && name.value() != entry->name())
-            continue;
-
-        // 3. append entry to result.
-        TRY(result.try_append(entry));
-    }
-
-    // 3. Sort results's entries in chronological order with respect to startTime
-    quick_sort(result, [](auto const& left_entry, auto const& right_entry) {
-        return left_entry->start_time() < right_entry->start_time();
-    });
-
-    // 4. Return result.
-    return result;
 }
 
 // https://www.w3.org/TR/performance-timeline/#dfn-filter-buffer-map-by-name-and-type
@@ -432,6 +424,107 @@ ErrorOr<Vector<JS::Handle<PerformanceTimeline::PerformanceEntry>>> WindowOrWorke
 
     // 7. Return result.
     return result;
+}
+
+ErrorOr<void> WindowOrWorkerGlobalScopeMixin::register_performance_observer(JS::NonnullGCPtr<PerformanceTimeline::PerformanceObserver> observer)
+{
+    TRY(m_registered_performance_observer_objects.try_set(observer, AK::HashSetExistingEntryBehavior::Keep));
+    return {};
+}
+
+bool WindowOrWorkerGlobalScopeMixin::has_registered_performance_observer(JS::NonnullGCPtr<PerformanceTimeline::PerformanceObserver> observer)
+{
+    return m_registered_performance_observer_objects.contains(observer);
+}
+
+// https://w3c.github.io/performance-timeline/#dfn-queue-the-performanceobserver-task
+void WindowOrWorkerGlobalScopeMixin::queue_the_performance_observer_task()
+{
+    // 1. If relevantGlobal's performance observer task queued flag is set, terminate these steps.
+    if (m_performance_observer_task_queued)
+        return;
+
+    // 2. Set relevantGlobal's performance observer task queued flag.
+    m_performance_observer_task_queued = true;
+
+    // 3. Queue a task that consists of running the following substeps. The task source for the queued task is the performance
+    //    timeline task source.
+    queue_global_task(Task::Source::PerformanceTimeline, this_impl(), [this]() {
+        auto& realm = this_impl().realm();
+
+        // 1. Unset performance observer task queued flag of relevantGlobal.
+        m_performance_observer_task_queued = false;
+
+        // 2. Let notifyList be a copy of relevantGlobal's list of registered performance observer objects.
+        auto notify_list = m_registered_performance_observer_objects;
+
+        // 3. For each registered performance observer object registeredObserver in notifyList, run these steps:
+        for (auto& registered_observer : notify_list) {
+            // 1. Let po be registeredObserver's observer.
+            // 2. Let entries be a copy of po’s observer buffer.
+            // 4. Empty po’s observer buffer.
+            auto entries = registered_observer->take_records();
+
+            // 3. If entries is empty, return.
+            // FIXME: Do they mean `continue`?
+            if (entries.is_empty())
+                continue;
+
+            // 5. Let observerEntryList be a new PerformanceObserverEntryList, with its entry list set to entries.
+            auto observer_entry_list = realm.heap().allocate<PerformanceTimeline::PerformanceObserverEntryList>(realm, realm, move(entries)).release_allocated_value_but_fixme_should_propagate_errors();
+
+            // 6. Let droppedEntriesCount be null.
+            Optional<u64> dropped_entries_count;
+
+            // 7. If po's requires dropped entries is set, perform the following steps:
+            if (registered_observer->requires_dropped_entries()) {
+                // 1. Set droppedEntriesCount to 0.
+                dropped_entries_count = 0;
+
+                // 2. For each PerformanceObserverInit item in registeredObserver's options list:
+                for (auto const& item : registered_observer->options_list()) {
+                    // 1. For each DOMString entryType that appears either as item's type or in item's entryTypes:
+                    auto increment_dropped_entries_count = [this, &dropped_entries_count](FlyString const& type) {
+                        // 1. Let map be relevantGlobal's performance entry buffer map.
+                        auto const& map = m_performance_entry_buffer_map;
+
+                        // 2. Let tuple be the result of getting the value of entry on map given entryType as key.
+                        auto const& tuple = map.get(type);
+                        VERIFY(tuple.has_value());
+
+                        // 3. Increase droppedEntriesCount by tuple's dropped entries count.
+                        dropped_entries_count.value() += tuple->dropped_entries_count;
+                    };
+
+                    if (item.type.has_value()) {
+                        increment_dropped_entries_count(item.type.value());
+                    } else {
+                        VERIFY(item.entry_types.has_value());
+                        for (auto const& type : item.entry_types.value())
+                            increment_dropped_entries_count(type);
+                    }
+                }
+
+                // 3. Set po's requires dropped entries to false.
+                registered_observer->unset_requires_dropped_entries({});
+            }
+
+            // 8. Let callbackOptions be a PerformanceObserverCallbackOptions with its droppedEntriesCount set to
+            //    droppedEntriesCount if droppedEntriesCount is not null, otherwise unset.
+            auto callback_options = JS::Object::create(realm, realm.intrinsics().object_prototype());
+            if (dropped_entries_count.has_value())
+                MUST(callback_options->create_data_property("droppedEntriesCount", JS::Value(dropped_entries_count.value())));
+
+            dbgln("PO callback!");
+
+            // 9. Call po’s observer callback with observerEntryList as the first argument, with po as the second
+            //    argument and as callback this value, and with callbackOptions as the third argument.
+            //    If this throws an exception, report the exception.
+            auto completion = WebIDL::invoke_callback(registered_observer->callback(), registered_observer, observer_entry_list, registered_observer, callback_options);
+            if (completion.is_abrupt())
+                HTML::report_exception(completion, realm);
+        }
+    });
 }
 
 }
