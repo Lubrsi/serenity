@@ -66,15 +66,13 @@ private:
 };
 
 ASTNode::ASTNode(SourceRange source_range)
-    : m_start_offset(source_range.start.offset)
-    , m_source_code(source_range.code)
-    , m_end_offset(source_range.end.offset)
+    : m_shrink_wrapped_source_range(source_range.start.offset, source_range.end.offset, source_range.code)
 {
 }
 
 SourceRange ASTNode::source_range() const
 {
-    return m_source_code->range_from_offsets(m_start_offset, m_end_offset);
+    return m_shrink_wrapped_source_range.to_source_range();
 }
 
 DeprecatedString ASTNode::class_name() const

@@ -8,6 +8,7 @@
 #include <LibJS/Bytecode/BasicBlock.h>
 #include <LibJS/Bytecode/Op.h>
 #include <sys/mman.h>
+#include <LibJS/Bytecode/Executable.h>
 
 namespace JS::Bytecode {
 
@@ -53,6 +54,37 @@ void BasicBlock::dump(Bytecode::Executable const& executable) const
     if (!m_name.is_empty())
         warnln("{}:", m_name);
     while (!it.at_end()) {
+        DebugBlock const* closest_debug_block { nullptr };
+        ptrdiff_t closest_debug_block_size { 0 };
+
+        for (auto const& debug_block : executable.debug_blocks) {
+            auto source_range = debug_block->shrink_wrapped_source_range.to_source_range();
+
+//            warnln("check block {:p}, {:p} -> {:p} {}:{}:{}", reinterpret_cast<u8 const*>(&*it), debug_block->start_of_instructions, debug_block->end_of_instructions, source_range.filename(), source_range.start.line, source_range.start.column);
+//            dbgln("{:p} >= {:p}? {}", reinterpret_cast<u8 const*>(&*it), debug_block->start_of_instructions, reinterpret_cast<u8 const*>(&*it) >= debug_block->start_of_instructions);
+//            dbgln("{:p} <= {:p}? {}", reinterpret_cast<u8 const*>(&*it), debug_block->end_of_instructions, reinterpret_cast<u8 const*>(&*it) <= debug_block->end_of_instructions);
+//            dbgln("contains? {}", debug_block->contains(reinterpret_cast<u8 const*>(&*it)));
+            if (debug_block->contains(reinterpret_cast<u8 const*>(&*it))) {
+//                dbgln("contains :)");
+                if (!closest_debug_block) {
+                    closest_debug_block = debug_block;
+                    closest_debug_block_size = debug_block->end_of_instructions - debug_block->start_of_instructions;
+                    continue;
+                }
+
+                auto block_size = debug_block->end_of_instructions - debug_block->start_of_instructions;
+                if (block_size <= closest_debug_block_size) {
+                    closest_debug_block = debug_block;
+                    closest_debug_block_size = block_size;
+                }
+            }
+        }
+
+        if (closest_debug_block) {
+            auto source_range = closest_debug_block->shrink_wrapped_source_range.to_source_range();
+            warnln("== {}:{}:{}", source_range.filename(), source_range.start.line, source_range.start.column);
+        }
+
         warnln("[{:4x}] {}", it.offset(), (*it).to_deprecated_string(executable));
         ++it;
     }

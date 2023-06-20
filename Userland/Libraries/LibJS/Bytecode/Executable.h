@@ -9,6 +9,7 @@
 #include <AK/DeprecatedFlyString.h>
 #include <AK/NonnullOwnPtr.h>
 #include <LibJS/Bytecode/BasicBlock.h>
+#include <LibJS/Bytecode/DebugBlock.h>
 #include <LibJS/Bytecode/IdentifierTable.h>
 #include <LibJS/Bytecode/StringTable.h>
 
@@ -17,6 +18,7 @@ namespace JS::Bytecode {
 struct Executable {
     DeprecatedFlyString name;
     Vector<NonnullOwnPtr<BasicBlock>> basic_blocks;
+    Vector<NonnullOwnPtr<DebugBlock>> debug_blocks;
     NonnullOwnPtr<StringTable> string_table;
     NonnullOwnPtr<IdentifierTable> identifier_table;
     size_t number_of_registers { 0 };

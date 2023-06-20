@@ -110,6 +110,10 @@ public:
         return *m_root_basic_blocks.last();
     }
 
+    DebugBlock& make_debug_block(ASTNode const& node);
+    void push_debug_chain(DebugBlockChain& chain_node);
+    void pop_debug_chain();
+
     bool is_current_block_terminated() const
     {
         return m_current_basic_block->is_terminated();
@@ -202,6 +206,8 @@ private:
 
     BasicBlock* m_current_basic_block { nullptr };
     Vector<NonnullOwnPtr<BasicBlock>> m_root_basic_blocks;
+    DebugBlockChain const* m_debug_block_chain { nullptr };
+    Vector<NonnullOwnPtr<DebugBlock>> m_root_debug_blocks;
     NonnullOwnPtr<StringTable> m_string_table;
     NonnullOwnPtr<IdentifierTable> m_identifier_table;
 
@@ -212,6 +218,28 @@ private:
     Vector<LabelableScope> m_breakable_scopes;
     Vector<BlockBoundaryType> m_boundaries;
     Vector<Register> m_home_objects;
+};
+
+class GeneratorNodeScope {
+    AK_MAKE_NONCOPYABLE(GeneratorNodeScope);
+    AK_MAKE_NONMOVABLE(GeneratorNodeScope);
+
+public:
+    GeneratorNodeScope(Bytecode::Generator& generator, ASTNode const& node)
+        : m_generator(generator)
+        , m_chain_node { nullptr, generator.make_debug_block(node) }
+    {
+        generator.push_debug_chain(m_chain_node);
+    }
+
+    ~GeneratorNodeScope()
+    {
+        m_generator.pop_debug_chain();
+    }
+
+private:
+    Generator& m_generator;
+    DebugBlockChain m_chain_node;
 };
 
 }

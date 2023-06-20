@@ -30,4 +30,22 @@ struct SourceRange {
     DeprecatedString filename() const;
 };
 
+struct ShrinkWrappedSourceRange {
+    ShrinkWrappedSourceRange(u32 start_offset, u32 end_offset, NonnullRefPtr<SourceCode const> source_code)
+        : start_offset(start_offset)
+        , end_offset(end_offset)
+        , source_code(source_code)
+    {
+    }
+
+    u32 start_offset { 0 };
+    u32 end_offset { 0 };
+    NonnullRefPtr<SourceCode const> source_code;
+
+    [[nodiscard]] SourceRange to_source_range() const
+    {
+        return source_code->range_from_offsets(start_offset, end_offset);
+    }
+};
+
 }

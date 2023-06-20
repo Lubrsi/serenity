@@ -827,7 +827,7 @@ Completion ECMAScriptFunctionObject::ordinary_call_evaluate_body()
     // suddenly stop working inside of generators.
     // This is a stop gap until bytecode mode becomes the default.
     OwnPtr<Bytecode::Interpreter> temp_bc_interpreter;
-    if (m_kind == FunctionKind::Generator && !bytecode_interpreter) {
+    if ((m_kind == FunctionKind::Generator || m_kind == FunctionKind::Async) && !bytecode_interpreter) {
         temp_bc_interpreter = make<Bytecode::Interpreter>(realm);
         bytecode_interpreter = temp_bc_interpreter.ptr();
     }
@@ -846,7 +846,7 @@ Completion ECMAScriptFunctionObject::ordinary_call_evaluate_body()
                 dbgln("Optimisation passes took {}us", passes.elapsed());
                 dbgln("Compiled Bytecode::Block for function '{}':", m_name);
             }
-            if (Bytecode::g_dump_bytecode)
+//            if (Bytecode::g_dump_bytecode)
                 bytecode_executable->dump();
 
             return bytecode_executable;

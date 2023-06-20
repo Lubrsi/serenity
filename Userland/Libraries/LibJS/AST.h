@@ -57,12 +57,13 @@ public:
     virtual void dump(int indent) const;
 
     [[nodiscard]] SourceRange source_range() const;
-    u32 start_offset() const { return m_start_offset; }
-    u32 end_offset() const { return m_end_offset; }
+    [[nodiscard]] ShrinkWrappedSourceRange const& shrink_wrapped_source_range() const { return m_shrink_wrapped_source_range; }
+    u32 start_offset() const { return m_shrink_wrapped_source_range.start_offset; }
+    u32 end_offset() const { return m_shrink_wrapped_source_range.end_offset; }
 
-    SourceCode const& source_code() const { return *m_source_code; }
+    SourceCode const& source_code() const { return *m_shrink_wrapped_source_range.source_code; }
 
-    void set_end_offset(Badge<Parser>, u32 end_offset) { m_end_offset = end_offset; }
+    void set_end_offset(Badge<Parser>, u32 end_offset) { m_shrink_wrapped_source_range.end_offset = end_offset; }
 
     DeprecatedString class_name() const;
 
@@ -96,11 +97,7 @@ protected:
     explicit ASTNode(SourceRange);
 
 private:
-    // NOTE: These members are carefully ordered so that `m_start_offset` is packed with the padding after RefCounted::m_ref_count.
-    //       This creates a 4-byte padding hole after `m_end_offset` which is used to pack subclasses better.
-    u32 m_start_offset { 0 };
-    RefPtr<SourceCode const> m_source_code;
-    u32 m_end_offset { 0 };
+    ShrinkWrappedSourceRange m_shrink_wrapped_source_range;
 };
 
 // This is a helper class that packs an array of T after the AST node, all in the same allocation.

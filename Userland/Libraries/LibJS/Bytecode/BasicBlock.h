@@ -53,6 +53,7 @@ private:
     size_t m_buffer_capacity { 0 };
     size_t m_buffer_size { 0 };
     DeprecatedString m_name;
+
 };
 
 }

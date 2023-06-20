@@ -231,6 +231,7 @@ Interpreter::ValueAndFrame Interpreter::run_and_return_frame(Executable const& e
         bool will_yield = false;
         while (!pc.at_end()) {
             auto& instruction = *pc;
+            dbgln("instruction: {}", instruction.to_deprecated_string(executable));
             auto ran_or_error = instruction.execute(*this);
             if (ran_or_error.is_error()) {
                 auto exception_value = *ran_or_error.throw_completion().value();

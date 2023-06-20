@@ -57,6 +57,7 @@ CodeGenerationErrorOr<NonnullOwnPtr<Executable>> Generator::generate(ASTNode con
     return adopt_own(*new Executable {
         .name = {},
         .basic_blocks = move(generator.m_root_basic_blocks),
+        .debug_blocks = move(generator.m_root_debug_blocks),
         .string_table = move(generator.m_string_table),
         .identifier_table = move(generator.m_identifier_table),
         .number_of_registers = generator.m_next_register,
@@ -451,6 +452,27 @@ void Generator::emit_new_function(FunctionNode const& function_node)
         emit<Op::NewFunction>(function_node);
     else
         emit<Op::NewFunction>(function_node, m_home_objects.last());
+}
+
+DebugBlock& Generator::make_debug_block(ASTNode const& node)
+{
+    VERIFY(m_current_basic_block);
+    m_root_debug_blocks.append(DebugBlock::create(m_current_basic_block->instruction_stream().data(), node.shrink_wrapped_source_range()));
+    return *m_root_debug_blocks.last();
+}
+
+void Generator::push_debug_chain(DebugBlockChain& chain_node)
+{
+    chain_node.previous = m_debug_block_chain;
+    m_debug_block_chain = &chain_node;
+}
+
+void Generator::pop_debug_chain()
+{
+    VERIFY(m_debug_block_chain);
+    VERIFY(m_current_basic_block);
+    m_debug_block_chain->debug_block.end_of_instructions = static_cast<u8 const*>(m_current_basic_block->next_slot()) - 1;
+    m_debug_block_chain = m_debug_block_chain->previous;
 }
 
 }
