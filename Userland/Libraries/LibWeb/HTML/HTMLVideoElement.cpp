@@ -166,7 +166,6 @@ WebIDL::ExceptionOr<void> HTMLVideoElement::determine_element_poster_frame(Optio
     fetch_algorithms_input.process_response = [this](auto response) mutable {
         ScopeGuard guard { [&] { m_load_event_delayer.clear(); } };
 
-        auto& realm = this->realm();
         auto& global = document().realm().global_object();
 
         if (response->is_network_error())
@@ -191,7 +190,7 @@ WebIDL::ExceptionOr<void> HTMLVideoElement::determine_element_poster_frame(Optio
         VERIFY(response->body());
         auto empty_algorithm = [](auto) {};
 
-        response->body()->fully_read(realm, move(on_image_data_read), move(empty_algorithm), JS::NonnullGCPtr { global }).release_value_but_fixme_should_propagate_errors();
+        response->body()->fully_read(move(on_image_data_read), move(empty_algorithm), JS::NonnullGCPtr { global }).release_value_but_fixme_should_propagate_errors();
     };
 
     m_fetch_controller = TRY(Fetch::Fetching::fetch(realm, request, Fetch::Infrastructure::FetchAlgorithms::create(vm, move(fetch_algorithms_input))));

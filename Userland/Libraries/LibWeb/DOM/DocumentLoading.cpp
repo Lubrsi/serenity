@@ -86,7 +86,6 @@ static WebIDL::ExceptionOr<JS::NonnullGCPtr<DOM::Document>> load_markdown_docume
         };
 
         navigation_params.response->body()->fully_read(
-                                              realm,
                                               move(process_body),
                                               move(process_body_error),
                                               JS::NonnullGCPtr { realm.global_object() })
@@ -158,7 +157,7 @@ static WebIDL::ExceptionOr<JS::NonnullGCPtr<DOM::Document>> load_html_document(H
         };
 
         auto& realm = document->realm();
-        TRY(navigation_params.response->body()->fully_read(realm, move(process_body), move(process_body_error), JS::NonnullGCPtr { realm.global_object() }));
+        TRY(navigation_params.response->body()->fully_read(move(process_body), move(process_body_error), JS::NonnullGCPtr { realm.global_object() }));
     }
 
     // 4. Return document.
@@ -238,7 +237,7 @@ static WebIDL::ExceptionOr<JS::NonnullGCPtr<DOM::Document>> load_xml_document(HT
     };
 
     auto& realm = document->realm();
-    TRY(navigation_params.response->body()->fully_read(realm, move(process_body), move(process_body_error), JS::NonnullGCPtr { realm.global_object() }));
+    TRY(navigation_params.response->body()->fully_read(move(process_body), move(process_body_error), JS::NonnullGCPtr { realm.global_object() }));
 
     return document;
 }
@@ -301,7 +300,7 @@ static WebIDL::ExceptionOr<JS::NonnullGCPtr<DOM::Document>> load_text_document(H
     };
 
     auto& realm = document->realm();
-    TRY(navigation_params.response->body()->fully_read(realm, move(process_body), move(process_body_error), JS::NonnullGCPtr { realm.global_object() }));
+    TRY(navigation_params.response->body()->fully_read(move(process_body), move(process_body_error), JS::NonnullGCPtr { realm.global_object() }));
 
     // 6. Return document.
     return document;
@@ -372,7 +371,6 @@ static WebIDL::ExceptionOr<JS::NonnullGCPtr<DOM::Document>> load_media_document(
     //        never happens.
     auto& realm = document->realm();
     TRY(navigation_params.response->body()->fully_read(
-        realm,
         [document](auto) { HTML::HTMLParser::the_end(document); },
         [](auto) {},
         JS::NonnullGCPtr { realm.global_object() }));

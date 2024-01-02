@@ -520,7 +520,7 @@ WebIDL::ExceptionOr<Optional<JS::NonnullGCPtr<PendingResponse>>> main_fetch(JS::
                 };
 
                 // 4. Fully read response’s body given processBody and processBodyError.
-                TRY_OR_IGNORE(response->body()->fully_read(realm, move(process_body), move(process_body_error), fetch_params.task_destination()));
+                TRY_OR_IGNORE(response->body()->fully_read(move(process_body), move(process_body_error), fetch_params.task_destination()));
             }
             // 23. Otherwise, run fetch response handover given fetchParams and response.
             else {
@@ -681,7 +681,7 @@ WebIDL::ExceptionOr<void> fetch_response_handover(JS::Realm& realm, Infrastructu
         // 4. Otherwise, fully read internalResponse body given processBody, processBodyError, and fetchParams’s task
         //    destination.
         else {
-            TRY(internal_response->body()->fully_read(realm, move(process_body), move(process_body_error), fetch_params.task_destination()));
+            TRY(internal_response->body()->fully_read(move(process_body), move(process_body_error), fetch_params.task_destination()));
         }
     }
 

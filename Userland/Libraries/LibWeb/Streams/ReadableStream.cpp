@@ -15,6 +15,10 @@
 #include <LibWeb/Streams/ReadableStreamDefaultReader.h>
 #include <LibWeb/Streams/UnderlyingSource.h>
 #include <LibWeb/WebIDL/ExceptionOr.h>
+#include <LibJS/Runtime/TypedArray.h>
+#include <LibJS/Runtime/DataView.h>
+#include <LibWeb/Streams/ReadableStreamBYOBRequest.h>
+#include <LibWeb/WebIDL/Buffers.h>
 
 namespace Web::Streams {
 
@@ -106,6 +110,90 @@ WebIDL::ExceptionOr<ReadableStreamReader> ReadableStream::get_reader(ReadableStr
 
     // 3. Return ? AcquireReadableStreamBYOBReader(this).
     return ReadableStreamReader { TRY(acquire_readable_stream_byob_reader(*this)) };
+}
+
+// https://streams.spec.whatwg.org/#readablestream-enqueue
+WebIDL::ExceptionOr<void> ReadableStream::enqueue(JS::Value chunk)
+{
+    auto& realm = this->realm();
+
+    // 1. If stream.[[controller]] implements ReadableStreamDefaultController,
+    VERIFY(m_controller.has_value());
+    auto& controller = m_controller.value();
+    if (controller.has<JS::NonnullGCPtr<ReadableStreamDefaultController>>()) {
+        // 1. Perform ! ReadableStreamDefaultControllerEnqueue(stream.[[controller]], chunk).
+        auto& default_controller = controller.get<JS::NonnullGCPtr<ReadableStreamDefaultController>>();
+        return MUST(readable_stream_default_controller_enqueue(default_controller, chunk));
+    }
+
+    // 2. Otherwise,
+    // 1. Assert: stream.[[controller]] implements ReadableByteStreamController.
+    auto& byte_controller = controller.get<JS::NonnullGCPtr<ReadableByteStreamController>>();
+
+    // 2. Assert: chunk is an ArrayBufferView.
+    VERIFY(chunk.is_object());
+    VERIFY(is<JS::TypedArrayBase>(chunk.as_object()) || is<JS::DataView>(chunk.as_object()));
+    auto view = realm.heap().allocate<WebIDL::ArrayBufferView>(realm, chunk.as_object());
+
+    // 3. Let byobView be the current BYOB request view for stream.
+    auto byob_view = current_byob_request_view();
+
+    // 4. If byobView is non-null, and chunk.[[ViewedArrayBuffer]] is byobView.[[ViewedArrayBuffer]], then:
+    if (byob_view && view->viewed_array_buffer() == byob_view->viewed_array_buffer()) {
+        // 1. Assert: chunk.[[ByteOffset]] is byobView.[[ByteOffset]].
+        VERIFY(view->byte_offset() == byob_view->byte_offset());
+
+        // 2. Assert: chunk.[[ByteLength]] ≤ byobView.[[ByteLength]].
+        // Spec Note: These asserts ensure that the caller does not write outside the requested range in the current BYOB request view.
+        VERIFY(view->byte_length() <= byob_view->byte_length());
+
+        // 3. Perform ? ReadableByteStreamControllerRespond(stream.[[controller]], chunk.[[ByteLength]]).
+        return readable_byte_stream_controller_respond(byte_controller, view->byte_length());
+    }
+
+    // 5. Otherwise, perform ? ReadableByteStreamControllerEnqueue(stream.[[controller]], chunk).
+    return readable_byte_stream_controller_enqueue(byte_controller, chunk);
+}
+
+// https://streams.spec.whatwg.org/#readablestream-close
+void ReadableStream::close()
+{
+    // 1. If stream.[[controller]] implements ReadableByteStreamController,
+    VERIFY(m_controller.has_value());
+    auto& controller = m_controller.value();
+    if (controller.has<JS::NonnullGCPtr<ReadableByteStreamController>>()) {
+        auto& byte_controller = controller.get<JS::NonnullGCPtr<ReadableByteStreamController>>();
+
+        // 1. Perform ! ReadableByteStreamControllerClose(stream.[[controller]]).
+        MUST(readable_byte_stream_controller_close(byte_controller));
+
+        // 2. If stream.[[controller]].[[pendingPullIntos]] is not empty, perform ! ReadableByteStreamControllerRespond(stream.[[controller]], 0).
+        if (!byte_controller->pending_pull_intos().is_empty())
+            MUST(readable_byte_stream_controller_respond(byte_controller, 0));
+    }
+    // 2. Otherwise, perform ! ReadableStreamDefaultControllerClose(stream.[[controller]]).
+    else {
+        auto& default_controller = controller.get<JS::NonnullGCPtr<ReadableStreamDefaultController>>();
+        readable_stream_default_controller_close(default_controller);
+    }
+}
+
+// https://streams.spec.whatwg.org/#readablestream-current-byob-request-view
+JS::GCPtr<WebIDL::ArrayBufferView> ReadableStream::current_byob_request_view()
+{
+    // 1. Assert: stream.[[controller]] implements ReadableByteStreamController.
+    VERIFY(m_controller.has_value());
+    auto& byte_controller = m_controller.value().get<JS::NonnullGCPtr<ReadableByteStreamController>>();
+
+    // 2. Let byobRequest be ! ReadableByteStreamControllerGetBYOBRequest(stream.[[controller]]).
+    auto byob_request = readable_byte_stream_controller_get_byob_request(byte_controller);
+
+    // 3. If byobRequest is null, then return null.
+    if (!byob_request)
+        return nullptr;
+
+    // 4. Return byobRequest.[[view]].
+    return byob_request->view();
 }
 
 void ReadableStream::initialize(JS::Realm& realm)

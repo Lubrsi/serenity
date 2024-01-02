@@ -66,6 +66,11 @@ public:
     State state() const { return m_state; }
     void set_state(State value) { m_state = value; }
 
+    WebIDL::ExceptionOr<void> enqueue(JS::Value chunk);
+    void close();
+
+    JS::GCPtr<WebIDL::ArrayBufferView> current_byob_request_view();
+
 private:
     explicit ReadableStream(JS::Realm&);
 

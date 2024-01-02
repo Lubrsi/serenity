@@ -15,10 +15,12 @@
 #include <LibWeb/Bindings/HostDefined.h>
 #include <LibWeb/HTML/Scripting/Environments.h>
 #include <LibWeb/WebIDL/CallbackType.h>
+#include <LibWeb/Streams/AbstractOperations.h>
 
 namespace Web::WebIDL {
 
 ErrorOr<ByteBuffer> get_buffer_source_copy(JS::Object const& buffer_source);
+void set_up_with_byte_reading_support(Streams::ReadableStream& stream, Streams::PullAlgorithm pull_algorithm = nullptr, Streams::CancelAlgorithm cancel_algorithm = nullptr, double high_water_mark = 1.0, Streams::SizeAlgorithm size_algorithm = nullptr);
 
 JS::Completion call_user_object_operation(WebIDL::CallbackType& callback, String const& operation_name, Optional<JS::Value> this_argument, JS::MarkedVector<JS::Value> args);
 

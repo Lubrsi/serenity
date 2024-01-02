@@ -955,8 +955,6 @@ WebIDL::ExceptionOr<void> HTMLMediaElement::fetch_resource(AK::URL const& url_re
         Fetch::Infrastructure::FetchAlgorithms::Input fetch_algorithms_input {};
 
         fetch_algorithms_input.process_response = [this, byte_range = move(byte_range), failure_callback = move(failure_callback)](auto response) mutable {
-            auto& realm = this->realm();
-
             // FIXME: If the response is CORS cross-origin, we must use its internal response to query any of its data. See:
             //        https://github.com/whatwg/html/issues/9355
             response = response->unsafe_response();
@@ -1009,7 +1007,7 @@ WebIDL::ExceptionOr<void> HTMLMediaElement::fetch_resource(AK::URL const& url_re
             // FIXME: We are "fully" reading the response here, rather than "incrementally". Memory concerns aside, this should be okay for now as we are
             //        always setting byteRange to "entire resource". However, we should switch to incremental reads when that is implemented, and then
             //        implement the processEndOfMedia step.
-            response->body()->fully_read(realm, move(update_media), move(empty_algorithm), JS::NonnullGCPtr { global }).release_value_but_fixme_should_propagate_errors();
+            response->body()->fully_read(move(update_media), move(empty_algorithm), JS::NonnullGCPtr { global }).release_value_but_fixme_should_propagate_errors();
         };
 
         m_fetch_controller = TRY(Fetch::Fetching::fetch(realm, request, Fetch::Infrastructure::FetchAlgorithms::create(vm, move(fetch_algorithms_input))));

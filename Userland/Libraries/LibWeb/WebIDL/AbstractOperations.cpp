@@ -20,6 +20,9 @@
 #include <LibWeb/HTML/Window.h>
 #include <LibWeb/WebIDL/AbstractOperations.h>
 #include <LibWeb/WebIDL/Promise.h>
+#include <LibWeb/Bindings/ExceptionOrUtils.h>
+#include <LibWeb/Streams/ReadableStreamDefaultController.h>
+#include <LibWeb/HTML/Scripting/TemporaryExecutionContext.h>
 #include <LibWeb/WebIDL/Types.h>
 
 namespace Web::WebIDL {
@@ -99,6 +102,90 @@ ErrorOr<ByteBuffer> get_buffer_source_copy(JS::Object const& buffer_source)
 
     // 10. Return bytes.
     return bytes;
+}
+
+// https://streams.spec.whatwg.org/#readablestream-set-up
+void set_up_with_byte_reading_support(Streams::ReadableStream& stream, Streams::PullAlgorithm pull_algorithm, Streams::CancelAlgorithm cancel_algorithm, double high_water_mark, Streams::SizeAlgorithm size_algorithm)
+{
+    // To set up a newly-created-via-Web IDL ReadableStream object stream, given an optional algorithm pullAlgorithm,
+    // an optional algorithm cancelAlgorithm, an optional number highWaterMark (default 1), and an optional algorithm
+    // sizeAlgorithm, perform the following steps.
+    auto& realm = stream.realm();
+
+    // AD-HOC: Temporary execution context for promises.
+    auto& environment_settings_object = Bindings::host_defined_environment_settings_object(realm);
+    environment_settings_object.prepare_to_run_script();
+    environment_settings_object.prepare_to_run_callback();
+
+    // 1. Let startAlgorithm be an algorithm that returns undefined.
+    Streams::StartAlgorithm start_algorithm = []() {
+        return JS::js_undefined();
+    };
+
+    // 2. Let pullAlgorithmWrapper be an algorithm that runs these steps:
+    Streams::PullAlgorithm pull_algorithm_wrapper = [&realm, pull_algorithm = move(pull_algorithm)]() {
+        // 1. Let result be the result of running cancelAlgorithm, if cancelAlgorithm was given, or null otherwise.
+        //    If this throws an exception e, return a promise rejected with e.
+        JS::GCPtr<WebIDL::Promise> result;
+        if (pull_algorithm) {
+            auto maybe_exception = pull_algorithm();
+            if (maybe_exception.is_exception()) {
+                auto throw_completion = Bindings::dom_exception_to_throw_completion(realm.vm(), maybe_exception.exception());
+                return WebIDL::create_rejected_promise(realm, *throw_completion.value());
+            }
+
+            result = maybe_exception.release_value();
+        }
+
+        // 2. If result is a Promise, then return result.
+        if (result)
+            return JS::NonnullGCPtr { *result };
+
+        // 3. Return a promise resolved with undefined.
+        return WebIDL::create_resolved_promise(realm, JS::js_undefined());
+    };
+
+    // 3. Let cancelAlgorithmWrapper be an algorithm that runs these steps:
+    Streams::CancelAlgorithm cancel_algorithm_wrapper = [&realm, cancel_algorithm = move(cancel_algorithm)](JS::Value reason) {
+        // 1. Let result be the result of running cancelAlgorithm, if cancelAlgorithm was given, or null otherwise.
+        //    If this throws an exception e, return a promise rejected with e.
+        JS::GCPtr<WebIDL::Promise> result;
+        if (cancel_algorithm) {
+            auto maybe_exception = cancel_algorithm(reason);
+            if (maybe_exception.is_exception()) {
+                auto throw_completion = Bindings::dom_exception_to_throw_completion(realm.vm(), maybe_exception.exception());
+                return WebIDL::create_rejected_promise(realm, *throw_completion.value());
+            }
+
+            result = maybe_exception.release_value();
+        }
+
+        // 2. If result is a Promise, then return result.
+        if (result)
+            return JS::NonnullGCPtr { *result };
+
+        // 3. Return a promise resolved with undefined.
+        return WebIDL::create_resolved_promise(realm, JS::js_undefined());
+    };
+
+    // 4. If sizeAlgorithm was not given, then set it to an algorithm that returns 1.
+    if (!size_algorithm) {
+        size_algorithm = [](auto const&) {
+            return JS::Value(1.0);
+        };
+    }
+
+    // 5. Perform ! InitializeReadableStream(stream).
+    Streams::initialize_readable_stream(stream);
+
+    // 6. Let controller be a new ReadableStreamDefaultController.
+    auto controller = realm.heap().allocate<Streams::ReadableStreamDefaultController>(realm, realm);
+
+    // 7. Perform ! SetUpReadableStreamDefaultController(stream, controller, startAlgorithm, pullAlgorithmWrapper, cancelAlgorithmWrapper, highWaterMark, sizeAlgorithm).
+    MUST(set_up_readable_stream_default_controller(stream, controller, move(start_algorithm), move(pull_algorithm_wrapper), move(cancel_algorithm_wrapper), high_water_mark, move(size_algorithm)));
+
+    environment_settings_object.clean_up_after_running_callback();
+    environment_settings_object.clean_up_after_running_script();
 }
 
 // https://webidl.spec.whatwg.org/#call-user-object-operation-return

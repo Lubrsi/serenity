@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "LibWeb/Platform/EventLoopPlugin.h"
 #include <LibJS/Runtime/Completion.h>
 #include <LibWeb/Fetch/BodyInit.h>
 #include <LibWeb/Fetch/Infrastructure/HTTP/Bodies.h>
@@ -14,6 +15,8 @@
 #include <LibWeb/WebIDL/Buffers.h>
 #include <LibWeb/WebIDL/ExceptionOr.h>
 #include <LibWeb/XHR/FormData.h>
+#include <LibJS/Runtime/ArrayBuffer.h>
+#include <LibJS/Runtime/TypedArray.h>
 
 namespace Web::Fetch {
 
@@ -50,8 +53,8 @@ WebIDL::ExceptionOr<Infrastructure::BodyWithType> extract_body(JS::Realm& realm,
     }
     // 4. Otherwise, set stream to a new ReadableStream object, and set up stream.
     else {
-        // FIXME: "set up stream"
         stream = realm.heap().allocate<Streams::ReadableStream>(realm, realm);
+        WebIDL::set_up_with_byte_reading_support(*stream);
     }
 
     // 5. Assert: stream is a ReadableStream object.
@@ -130,8 +133,19 @@ WebIDL::ExceptionOr<Infrastructure::BodyWithType> extract_body(JS::Realm& realm,
 
     // FIXME: 11. If source is a byte sequence, then set action to a step that returns source and length to source’s length.
     // For now, do it synchronously.
-    if (source.has<ByteBuffer>())
+    if (source.has<ByteBuffer>()) {
         length = source.get<ByteBuffer>().size();
+        auto buffer = source.get<ByteBuffer>();
+        Platform::EventLoopPlugin::the().deferred_invoke([stream = JS::make_handle(stream), buffer = move(buffer)] {
+            auto& realm = stream->realm();
+            if (!stream->is_errored()) {
+                auto array_buffer = JS::ArrayBuffer::create(realm, move(buffer));
+                auto uint8array = JS::Uint8Array::create(realm, buffer.size(), array_buffer);
+                MUST(stream->enqueue(uint8array));
+            }
+            stream->close();
+        });
+    }
 
     // FIXME: 12. If action is non-null, then run these steps in parallel:
 

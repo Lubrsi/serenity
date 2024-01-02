@@ -26,6 +26,8 @@ DOMException::DOMException(JS::Realm& realm, FlyString const& name, FlyString co
     , m_name(name)
     , m_message(message)
 {
+    dbgln("Creating {} DOMException: {}", name, message);
+    vm().dump_backtrace();
 }
 
 DOMException::~DOMException() = default;
